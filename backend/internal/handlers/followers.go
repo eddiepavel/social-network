@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"social-network/internal/auth"
+	"social-network/internal/middleware"
 	"strings"
 	"time"
 )
@@ -41,7 +41,7 @@ func (h *FollowersHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get current user from context
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -147,7 +147,7 @@ func (h *FollowersHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get current user from context
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -196,7 +196,7 @@ func (h *FollowersHandler) AcceptFollowRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	// Get current user from context (the followee)
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -245,7 +245,7 @@ func (h *FollowersHandler) RejectFollowRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	// Get current user from context (the followee)
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -294,7 +294,7 @@ func (h *FollowersHandler) GetFollowers(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get current user from context
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -369,7 +369,7 @@ func (h *FollowersHandler) GetFollowing(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get current user from context
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -445,7 +445,7 @@ func (h *FollowersHandler) GetFollowRequests(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get current user from context
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return

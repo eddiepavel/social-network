@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"social-network/internal/auth"
+	"social-network/internal/middleware"
 	"social-network/internal/models"
 	"strings"
 	"time"
@@ -33,7 +33,7 @@ func (h *GroupsHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get current user from context
-	userID, ok := auth.GetUserIDFromContext(r.Context())
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -190,7 +190,7 @@ func (h *GroupsHandler) GetGroupDetails(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get current user from context
-	userID, ok := auth.GetUserIDFromContext(r.Context())
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -333,7 +333,7 @@ func (h *GroupsHandler) InviteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get current user from context
-	inviterID, ok := auth.GetUserIDFromContext(r.Context())
+	inviterID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -450,7 +450,7 @@ func (h *GroupsHandler) RequestToJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get current user from context
-	userID, ok := auth.GetUserIDFromContext(r.Context())
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -535,7 +535,7 @@ func (h *GroupsHandler) HandleJoinRequest(w http.ResponseWriter, r *http.Request
 	}
 
 	// Get current user from context
-	currentUserID, ok := auth.GetUserIDFromContext(r.Context())
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return

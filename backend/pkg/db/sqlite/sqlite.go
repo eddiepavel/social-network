@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	db_users "social-network/pkg/db/queries/users"
 	"sort"
 	"strings"
 
@@ -23,16 +24,27 @@ type Config struct {
 	MigrationsPath string
 }
 
+type Transactions struct {
+	Users *db_users.Queries
+}
+
+func NewQuery(db *sql.DB) *Transactions {
+	return &Transactions{
+		Users: db_users.New(db),
+	}
+}
+
 // New creates a new database connection and applies migrations
-func New(config Config) (*DB, error) {
+func New() (*DB, error) {
 	// Ensure database directory exists
-	dbDir := filepath.Dir(config.DatabasePath)
+	dbDir := filepath.Dir("pkg/db")
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
 	// Open database connection
-	sqlDB, err := sql.Open("sqlite3", config.DatabasePath)
+	fmt.Println("pkg/db/" + os.Getenv("DATABASE_NAME"))
+	sqlDB, err := sql.Open("sqlite3", "pkg/db/"+os.Getenv("DATABASE_NAME"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -45,12 +57,12 @@ func New(config Config) (*DB, error) {
 	db := &DB{sqlDB}
 
 	// Run init.sql first to create schema_migrations table
-	if err := db.runInitSQL(config.MigrationsPath); err != nil {
+	if err := db.runInitSQL("pkg/db/migrations/sqlite"); err != nil {
 		return nil, fmt.Errorf("failed to run init.sql: %w", err)
 	}
 
 	// Apply migrations
-	if err := db.runMigrations(config.MigrationsPath); err != nil {
+	if err := db.runMigrations("pkg/db/migrations/sqlite"); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -61,7 +73,7 @@ func New(config Config) (*DB, error) {
 // runInitSQL executes the init.sql file to set up migration tracking
 func (db *DB) runInitSQL(migrationsPath string) error {
 	initPath := filepath.Join(migrationsPath, "init.sql")
-
+	fmt.Println(initPath)
 	// Read init.sql file
 	initSQL, err := os.ReadFile(initPath)
 	if err != nil {

@@ -1,46 +1,92 @@
 package routes
 
 import (
-	"database/sql"
 	"net/http"
-	"strings"
-
-	"social-network/internal/auth"
+	"social-network/app"
 	"social-network/internal/handlers"
+	"social-network/internal/middleware"
+	"strings"
 )
 
+type Handler struct {
+	App     *app.App
+	Handler *http.ServeMux
+}
+
+// Authentication endpoints
+func (h *Handler) authRoutes() *http.ServeMux {
+
+	h.Handler.HandleFunc("GET /session", handlers.GetSession(h.App))
+	h.Handler.HandleFunc("POST /logout", handlers.Logout(h.App))
+
+	return h.Handler
+}
+
+// public routes
+func (h *Handler) publicRoutes() *http.ServeMux {
+
+	h.Handler.HandleFunc("POST /register", handlers.Register(h.App))
+	h.Handler.HandleFunc("POST /login", handlers.Login(h.App))
+
+	return h.Handler
+}
+
 // Setup initializes all application routes
-func Setup(db *sql.DB) http.Handler {
+func Setup(app *app.App) http.Handler {
 	mux := http.NewServeMux()
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db)
-	usersHandler := handlers.NewUsersHandler(db)
-	groupsHandler := handlers.NewGroupsHandler(db)
-	followersHandler := handlers.NewFollowersHandler(db)
+	handler := &Handler{
+		App:     app,
+		Handler: mux,
+	}
 
-	// Initialize middleware
-	authMiddleware := auth.AuthMiddleware(db)
+	authRoutesMux := handler.authRoutes()
+	authWithMiddleware := middleware.ChainMiddleware(
+		authRoutesMux.ServeHTTP,
+		[]string{"auth"},
+		app.DB,
+		app.Logger,
+	)
+
+	publicRoutesMux := handler.publicRoutes()
+	publicWithMiddleware := middleware.ChainMiddleware(
+		publicRoutesMux.ServeHTTP,
+		[]string{},
+		app.DB,
+		app.Logger,
+	)
+
+	mux.Handle("/api/", http.StripPrefix("/api", mux))
+	mux.Handle("/public/", http.StripPrefix("/public", http.HandlerFunc(publicWithMiddleware)))
+	mux.Handle("/auth/", http.StripPrefix("/auth", http.HandlerFunc(authWithMiddleware)))
+
+	// Progress so far:
+	// 1. Grouped endpoints with middleware for easier route management.
+	// 2. Planning to move query logic from handlers/middleware to pkg/db using sqlc (see new YAML file).
+	// 3. Added .env helper for consistent environment variable usage.
+	// 4. Database migration logic needs refactoring.... migration paths should be fixed and not depend on execution locations.
+	// 5. App struct that wraps entire application with packages that are needed throughout request lifecycle.
+
+	// Disclaimer:
+	// The app requires significant refactoring for better organization (aiming for a mini-framework structure).
+	// Error responses should be standardized to JSON for all REST API endpoints, instead of plain text.
+
+	// Initialize handlers
+	usersHandler := handlers.NewUsersHandler(app.DB)
+	groupsHandler := handlers.NewGroupsHandler(app.DB)
+	followersHandler := handlers.NewFollowersHandler(app.DB)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", healthCheck)
 
-	// Authentication endpoints (public)
-	mux.HandleFunc("/api/auth/register", authHandler.Register)
-	mux.HandleFunc("/api/auth/login", authHandler.Login)
-	mux.HandleFunc("/api/auth/logout", authHandler.Logout)
-
-	// Protected endpoints
-	mux.HandleFunc("/api/auth/session", authMiddleware(authHandler.GetSession))
-
 	// Users & Profile endpoints (protected)
-	mux.HandleFunc("/api/users/", authMiddleware(usersHandler.GetUserProfile))
-	mux.HandleFunc("/api/users/profile", authMiddleware(usersHandler.UpdateProfile))
-	mux.HandleFunc("/api/users/privacy", authMiddleware(usersHandler.UpdatePrivacy))
+	mux.HandleFunc("/api/users/", middleware.AuthMiddleware(usersHandler.GetUserProfile, app.DB, app.Logger))
+	mux.HandleFunc("/api/users/profile", middleware.AuthMiddleware(usersHandler.UpdateProfile, app.DB, app.Logger))
+	mux.HandleFunc("/api/users/privacy", middleware.AuthMiddleware(usersHandler.UpdatePrivacy, app.DB, app.Logger))
 
 	// Groups endpoints (protected)
 	// Route to /api/groups for both GET (list all) and POST (create)
-	mux.HandleFunc("/api/groups", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/groups", middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			groupsHandler.GetGroups(w, r)
 		} else if r.Method == http.MethodPost {
@@ -48,18 +94,18 @@ func Setup(db *sql.DB) http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	}))
+	}, app.DB, app.Logger))
 
 	// Route to /api/groups/* for dynamic paths
-	mux.HandleFunc("/api/groups/", authMiddleware(groupsRouter(groupsHandler)))
+	mux.HandleFunc("/api/groups/", middleware.AuthMiddleware(groupsRouter(groupsHandler), app.DB, app.Logger))
 
 	// Followers endpoints (protected)
-	mux.HandleFunc("/api/follow/requests", authMiddleware(followersHandler.GetFollowRequests))
-	mux.HandleFunc("/api/follow/accept/", authMiddleware(followersHandler.AcceptFollowRequest))
-	mux.HandleFunc("/api/follow/reject/", authMiddleware(followersHandler.RejectFollowRequest))
-	mux.HandleFunc("/api/followers/", authMiddleware(followersHandler.GetFollowers))
-	mux.HandleFunc("/api/following/", authMiddleware(followersHandler.GetFollowing))
-	mux.HandleFunc("/api/follow/", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/follow/requests", middleware.AuthMiddleware(followersHandler.GetFollowRequests, app.DB, app.Logger))
+	mux.HandleFunc("/api/follow/accept/", middleware.AuthMiddleware(followersHandler.AcceptFollowRequest, app.DB, app.Logger))
+	mux.HandleFunc("/api/follow/reject/", middleware.AuthMiddleware(followersHandler.RejectFollowRequest, app.DB, app.Logger))
+	mux.HandleFunc("/api/followers/", middleware.AuthMiddleware(followersHandler.GetFollowers, app.DB, app.Logger))
+	mux.HandleFunc("/api/following/", middleware.AuthMiddleware(followersHandler.GetFollowing, app.DB, app.Logger))
+	mux.HandleFunc("/api/follow/", middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			followersHandler.FollowUser(w, r)
 		} else if r.Method == http.MethodDelete {
@@ -67,22 +113,9 @@ func Setup(db *sql.DB) http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	}))
+	}, app.DB, app.Logger))
 
 	// TODO: Add more endpoints as features are implemented
-	// Posts endpoints
-	// mux.HandleFunc("/api/posts", authMiddleware(postsHandler.GetPosts))
-	// mux.HandleFunc("/api/posts", authMiddleware(postsHandler.CreatePost))
-
-	// Followers endpoints
-	// mux.HandleFunc("/api/follow/:userId", authMiddleware(followersHandler.Follow))
-	// mux.HandleFunc("/api/followers/:userId", authMiddleware(followersHandler.GetFollowers))
-
-	// Chat WebSocket
-	// mux.HandleFunc("/ws/chat", authMiddleware(chatHandler.HandleWebSocket))
-
-	// Notifications endpoints
-	// mux.HandleFunc("/api/notifications", authMiddleware(notificationsHandler.GetNotifications))
 
 	return mux
 }

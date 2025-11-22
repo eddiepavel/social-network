@@ -1,0 +1,9 @@
+version: "2"
+sql: 
+  - engine: "sqlite"
+    queries: ["/pkg/db/queries/users/users.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000001_create_users_table.sql"]
+    gen:
+      go:
+        package: "db_users"
+        out: "/pkg/db/queries/users"
