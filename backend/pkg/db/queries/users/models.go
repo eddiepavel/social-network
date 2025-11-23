@@ -16,7 +16,7 @@ type User struct {
 	LastName     string
 	Dob          string
 	Avatar       sql.NullString
-	Nickname     sql.NullString
+	Nickname     string
 	AboutMe      sql.NullString
 	IsPublic     sql.NullBool
 	CreatedAt    sql.NullTime

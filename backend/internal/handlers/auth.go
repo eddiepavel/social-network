@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"social-network/app"
+	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
+	"social-network/internal/utils"
 	db_users "social-network/pkg/db/queries/users"
 	"social-network/pkg/db/sqlite"
 
@@ -20,31 +23,32 @@ import (
 func Register(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var req models.CreateUserRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
 		// Validate required fields
-		if req.Email == "" || req.Password == "" || req.FirstName == "" || req.LastName == "" || req.DOB == "" {
-			http.Error(w, "Missing required fields", http.StatusBadRequest)
+
+		var req models.CreateUserRequest
+
+		inputs := helpers.ValidateRegister(r, app.DB)
+
+		ok, errValidation := utils.Validatation(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, http.StatusBadRequest, "400", "validation error", errValidation)
 			return
 		}
 
 		// Generate UUID for user
 		userID, err := uuid.New().MarshalBinary()
 		if err != nil {
-			log.Printf("Failed to generate UUID: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			app.Logger.Error("failed uuid", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
 
 		// Hash password with bcrypt
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("Failed to hash password: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			app.Logger.Error("failed to hash password", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
 
@@ -57,21 +61,21 @@ func Register(app *app.App) http.HandlerFunc {
 			LastName:     req.LastName,
 			Dob:          req.DOB,
 			Avatar:       sql.NullString{String: req.Avatar, Valid: true},
-			Nickname:     sql.NullString{String: req.Nickname, Valid: true},
+			Nickname:     req.Nickname,
 			AboutMe:      sql.NullString{String: req.AboutMe, Valid: true},
 		})
 
 		if err != nil {
-			app.Logger.Error("failed to create user")
-			http.Error(w, "failed to create user", http.StatusInternalServerError)
+			app.Logger.Error("failed to create user", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
 
 		// Create session for auto-login
 		sessionID, err := middleware.CreateSession(app.DB, transaction.UserID)
 		if err != nil {
-			log.Printf("Failed to create session: %v", err)
-			http.Error(w, "User created but failed to create session", http.StatusInternalServerError)
+			app.Logger.Error("failed to create session", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
 
@@ -86,13 +90,12 @@ func Register(app *app.App) http.HandlerFunc {
 			LastName:  transaction.LastName,
 			DOB:       transaction.Dob,
 			Avatar:    transaction.Avatar.String,
-			Nickname:  transaction.Nickname.String,
+			Nickname:  transaction.Nickname,
 			AboutMe:   transaction.AboutMe.String,
 			CreatedAt: transaction.CreatedAt.Time.String(),
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(response)
+
+		utils.Write(w, http.StatusOK, response)
 	}
 
 }
@@ -149,7 +152,7 @@ func Login(app *app.App) http.HandlerFunc {
 			LastName:  transaction.LastName,
 			DOB:       transaction.Dob,
 			Avatar:    transaction.Avatar.String,
-			Nickname:  transaction.Nickname.String,
+			Nickname:  transaction.Nickname,
 			AboutMe:   transaction.AboutMe.String,
 			CreatedAt: transaction.CreatedAt.Time.String(),
 		}
@@ -189,7 +192,7 @@ func GetSession(app *app.App) http.HandlerFunc {
 			LastName:  user.LastName,
 			DOB:       user.Dob,
 			Avatar:    user.Avatar.String,
-			Nickname:  user.Nickname.String,
+			Nickname:  user.Nickname,
 			AboutMe:   user.AboutMe.String,
 			CreatedAt: user.CreatedAt.Time.String(),
 		}

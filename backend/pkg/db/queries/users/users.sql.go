@@ -24,7 +24,7 @@ type CreateUserParams struct {
 	LastName     string
 	Dob          string
 	Avatar       sql.NullString
-	Nickname     sql.NullString
+	Nickname     string
 	AboutMe      sql.NullString
 }
 
@@ -89,6 +89,29 @@ SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickna
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Dob,
+		&i.Avatar,
+		&i.Nickname,
+		&i.AboutMe,
+		&i.IsPublic,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByNickname = `-- name: GetUserByNickname :one
+SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at FROM users WHERE nickname = ? LIMIT 1
+`
+
+func (q *Queries) GetUserByNickname(ctx context.Context, nickname string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByNickname, nickname)
 	var i User
 	err := row.Scan(
 		&i.UserID,
