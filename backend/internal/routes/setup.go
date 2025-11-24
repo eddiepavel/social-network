@@ -29,10 +29,12 @@ func Setup(app *app.App) http.Handler {
 
 	authGroup := createGroup(handler.authRoutes, []string{"auth"}, app)
 	publicGroup := createGroup(handler.publicRoutes, []string{}, app)
+	usersGroup := createGroup(handler.userRoutes, []string{"auth"}, app)
 
 	mux.Handle("/api/", http.StripPrefix("/api", mux))
-	mux.Handle("/public/", http.StripPrefix("/public", http.HandlerFunc(publicGroup)))
-	mux.Handle("/auth/", http.StripPrefix("/auth", http.HandlerFunc(authGroup)))
+	mux.Handle("/public/", http.StripPrefix("/public", publicGroup))
+	mux.Handle("/auth/", http.StripPrefix("/auth", authGroup))
+	mux.Handle("/users/", http.StripPrefix("/users", usersGroup))
 
 	// Progress so far:
 	// 1. Grouped endpoints with middleware for easier route management.
@@ -46,17 +48,11 @@ func Setup(app *app.App) http.Handler {
 	// Error responses should be standardized to JSON for all REST API endpoints, instead of plain text.
 
 	// Initialize handlers
-	usersHandler := handlers.NewUsersHandler(app.DB)
 	groupsHandler := handlers.NewGroupsHandler(app.DB)
 	followersHandler := handlers.NewFollowersHandler(app.DB)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", healthCheck)
-
-	// Users & Profile endpoints (protected)
-	mux.HandleFunc("/api/users/", middleware.AuthMiddleware(usersHandler.GetUserProfile, app.DB, app.Logger))
-	mux.HandleFunc("/api/users/profile", middleware.AuthMiddleware(usersHandler.UpdateProfile, app.DB, app.Logger))
-	mux.HandleFunc("/api/users/privacy", middleware.AuthMiddleware(usersHandler.UpdatePrivacy, app.DB, app.Logger))
 
 	// Groups endpoints (protected)
 	// Route to /api/groups for both GET (list all) and POST (create)

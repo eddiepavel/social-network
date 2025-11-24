@@ -57,32 +57,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const gerUserById = `-- name: GerUserById :one
-SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
-FROM users
-WHERE user_id = ?
-LIMIT 1
-`
-
-func (q *Queries) GerUserById(ctx context.Context, userID []byte) (User, error) {
-	row := q.db.QueryRowContext(ctx, gerUserById, userID)
-	var i User
-	err := row.Scan(
-		&i.UserID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.FirstName,
-		&i.LastName,
-		&i.Dob,
-		&i.Avatar,
-		&i.Nickname,
-		&i.AboutMe,
-		&i.IsPublic,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at FROM users WHERE email = ? LIMIT 1
 `
@@ -106,12 +80,105 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserById = `-- name: GetUserById :one
+SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
+FROM users
+WHERE user_id = ?
+LIMIT 1
+`
+
+func (q *Queries) GetUserById(ctx context.Context, userID []byte) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserById, userID)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Dob,
+		&i.Avatar,
+		&i.Nickname,
+		&i.AboutMe,
+		&i.IsPublic,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getUserByNickname = `-- name: GetUserByNickname :one
 SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at FROM users WHERE nickname = ? LIMIT 1
 `
 
 func (q *Queries) GetUserByNickname(ctx context.Context, nickname string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByNickname, nickname)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Dob,
+		&i.Avatar,
+		&i.Nickname,
+		&i.AboutMe,
+		&i.IsPublic,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users SET first_name = ?, last_name = ?, nickname = ?, about_me = ?, avatar = ? WHERE user_id = ? RETURNING user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
+`
+
+type UpdateUserParams struct {
+	FirstName string
+	LastName  string
+	Nickname  string
+	AboutMe   sql.NullString
+	Avatar    sql.NullString
+	UserID    []byte
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser,
+		arg.FirstName,
+		arg.LastName,
+		arg.Nickname,
+		arg.AboutMe,
+		arg.Avatar,
+		arg.UserID,
+	)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Dob,
+		&i.Avatar,
+		&i.Nickname,
+		&i.AboutMe,
+		&i.IsPublic,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateUserPrivacy = `-- name: UpdateUserPrivacy :one
+UPDATE users SET is_public = ? WHERE user_id = ? RETURNING user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
+`
+
+type UpdateUserPrivacyParams struct {
+	IsPublic sql.NullBool
+	UserID   []byte
+}
+
+func (q *Queries) UpdateUserPrivacy(ctx context.Context, arg UpdateUserPrivacyParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserPrivacy, arg.IsPublic, arg.UserID)
 	var i User
 	err := row.Scan(
 		&i.UserID,

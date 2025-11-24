@@ -7,3 +7,10 @@ sql:
       go:
         package: "db_users"
         out: "/pkg/db/queries/users"
+  - engine: "sqlite"
+    queries: ["/pkg/db/queries/followers/followers.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql"]
+    gen:
+      go:
+        package: "db_followers"
+        out: "/pkg/db/queries/followers"

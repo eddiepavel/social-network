@@ -9,8 +9,14 @@ INSERT INTO users (user_id, email, password_hash, first_name, last_name, dob, av
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 RETURNING *;
 
--- name: GerUserById :one 
+-- name: GetUserById :one
 SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
 FROM users
 WHERE user_id = ?
-LIMIT 1; 
+LIMIT 1;
+
+-- name: UpdateUser :one
+UPDATE users SET first_name = ?, last_name = ?, nickname = ?, about_me = ?, avatar = ? WHERE user_id = ? RETURNING *;
+
+-- name: UpdateUserPrivacy :one
+UPDATE users SET is_public = ? WHERE user_id = ? RETURNING *;

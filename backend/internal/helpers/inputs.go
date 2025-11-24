@@ -38,3 +38,13 @@ func MakeValidateRegister(r *http.Request, d *sql.DB) map[string][]interface{} {
 		}},
 	}
 }
+
+func MakeValidateUpdateProfile() map[string][]interface{} {
+	return map[string][]interface{}{
+		"first_name": {"sometimes", "string"},
+		"last_name":  {"sometimes", "string"},
+		"nickname":   {"sometimes", "string"},
+		"avatar":     {"sometimes", "string"},
+		"about_me":   {"sometimes", "string"},
+	}
+}

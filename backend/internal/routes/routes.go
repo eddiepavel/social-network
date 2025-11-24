@@ -28,3 +28,12 @@ func (h *Handler) publicRoutes() *http.ServeMux {
 
 	return h.Handler
 }
+
+func (h *Handler) userRoutes() *http.ServeMux {
+
+	h.Handler.HandleFunc("GET /{id}", handlers.GetUserProfile(h.App))
+	h.Handler.HandleFunc("PUT /profile", handlers.UpdateProfile(h.App))
+	h.Handler.HandleFunc("PUT /privacy", handlers.UpdatePrivacy(h.App))
+
+	return h.Handler
+}

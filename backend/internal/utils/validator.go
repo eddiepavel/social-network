@@ -122,6 +122,10 @@ func (v *Validator) ValidateInput(value interface{}, rules []interface{}, key st
 				if err := v.Required(value, key); err != nil {
 					errs = append(errs, err.Error())
 				}
+			case r == "sometimes":
+				if value == nil {
+					return nil
+				}
 			case r == "base64":
 				str, ok := value.(string)
 				if !ok {

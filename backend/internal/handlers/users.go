@@ -4,283 +4,156 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"log"
+	"errors"
 	"net/http"
+	"social-network/app"
+	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
-	"strings"
-	"time"
+	"social-network/internal/utils"
+	db_users "social-network/pkg/db/queries/users"
+	"social-network/pkg/db/sqlite"
 )
-
-// UsersHandler handles user-related requests
-type UsersHandler struct {
-	db *sql.DB
-}
-
-// NewUsersHandler creates a new UsersHandler
-func NewUsersHandler(db *sql.DB) *UsersHandler {
-	return &UsersHandler{db: db}
-}
 
 // GetUserProfile handles GET /api/users/:id
 // Returns user profile respecting privacy settings
-func (h *UsersHandler) GetUserProfile(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+func GetUserProfile(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get current user from context
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		// Extract user ID from URL path: /api/users/:id
+		targetUserIDHex := r.PathValue("id")
+		if targetUserIDHex == "" {
+			utils.BadRequest(w, errors.New("user ID required"))
+			return
+		}
+
+		targetUserID, err := hex.DecodeString(targetUserIDHex)
+		if err != nil {
+			utils.BadRequest(w, err)
+			return
+		}
+
+		// Fetch user profile
+		user := helpers.FetchUser(app, targetUserID, r.Context(), w)
+		if user.UserID == nil {
+			return
+		}
+
+		// Check if user can view this profile
+		access, err := helpers.AccessToProfile(currentUserID, user, app, r)
+		if err != nil {
+			app.Logger.Error("Error checking profile access", "error", err)
+			utils.Internal(w, err)
+			return
+		}
+
+		if !access {
+			utils.Forbidden(w)
+			return
+		}
+
+		// Return user response
+		response := helpers.UserToResponse(user)
+
+		utils.Write(w, http.StatusOK, response)
 	}
 
-	// Get current user from context
-	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Extract user ID from URL path: /api/users/:id
-	pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/users/"), "/")
-	if len(pathParts) == 0 || pathParts[0] == "" {
-		http.Error(w, "User ID required", http.StatusBadRequest)
-		return
-	}
-
-	targetUserIDHex := pathParts[0]
-	targetUserID, err := hex.DecodeString(targetUserIDHex)
-	if err != nil {
-		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-		return
-	}
-
-	// Check if user can view this profile
-	canView, err := h.canViewProfile(currentUserID, targetUserID)
-	if err != nil {
-		log.Printf("Error checking profile access: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	if !canView {
-		http.Error(w, "You don't have permission to view this profile", http.StatusForbidden)
-		return
-	}
-
-	// Fetch user profile
-	user, err := h.getUserByID(targetUserID)
-	if err == sql.ErrNoRows {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		log.Printf("Failed to fetch user: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Return user response
-	response := h.userToResponse(user)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
 
 // UpdateProfile handles PUT /api/users/profile
 // Updates current user's profile (own profile only)
-func (h *UsersHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func UpdateProfile(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get current user from context
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
 
-	// Get current user from context
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
+		user := helpers.FetchUser(app, userID, r.Context(), w)
+		if user.UserID == nil {
+			return // Error already handled in FetchUser
+		}
 
-	// Parse request body
-	var req models.UpdateProfileRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+		// Parse request body
+		var req models.UpdateProfileRequest
 
-	// Build dynamic update query
-	updates := []string{}
-	args := []interface{}{}
+		inputs := helpers.MakeValidateUpdateProfile()
 
-	if req.FirstName != nil {
-		updates = append(updates, "first_name = ?")
-		args = append(args, *req.FirstName)
-	}
-	if req.LastName != nil {
-		updates = append(updates, "last_name = ?")
-		args = append(args, *req.LastName)
-	}
-	if req.Nickname != nil {
-		updates = append(updates, "nickname = ?")
-		args = append(args, *req.Nickname)
-	}
-	if req.AboutMe != nil {
-		updates = append(updates, "about_me = ?")
-		args = append(args, *req.AboutMe)
-	}
-	if req.Avatar != nil {
-		updates = append(updates, "avatar = ?")
-		args = append(args, *req.Avatar)
-	}
+		ok, errValidation := utils.Validate(r, inputs, &req)
 
-	if len(updates) == 0 {
-		http.Error(w, "No fields to update", http.StatusBadRequest)
-		return
+		if !ok {
+			utils.Error(w, http.StatusBadRequest, "400", "validation error", errValidation)
+			return
+		}
+
+		user = helpers.UpdateUser(user, req)
+		if user.UserID == nil {
+			utils.BadRequest(w, errors.New("no new data provided"))
+			return
+		}
+
+		updated, err := sqlite.NewQuery(app.DB).Users.UpdateUser(r.Context(), db_users.UpdateUserParams{
+			user.FirstName,
+			user.LastName,
+			user.Nickname,
+			user.AboutMe,
+			user.Avatar,
+			user.UserID,
+		})
+		if err != nil {
+			app.Logger.Error("Failed to update user", "error", err.Error())
+			utils.Internal(w, err)
+			return
+		}
+
+		// Return user response
+		response := helpers.UserToResponse(updated)
+
+		utils.Write(w, http.StatusOK, response)
 	}
-
-	// Add user_id to args
-	args = append(args, userID)
-
-	// Execute update
-	query := "UPDATE users SET " + strings.Join(updates, ", ") + " WHERE user_id = ?"
-	_, err := h.db.Exec(query, args...)
-	if err != nil {
-		log.Printf("Failed to update user profile: %v", err)
-		http.Error(w, "Failed to update profile", http.StatusInternalServerError)
-		return
-	}
-
-	// Fetch updated user
-	user, err := h.getUserByID(userID)
-	if err != nil {
-		log.Printf("Failed to fetch updated user: %v", err)
-		http.Error(w, "Profile updated but failed to fetch details", http.StatusInternalServerError)
-		return
-	}
-
-	// Return updated user
-	response := h.userToResponse(user)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
 
 // UpdatePrivacy handles PUT /api/users/privacy
 // Updates current user's privacy settings (own profile only)
-func (h *UsersHandler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get current user from context
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
 
-	// Get current user from context
-	userID, ok := middleware.GetUserIDFromContext(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
+		// Parse request body
+		var req models.UpdatePrivacyRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.BadRequest(w, err)
+			return
+		}
 
-	// Parse request body
-	var req models.UpdatePrivacyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+		// Update privacy setting
+		user, err := sqlite.NewQuery(app.DB).Users.UpdateUserPrivacy(r.Context(), db_users.UpdateUserPrivacyParams{UserID: userID})
+		if err == sql.ErrNoRows {
+			utils.NotFound(w)
+			return
+		}
+		if err != nil {
+			app.Logger.Error("Failed to fetch user", "error", err.Error())
+			utils.Internal(w, err)
+			return
+		}
 
-	// Update privacy setting
-	query := "UPDATE users SET is_public = ? WHERE user_id = ?"
-	_, err := h.db.Exec(query, req.IsPublic, userID)
-	if err != nil {
-		log.Printf("Failed to update privacy setting: %v", err)
-		http.Error(w, "Failed to update privacy", http.StatusInternalServerError)
-		return
-	}
+		// Return updated user
+		response := helpers.UserToResponse(user)
 
-	// Fetch updated user
-	user, err := h.getUserByID(userID)
-	if err != nil {
-		log.Printf("Failed to fetch updated user: %v", err)
-		http.Error(w, "Privacy updated but failed to fetch details", http.StatusInternalServerError)
-		return
-	}
-
-	// Return updated user
-	response := h.userToResponse(user)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-// Helper functions
-
-// canViewProfile checks if currentUser can view targetUser's profile
-// Rules:
-// - Can always view own profile
-// - Can view public profiles
-// - Can view private profiles if following them (accepted follower)
-func (h *UsersHandler) canViewProfile(currentUserID, targetUserID []byte) (bool, error) {
-	// Can always view own profile
-	if string(currentUserID) == string(targetUserID) {
-		return true, nil
-	}
-
-	// Check if target user's profile is public
-	var isPublic bool
-	query := "SELECT is_public FROM users WHERE user_id = ?"
-	err := h.db.QueryRow(query, targetUserID).Scan(&isPublic)
-	if err != nil {
-		return false, err
-	}
-
-	// Public profiles are visible to everyone
-	if isPublic {
-		return true, nil
-	}
-
-	// For private profiles, check if current user is a follower
-	query = `
-		SELECT COUNT(*) FROM followers
-		WHERE follower_id = ? AND followee_id = ? AND status = 'accepted'
-	`
-	var count int
-	err = h.db.QueryRow(query, currentUserID, targetUserID).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-
-	return count > 0, nil
-}
-
-func (h *UsersHandler) getUserByID(userID []byte) (*models.User, error) {
-	query := `
-		SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
-		FROM users
-		WHERE user_id = ?
-	`
-
-	user := &models.User{}
-	err := h.db.QueryRow(query, userID).Scan(
-		&user.UserID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.FirstName,
-		&user.LastName,
-		&user.DOB,
-		&user.Avatar,
-		&user.Nickname,
-		&user.AboutMe,
-		&user.IsPublic,
-		&user.CreatedAt,
-	)
-
-	return user, err
-}
-
-func (h *UsersHandler) userToResponse(user *models.User) models.UserResponse {
-	return models.UserResponse{
-		UserID:    hex.EncodeToString(user.UserID),
-		Email:     user.Email,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		DOB:       user.DOB,
-		Avatar:    user.Avatar,
-		Nickname:  user.Nickname,
-		AboutMe:   user.AboutMe,
-		IsPublic:  user.IsPublic,
-		CreatedAt: user.CreatedAt.Format(time.RFC3339),
+		utils.Write(w, http.StatusOK, response)
 	}
 }

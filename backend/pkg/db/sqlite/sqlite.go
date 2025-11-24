@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	db_followers "social-network/pkg/db/queries/followers"
 	db_users "social-network/pkg/db/queries/users"
 	"sort"
 	"strings"
@@ -25,7 +26,8 @@ type Config struct {
 }
 
 type Transactions struct {
-	Users *db_users.Queries
+	Users     *db_users.Queries
+	Followers *db_followers.Queries
 }
 
 func NewQuery(db *sql.DB) *Transactions {
