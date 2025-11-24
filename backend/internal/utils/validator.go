@@ -166,7 +166,7 @@ func (v *Validator) ValidateInput(value interface{}, rules []interface{}, key st
 }
 
 // NEW: validate against JSON body instead of form values.
-func Validatation(r *http.Request, inputs map[string][]interface{}, req any) (bool, map[string][]string) {
+func Validate(r *http.Request, inputs map[string][]interface{}, req any) (bool, map[string][]string) {
 
 	bodyBytes, err := io.ReadAll(r.Body)
 

@@ -27,9 +27,9 @@ func Register(app *app.App) http.HandlerFunc {
 
 		var req models.CreateUserRequest
 
-		inputs := helpers.ValidateRegister(r, app.DB)
+		inputs := helpers.MakeValidateRegister(r, app.DB)
 
-		ok, errValidation := utils.Validatation(r, inputs, &req)
+		ok, errValidation := utils.Validate(r, inputs, &req)
 
 		if !ok {
 			utils.Error(w, http.StatusBadRequest, "400", "validation error", errValidation)

@@ -7,7 +7,7 @@ import (
 	"social-network/pkg/db/sqlite"
 )
 
-func ValidateRegister(r *http.Request, d *sql.DB) map[string][]interface{} {
+func MakeValidateRegister(r *http.Request, d *sql.DB) map[string][]interface{} {
 	return map[string][]interface{}{
 		"email": {"required", "string", func(v interface{}) error {
 			email, _ := v.(string)
