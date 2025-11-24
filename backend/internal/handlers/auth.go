@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"log"
@@ -83,17 +82,7 @@ func Register(app *app.App) http.HandlerFunc {
 		middleware.SetSessionCookie(w, sessionID)
 
 		// return user response
-		response := models.UserResponse{
-			UserID:    hex.EncodeToString(transaction.UserID),
-			Email:     transaction.Email,
-			FirstName: transaction.FirstName,
-			LastName:  transaction.LastName,
-			DOB:       transaction.Dob,
-			Avatar:    transaction.Avatar.String,
-			Nickname:  transaction.Nickname,
-			AboutMe:   transaction.AboutMe.String,
-			CreatedAt: transaction.CreatedAt.Time.String(),
-		}
+		response := helpers.UserToResponse(transaction)
 
 		utils.Write(w, http.StatusOK, response)
 	}
@@ -106,13 +95,13 @@ func Login(app *app.App) http.HandlerFunc {
 
 		var req models.LoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			utils.BadRequest(w, err)
 			return
 		}
 
 		// Validate required fields
 		if req.Email == "" || req.Password == "" {
-			http.Error(w, "Missing email or password", http.StatusBadRequest)
+			utils.BadRequest(w, errors.New("email and password are required"))
 			return
 		}
 
@@ -121,23 +110,23 @@ func Login(app *app.App) http.HandlerFunc {
 
 		if err != nil {
 			if err == sql.ErrNoRows {
-				http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+				utils.Unauthorized(w, "Invalid credentials")
 				return
 			}
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			utils.Internal(w, err)
 		}
 
 		// Compare password with bcrypt
 		if err := bcrypt.CompareHashAndPassword(transaction.PasswordHash, []byte(req.Password)); err != nil {
-			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+			utils.Unauthorized(w, "Invalid credentials")
 			return
 		}
 
 		// Create session
 		sessionID, err := middleware.CreateSession(app.DB, transaction.UserID)
 		if err != nil {
-			log.Printf("Failed to create session: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			app.Logger.Error("Failed to create session", "error", err)
+			utils.Internal(w, err)
 			return
 		}
 
@@ -145,19 +134,8 @@ func Login(app *app.App) http.HandlerFunc {
 		middleware.SetSessionCookie(w, sessionID)
 
 		// Return user response
-		response := models.UserResponse{
-			UserID:    hex.EncodeToString(transaction.UserID),
-			Email:     transaction.Email,
-			FirstName: transaction.FirstName,
-			LastName:  transaction.LastName,
-			DOB:       transaction.Dob,
-			Avatar:    transaction.Avatar.String,
-			Nickname:  transaction.Nickname,
-			AboutMe:   transaction.AboutMe.String,
-			CreatedAt: transaction.CreatedAt.Time.String(),
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		response := helpers.UserToResponse(transaction)
+		utils.Write(w, http.StatusOK, response)
 	}
 }
 
@@ -168,36 +146,19 @@ func GetSession(app *app.App) http.HandlerFunc {
 		// Get user_id from context (set by auth middleware)
 		userID, ok := middleware.GetUserIDFromContext(r.Context())
 		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			utils.Unauthorized(w, "Unauthorized")
 			return
 		}
 
 		// Fetch user
-		user, err := sqlite.NewQuery(app.DB).Users.GerUserById(r.Context(), userID)
-		if err == sql.ErrNoRows {
-			http.Error(w, "User not found", http.StatusNotFound)
-			return
-		}
-		if err != nil {
-			log.Printf("Failed to fetch user: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		user := helpers.FetchUser(app, userID, r.Context(), w)
+		if user.UserID == nil {
 			return
 		}
 
 		// Return user response
-		response := models.UserResponse{
-			UserID:    hex.EncodeToString(user.UserID),
-			Email:     user.Email,
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			DOB:       user.Dob,
-			Avatar:    user.Avatar.String,
-			Nickname:  user.Nickname,
-			AboutMe:   user.AboutMe.String,
-			CreatedAt: user.CreatedAt.Time.String(),
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		response := helpers.UserToResponse(user)
+		utils.Write(w, http.StatusOK, response)
 	}
 
 }
@@ -211,8 +172,7 @@ func Logout(app *app.App) http.HandlerFunc {
 		if err != nil {
 			// Even if no session, clear cookie and return success
 			middleware.ClearSessionCookie(w)
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Logged out successfully"))
+			utils.OK(w, "Logged out successfully")
 			return
 		}
 
@@ -224,8 +184,7 @@ func Logout(app *app.App) http.HandlerFunc {
 		// Clear cookie
 		middleware.ClearSessionCookie(w)
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Logged out successfully"))
+		utils.OK(w, "Logged out successfully")
 	}
 
 }
