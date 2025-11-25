@@ -14,11 +14,12 @@ type Middleware func(h http.HandlerFunc, c *sql.DB, l *slog.Logger) http.Handler
 func ChainMiddleware(h http.HandlerFunc, k []string, c *sql.DB, l *slog.Logger) http.HandlerFunc {
 
 	selectMiddle := map[string]Middleware{
-		"auth": AuthMiddleware,
-		"cors": CorsMiddleware,
+		"auth":    AuthMiddleware,
+		"cors":    CorsMiddleware,
+		"recover": RecoveryMiddleware,
 	}
 
-	globalMiddle := []string{"cors"}
+	globalMiddle := []string{"cors", "recover"}
 
 	wrapped := h
 
