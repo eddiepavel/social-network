@@ -14,3 +14,10 @@ sql:
       go:
         package: "db_followers"
         out: "/pkg/db/queries/followers"
+  - engine: "sqlite"
+    queries: ["/pkg/db/queries/followers/requests/requests.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000015_create_follow_requests_table.sql", "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql"]
+    gen:
+      go:
+        package: "db_requests"
+        out: "/pkg/db/queries/followers/requests"

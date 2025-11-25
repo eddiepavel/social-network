@@ -38,11 +38,13 @@ func Setup(app *app.App) http.Handler {
 	authGroup := handler.createGroup(handler.authRoutes, []string{"auth"})
 	publicGroup := handler.createGroup(handler.publicRoutes, []string{})
 	usersGroup := handler.createGroup(handler.userRoutes, []string{"auth"})
+	followersGroup := handler.createGroup(handler.followersRoutes, []string{"auth"})
 
 	mux.Handle("/api/", http.StripPrefix("/api", mux))
 	mux.Handle("/public/", http.StripPrefix("/public", publicGroup))
 	mux.Handle("/auth/", http.StripPrefix("/auth", authGroup))
 	mux.Handle("/users/", http.StripPrefix("/users", usersGroup))
+	mux.Handle("/followers/", http.StripPrefix("/followers", followersGroup))
 
 	// Progress so far:
 	// 1. Grouped endpoints with middleware for easier route management.
@@ -57,7 +59,6 @@ func Setup(app *app.App) http.Handler {
 
 	// Initialize handlers
 	groupsHandler := handlers.NewGroupsHandler(app.DB)
-	followersHandler := handlers.NewFollowersHandler(app.DB)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", healthCheck)
@@ -80,22 +81,6 @@ func Setup(app *app.App) http.Handler {
 	// Route to /api/groups/* for dynamic paths
 
 	mux.HandleFunc("/api/groups/", bb.AuthMiddleware(groupsRouter(groupsHandler)))
-
-	// Followers endpoints (protected)
-	mux.HandleFunc("/api/follow/requests", bb.AuthMiddleware(followersHandler.GetFollowRequests))
-	mux.HandleFunc("/api/follow/accept/", bb.AuthMiddleware(followersHandler.AcceptFollowRequest))
-	mux.HandleFunc("/api/follow/reject/", bb.AuthMiddleware(followersHandler.RejectFollowRequest))
-	mux.HandleFunc("/api/followers/", bb.AuthMiddleware(followersHandler.GetFollowers))
-	mux.HandleFunc("/api/following/", bb.AuthMiddleware(followersHandler.GetFollowing))
-	mux.HandleFunc("/api/follow/", bb.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			followersHandler.FollowUser(w, r)
-		} else if r.Method == http.MethodDelete {
-			followersHandler.UnfollowUser(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
 
 	// TODO: Add more endpoints as features are implemented
 

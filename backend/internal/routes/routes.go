@@ -31,3 +31,14 @@ func (h *Handler) userRoutes() *http.ServeMux {
 
 	return h.Handler
 }
+
+func (h *Handler) followersRoutes() *http.ServeMux {
+
+	h.Handler.HandleFunc("GET /requests", handlers.GetFollowRequests(h.App))
+	h.Handler.HandleFunc("POST /requests/{requestId}", handlers.UpdateFollowRequest(h.App))
+	h.Handler.HandleFunc("POST /{userId}/follow", handlers.FollowUser(h.App))
+	h.Handler.HandleFunc("GET /{userId}/followers", handlers.GetFollowers(h.App))
+	h.Handler.HandleFunc("GET /{userId}/following", handlers.GetFollowing(h.App))
+
+	return h.Handler
+}

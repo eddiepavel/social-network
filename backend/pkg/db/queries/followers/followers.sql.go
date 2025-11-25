@@ -29,3 +29,95 @@ func (q *Queries) CheckIfUserFollows(ctx context.Context, arg CheckIfUserFollows
 	)
 	return i, err
 }
+
+const deleteFollower = `-- name: DeleteFollower :exec
+DELETE FROM followers WHERE follower_id = ? AND followee_id = ?
+`
+
+type DeleteFollowerParams struct {
+	FollowerID []byte
+	FolloweeID []byte
+}
+
+func (q *Queries) DeleteFollower(ctx context.Context, arg DeleteFollowerParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFollower, arg.FollowerID, arg.FolloweeID)
+	return err
+}
+
+const getFollowees = `-- name: GetFollowees :many
+SELECT follower_id, followee_id, status, created_at FROM followers WHERE follower_id = ?
+`
+
+func (q *Queries) GetFollowees(ctx context.Context, followerID []byte) ([]Follower, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowees, followerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Follower
+	for rows.Next() {
+		var i Follower
+		if err := rows.Scan(
+			&i.FollowerID,
+			&i.FolloweeID,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowers = `-- name: GetFollowers :many
+SELECT follower_id, followee_id, status, created_at FROM followers WHERE followee_id = ?
+`
+
+func (q *Queries) GetFollowers(ctx context.Context, followeeID []byte) ([]Follower, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowers, followeeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Follower
+	for rows.Next() {
+		var i Follower
+		if err := rows.Scan(
+			&i.FollowerID,
+			&i.FolloweeID,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const insertFollower = `-- name: InsertFollower :exec
+INSERT INTO followers (follower_id, followee_id) VALUES (?, ?)
+`
+
+type InsertFollowerParams struct {
+	FollowerID []byte
+	FolloweeID []byte
+}
+
+func (q *Queries) InsertFollower(ctx context.Context, arg InsertFollowerParams) error {
+	_, err := q.db.ExecContext(ctx, insertFollower, arg.FollowerID, arg.FolloweeID)
+	return err
+}
