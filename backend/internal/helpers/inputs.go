@@ -24,7 +24,7 @@ func MakeValidateRegister(r *http.Request, d *sql.DB) map[string][]interface{} {
 		"first_name": {"required", "string"},
 		"last_name":  {"required", "string"},
 		"dob":        {"required", "string"},
-		"avatar":     {"required", "string"},
+		"avatar":     {"required", "base64"},
 		"nickname": {"required", "string", func(v interface{}) error {
 			nickname, _ := v.(string)
 			_, err := sqlite.NewQuery(d).Users.GetUserByNickname(r.Context(), nickname)
@@ -44,7 +44,7 @@ func MakeValidateUpdateProfile() map[string][]interface{} {
 		"first_name": {"sometimes", "string"},
 		"last_name":  {"sometimes", "string"},
 		"nickname":   {"sometimes", "string"},
-		"avatar":     {"sometimes", "string"},
+		"avatar":     {"sometimes", "base64"},
 		"about_me":   {"sometimes", "string"},
 	}
 }

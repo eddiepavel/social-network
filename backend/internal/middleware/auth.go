@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -19,7 +18,7 @@ const SessionCookieName = "session_id"
 const SessionDuration = 7 * 24 * time.Hour // 7 days
 
 // AuthMiddleware is middleware that requires a valid session
-func AuthMiddleware(next http.HandlerFunc, db *sql.DB, l *slog.Logger) http.HandlerFunc {
+func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID, err := GetSessionCookie(r)
 		if err != nil {
@@ -27,7 +26,7 @@ func AuthMiddleware(next http.HandlerFunc, db *sql.DB, l *slog.Logger) http.Hand
 			return
 		}
 
-		userID, err := ValidateSession(db, sessionID)
+		userID, err := ValidateSession(m.App.DB, sessionID)
 		if err != nil {
 			log.Printf("Session validation failed: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

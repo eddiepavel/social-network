@@ -8,12 +8,20 @@ import (
 	"strings"
 )
 
-func createGroup(routes func() *http.ServeMux, s []string, app *app.App) http.HandlerFunc {
-	group := middleware.ChainMiddleware(
+type Handler struct {
+	App     *app.App
+	Handler *http.ServeMux
+}
+
+func (h *Handler) createGroup(routes func() *http.ServeMux, middlewares []string) http.HandlerFunc {
+
+	builder := middleware.MiddlewareChain{
+		App: h.App,
+	}
+
+	group := builder.ChainMiddleware(
 		routes().ServeHTTP,
-		s,
-		app.DB,
-		app.Logger,
+		middlewares,
 	)
 
 	return group
@@ -27,9 +35,9 @@ func Setup(app *app.App) http.Handler {
 		Handler: mux,
 	}
 
-	authGroup := createGroup(handler.authRoutes, []string{"auth"}, app)
-	publicGroup := createGroup(handler.publicRoutes, []string{}, app)
-	usersGroup := createGroup(handler.userRoutes, []string{"auth"}, app)
+	authGroup := handler.createGroup(handler.authRoutes, []string{"auth"})
+	publicGroup := handler.createGroup(handler.publicRoutes, []string{})
+	usersGroup := handler.createGroup(handler.userRoutes, []string{"auth"})
 
 	mux.Handle("/api/", http.StripPrefix("/api", mux))
 	mux.Handle("/public/", http.StripPrefix("/public", publicGroup))
@@ -56,7 +64,10 @@ func Setup(app *app.App) http.Handler {
 
 	// Groups endpoints (protected)
 	// Route to /api/groups for both GET (list all) and POST (create)
-	mux.HandleFunc("/api/groups", middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	bb := middleware.MiddlewareChain{
+		App: app,
+	}
+	mux.HandleFunc("/api/groups", bb.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			groupsHandler.GetGroups(w, r)
 		} else if r.Method == http.MethodPost {
@@ -64,18 +75,19 @@ func Setup(app *app.App) http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	}, app.DB, app.Logger))
+	}))
 
 	// Route to /api/groups/* for dynamic paths
-	mux.HandleFunc("/api/groups/", middleware.AuthMiddleware(groupsRouter(groupsHandler), app.DB, app.Logger))
+
+	mux.HandleFunc("/api/groups/", bb.AuthMiddleware(groupsRouter(groupsHandler)))
 
 	// Followers endpoints (protected)
-	mux.HandleFunc("/api/follow/requests", middleware.AuthMiddleware(followersHandler.GetFollowRequests, app.DB, app.Logger))
-	mux.HandleFunc("/api/follow/accept/", middleware.AuthMiddleware(followersHandler.AcceptFollowRequest, app.DB, app.Logger))
-	mux.HandleFunc("/api/follow/reject/", middleware.AuthMiddleware(followersHandler.RejectFollowRequest, app.DB, app.Logger))
-	mux.HandleFunc("/api/followers/", middleware.AuthMiddleware(followersHandler.GetFollowers, app.DB, app.Logger))
-	mux.HandleFunc("/api/following/", middleware.AuthMiddleware(followersHandler.GetFollowing, app.DB, app.Logger))
-	mux.HandleFunc("/api/follow/", middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/follow/requests", bb.AuthMiddleware(followersHandler.GetFollowRequests))
+	mux.HandleFunc("/api/follow/accept/", bb.AuthMiddleware(followersHandler.AcceptFollowRequest))
+	mux.HandleFunc("/api/follow/reject/", bb.AuthMiddleware(followersHandler.RejectFollowRequest))
+	mux.HandleFunc("/api/followers/", bb.AuthMiddleware(followersHandler.GetFollowers))
+	mux.HandleFunc("/api/following/", bb.AuthMiddleware(followersHandler.GetFollowing))
+	mux.HandleFunc("/api/follow/", bb.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			followersHandler.FollowUser(w, r)
 		} else if r.Method == http.MethodDelete {
@@ -83,7 +95,7 @@ func Setup(app *app.App) http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	}, app.DB, app.Logger))
+	}))
 
 	// TODO: Add more endpoints as features are implemented
 

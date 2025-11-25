@@ -1,13 +1,11 @@
 package middleware
 
 import (
-	"database/sql"
-	"log/slog"
 	"net/http"
 )
 
 // CORS middleware to allow frontend requests
-func CorsMiddleware(next http.HandlerFunc, db *sql.DB, l *slog.Logger) http.HandlerFunc {
+func (m *MiddlewareChain) CorsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")

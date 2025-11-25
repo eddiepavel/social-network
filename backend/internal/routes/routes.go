@@ -2,14 +2,8 @@ package routes
 
 import (
 	"net/http"
-	"social-network/app"
 	"social-network/internal/handlers"
 )
-
-type Handler struct {
-	App     *app.App
-	Handler *http.ServeMux
-}
 
 // Authentication endpoints
 func (h *Handler) authRoutes() *http.ServeMux {

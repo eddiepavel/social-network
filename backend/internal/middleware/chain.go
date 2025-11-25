@@ -1,22 +1,25 @@
 package middleware
 
 import (
-	"database/sql"
 	"fmt"
-	"log/slog"
 	"net/http"
+	"social-network/app"
 )
 
-type Middleware func(h http.HandlerFunc, c *sql.DB, l *slog.Logger) http.HandlerFunc
+type Middleware func(h http.HandlerFunc) http.HandlerFunc
+
+type MiddlewareChain struct {
+	App *app.App
+}
 
 // ChainMiddleware applies a sequence of middlewares to an HTTP handler.
 // It combines global middlewares with route-specific middlewares.
-func ChainMiddleware(h http.HandlerFunc, k []string, c *sql.DB, l *slog.Logger) http.HandlerFunc {
+func (m *MiddlewareChain) ChainMiddleware(h http.HandlerFunc, k []string) http.HandlerFunc {
 
 	selectMiddle := map[string]Middleware{
-		"auth":    AuthMiddleware,
-		"cors":    CorsMiddleware,
-		"recover": RecoveryMiddleware,
+		"auth":    m.AuthMiddleware,
+		"cors":    m.CorsMiddleware,
+		"recover": m.RecoveryMiddleware,
 	}
 
 	globalMiddle := []string{"cors", "recover"}
@@ -28,7 +31,7 @@ func ChainMiddleware(h http.HandlerFunc, k []string, c *sql.DB, l *slog.Logger) 
 	for i := len(fullMiddlewareList) - 1; i >= 0; i-- {
 		key := fullMiddlewareList[i]
 		if mw, exists := selectMiddle[key]; exists {
-			wrapped = mw(wrapped, c, l)
+			wrapped = mw(wrapped)
 		} else {
 			fmt.Printf("Middleware %s not found\n", key)
 		}
