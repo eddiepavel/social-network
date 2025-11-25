@@ -101,12 +101,12 @@ func UpdateProfile(app *app.App) http.HandlerFunc {
 		}
 
 		updated, err := sqlite.NewQuery(app.DB).Users.UpdateUser(r.Context(), db_users.UpdateUserParams{
-			user.FirstName,
-			user.LastName,
-			user.Nickname,
-			user.AboutMe,
-			user.Avatar,
-			user.UserID,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Nickname:  user.Nickname,
+			AboutMe:   user.AboutMe,
+			Avatar:    user.Avatar,
+			UserID:    user.UserID,
 		})
 		if err != nil {
 			app.Logger.Error("Failed to update user", "error", err.Error())

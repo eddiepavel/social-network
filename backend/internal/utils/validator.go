@@ -124,6 +124,7 @@ func (v *Validator) ValidateInput(value interface{}, rules []interface{}, key st
 				}
 			case r == "sometimes":
 				if value == nil {
+					rules = nil
 					return nil
 				}
 			case r == "base64":
@@ -183,6 +184,8 @@ func Validate(r *http.Request, inputs map[string][]interface{}, req any) (bool, 
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
 		return false, map[string][]string{"_json": {"bad request"}}
 	}
+
+	defer r.Body.Close()
 
 	if err := json.Unmarshal(bodyBytes, req); err != nil {
 		return false, map[string][]string{"_json": {"bad request"}}
