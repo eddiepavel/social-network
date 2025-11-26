@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"social-network/internal/helpers"
+	"social-network/internal/utils"
 	db_sessions "social-network/pkg/db/queries/sessions"
 	"social-network/pkg/db/sqlite"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,14 +28,14 @@ func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID, err := GetSessionCookie(r)
 		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			utils.Unauthorized(w, "Unauthorized")
 			return
 		}
 
 		userID, err := ValidateSession(m.App.DB, sessionID)
 		if err != nil {
-			log.Printf("Session validation failed: %v", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			m.App.Logger.Error("validation failed", "err", err)
+			utils.Unauthorized(w, "Unauthorized")
 			return
 		}
 
@@ -51,21 +54,41 @@ func GetUserIDFromContext(ctx context.Context) ([]byte, bool) {
 // SetSessionCookie sets a session cookie in the response
 func SetSessionCookie(w http.ResponseWriter, sessionID []byte) {
 	setUuid, _ := helpers.GenerateFromBytes(sessionID)
+	var secure bool
+	var samesite http.SameSite
+	production, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
+	if err != nil {
+		log.Fatal("env corrupted")
+	}
+
+	if production {
+		secure = true
+		samesite = http.SameSiteNoneMode
+	} else {
+		secure = false
+		samesite = http.SameSiteLaxMode
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    setUuid,
 		Path:     "/",
 		MaxAge:   int(SessionDuration.Seconds()),
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
-		SameSite: http.SameSiteLaxMode,
+		Secure:   secure,
+		SameSite: samesite, // Lax for localhost without HTTPS
+		// Don't set Domain - let browser handle it automatically
 	})
 }
 
 // GetSessionCookie retrieves the session cookie from the request
 func GetSessionCookie(r *http.Request) ([]byte, error) {
 	cookie, err := r.Cookie(SessionCookieName)
+	if err != nil {
+		return []byte{}, err
+	}
 	setUuid, _ := helpers.GenerateFromString(cookie.Value)
+
 	if err != nil {
 		return []byte{}, err
 	}
