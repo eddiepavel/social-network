@@ -12,6 +12,7 @@ import type {
 export async function listGroups(): Promise<Group[]> {
   return apiRequest<Group[]>(API_ENDPOINTS.GROUPS, {
     method: 'GET',
+          credentials: 'include',
   });
 }
 
@@ -20,6 +21,7 @@ export async function createGroup(data: CreateGroupRequest): Promise<Group> {
   return apiRequest<Group>(API_ENDPOINTS.GROUPS, {
     method: 'POST',
     body: JSON.stringify(data),
+          credentials: 'include',
   });
 }
 
@@ -27,6 +29,7 @@ export async function createGroup(data: CreateGroupRequest): Promise<Group> {
 export async function getGroupDetails(groupId: string): Promise<GroupDetails> {
   return apiRequest<GroupDetails>(API_ENDPOINTS.GROUP_DETAILS(groupId), {
     method: 'GET',
+          credentials: 'include',
   });
 }
 
@@ -38,6 +41,7 @@ export async function inviteUser(
   return apiRequest<{ message: string }>(API_ENDPOINTS.GROUP_INVITE(groupId), {
     method: 'POST',
     body: JSON.stringify(data),
+          credentials: 'include',
   });
 }
 
@@ -47,6 +51,7 @@ export async function requestToJoin(
 ): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(API_ENDPOINTS.GROUP_REQUEST(groupId), {
     method: 'POST',
+          credentials: 'include',
   });
 }
 
@@ -61,6 +66,7 @@ export async function handleJoinRequest(
     {
       method: 'POST',
       body: JSON.stringify(data),
+            credentials: 'include',
     }
   );
 }

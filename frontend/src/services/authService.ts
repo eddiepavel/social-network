@@ -12,6 +12,7 @@ export async function register(formData: RegisterFormData): Promise<User> {
   return apiRequest<User>(API_ENDPOINTS.REGISTER, {
     method: 'POST',
     body: JSON.stringify(formData),
+      credentials: 'include',
   });
 }
 
@@ -20,6 +21,7 @@ export async function login(credentials: LoginFormData): Promise<User> {
   return apiRequest<User>(API_ENDPOINTS.LOGIN, {
     method: 'POST',
     body: JSON.stringify(credentials),
+      credentials: 'include',
   });
 }
 
@@ -27,6 +29,7 @@ export async function login(credentials: LoginFormData): Promise<User> {
 export async function logout(): Promise<void> {
   return apiRequest<void>(API_ENDPOINTS.LOGOUT, {
     method: 'POST',
+      credentials: 'include',
   });
 }
 
@@ -34,5 +37,6 @@ export async function logout(): Promise<void> {
 export async function getSession(): Promise<User> {
   return apiRequest<User>(API_ENDPOINTS.SESSION, {
     method: 'GET',
+      credentials: 'include',
   });
 }
