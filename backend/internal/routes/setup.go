@@ -9,8 +9,7 @@ import (
 )
 
 type Handler struct {
-	App     *app.App
-	Handler *http.ServeMux
+	App *app.App
 }
 
 func (h *Handler) createGroup(routes func() *http.ServeMux, middlewares []string) http.HandlerFunc {
@@ -31,8 +30,7 @@ func Setup(app *app.App) http.Handler {
 	mux := http.NewServeMux()
 
 	handler := &Handler{
-		App:     app,
-		Handler: mux,
+		App: app,
 	}
 
 	authGroup := handler.createGroup(handler.authRoutes, []string{"auth"})

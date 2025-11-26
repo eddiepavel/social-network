@@ -7,38 +7,42 @@ import (
 
 // Authentication endpoints
 func (h *Handler) authRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
 
-	h.Handler.HandleFunc("GET /session", handlers.GetSession(h.App))
-	h.Handler.HandleFunc("POST /logout", handlers.Logout(h.App))
+	mux.HandleFunc("GET /session", handlers.GetSession(h.App))
+	mux.HandleFunc("POST /logout", handlers.Logout(h.App))
 
-	return h.Handler
+	return mux
 }
 
 // public routes
 func (h *Handler) publicRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
 
-	h.Handler.HandleFunc("POST /register", handlers.Register(h.App))
-	h.Handler.HandleFunc("POST /login", handlers.Login(h.App))
+	mux.HandleFunc("POST /register", handlers.Register(h.App))
+	mux.HandleFunc("POST /login", handlers.Login(h.App))
 
-	return h.Handler
+	return mux
 }
 
 func (h *Handler) userRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
 
-	h.Handler.HandleFunc("GET /{id}", handlers.GetUserProfile(h.App))
-	h.Handler.HandleFunc("PUT /profile", handlers.UpdateProfile(h.App))
-	h.Handler.HandleFunc("PUT /privacy", handlers.UpdatePrivacy(h.App))
+	mux.HandleFunc("GET /{id}", handlers.GetUserProfile(h.App))
+	mux.HandleFunc("PUT /profile", handlers.UpdateProfile(h.App))
+	mux.HandleFunc("PUT /privacy", handlers.UpdatePrivacy(h.App))
 
-	return h.Handler
+	return mux
 }
 
 func (h *Handler) followersRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
 
-	h.Handler.HandleFunc("GET /requests", handlers.GetFollowRequests(h.App))
-	h.Handler.HandleFunc("POST /requests/{requestId}", handlers.UpdateFollowRequest(h.App))
-	h.Handler.HandleFunc("POST /{userId}/follow", handlers.FollowUser(h.App))
-	h.Handler.HandleFunc("GET /{userId}/followers", handlers.GetFollowers(h.App))
-	h.Handler.HandleFunc("GET /{userId}/following", handlers.GetFollowing(h.App))
+	mux.HandleFunc("GET /requests", handlers.GetFollowRequests(h.App))
+	mux.HandleFunc("POST /requests/{requestId}/respond", handlers.UpdateFollowRequest(h.App))
+	mux.HandleFunc("POST /{userId}/follow", handlers.FollowUser(h.App))
+	mux.HandleFunc("GET /{userId}/followers", handlers.GetFollowers(h.App))
+	mux.HandleFunc("GET /{userId}/following", handlers.GetFollowing(h.App))
 
-	return h.Handler
+	return mux
 }
