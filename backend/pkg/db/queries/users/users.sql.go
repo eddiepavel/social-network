@@ -24,7 +24,7 @@ type CreateUserParams struct {
 	LastName     string
 	Dob          string
 	Avatar       sql.NullString
-	Nickname     string
+	Nickname     sql.NullString
 	AboutMe      sql.NullString
 }
 
@@ -110,7 +110,7 @@ const getUserByNickname = `-- name: GetUserByNickname :one
 SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at FROM users WHERE nickname = ? LIMIT 1
 `
 
-func (q *Queries) GetUserByNickname(ctx context.Context, nickname string) (User, error) {
+func (q *Queries) GetUserByNickname(ctx context.Context, nickname sql.NullString) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByNickname, nickname)
 	var i User
 	err := row.Scan(
@@ -136,7 +136,7 @@ UPDATE users SET first_name = ?, last_name = ?, nickname = ?, about_me = ?, avat
 type UpdateUserParams struct {
 	FirstName string
 	LastName  string
-	Nickname  string
+	Nickname  sql.NullString
 	AboutMe   sql.NullString
 	Avatar    sql.NullString
 	UserID    []byte
@@ -173,7 +173,7 @@ UPDATE users SET is_public = ? WHERE user_id = ? RETURNING user_id, email, passw
 `
 
 type UpdateUserPrivacyParams struct {
-	IsPublic sql.NullBool
+	IsPublic bool
 	UserID   []byte
 }
 

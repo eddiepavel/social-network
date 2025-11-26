@@ -3,7 +3,6 @@ package helpers
 import (
 	"context"
 	"database/sql"
-	"encoding/hex"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/models"
@@ -43,9 +42,9 @@ func UpdateUser(user db_users.User, req models.UpdateProfileRequest) db_users.Us
 		user.Avatar.String = *req.Avatar
 		user.Avatar.Valid = true
 	}
-	if req.Nickname != nil || *req.Nickname == user.Nickname {
+	if req.Nickname != nil || *req.Nickname == user.Nickname.String {
 		empty--
-		user.Nickname = *req.Nickname
+		user.Nickname = sql.NullString{Valid: true, String: *req.Nickname}
 	}
 	if req.AboutMe != nil || *req.AboutMe == user.AboutMe.String {
 		empty--
@@ -72,12 +71,15 @@ func AccessToProfile(currentUserID []byte, targetUser db_users.User, app *app.Ap
 	}
 
 	// Public profiles are visible to everyone
-	if targetUser.IsPublic.Valid && targetUser.IsPublic.Bool {
+	if targetUser.IsPublic {
 		return true, nil
 	}
 
 	// For private profiles, check if current user is a follower
-	_, err := sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{currentUserID, targetUser.UserID})
+	_, err := sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{
+		FollowerID: currentUserID, FolloweeID: targetUser.UserID,
+	})
+
 	if err != nil {
 		return false, err
 	}
@@ -86,8 +88,9 @@ func AccessToProfile(currentUserID []byte, targetUser db_users.User, app *app.Ap
 }
 
 func UserToResponse(user db_users.User) models.UserResponse {
+	setUuid, _ := GenerateFromBytes(user.UserID)
 	return models.UserResponse{
-		UserID:    hex.EncodeToString(user.UserID),
+		UserID:    setUuid,
 		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
@@ -98,14 +101,19 @@ func UserToResponse(user db_users.User) models.UserResponse {
 			}
 			return ""
 		}(),
-		Nickname: user.Nickname,
+		Nickname: func() string {
+			if user.Nickname.Valid {
+				return user.Nickname.String
+			}
+			return ""
+		}(),
 		AboutMe: func() string {
 			if user.AboutMe.Valid {
 				return user.AboutMe.String
 			}
 			return ""
 		}(),
-		IsPublic:  user.IsPublic.Bool,
+		IsPublic:  user.IsPublic,
 		CreatedAt: user.CreatedAt.Time.String(),
 	}
 }

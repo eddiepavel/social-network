@@ -28,7 +28,7 @@ func (h *Handler) publicRoutes() *http.ServeMux {
 func (h *Handler) userRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /{id}", handlers.GetUserProfile(h.App))
+	mux.HandleFunc("GET /profile/{id}", handlers.GetUserProfile(h.App))
 	mux.HandleFunc("PUT /profile", handlers.UpdateProfile(h.App))
 	mux.HandleFunc("PUT /privacy", handlers.UpdatePrivacy(h.App))
 

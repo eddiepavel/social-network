@@ -22,8 +22,8 @@ type FollowerResponse struct {
 	UserID    string    `json:"user_id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
-	Avatar    *string   `json:"avatar"`
-	Nickname  *string   `json:"nickname"`
+	Avatar    *string   `json:"avatar,omitempty"`
+	Nickname  *string   `json:"nickname,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -52,7 +52,7 @@ func FollowUser(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		userID, err := hex.DecodeString(userIDHex)
+		userID, err := helpers.GenerateFromString(userIDHex)
 		if err != nil {
 			utils.BadRequest(w, errors.New("invalid user ID format"))
 			return
@@ -69,7 +69,7 @@ func FollowUser(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if user.IsPublic.Bool {
+		if user.IsPublic {
 			_, err := sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(),
 				db_followers.CheckIfUserFollowsParams{
 					FollowerID: currentUserID,
@@ -142,7 +142,24 @@ func FollowUser(app *app.App) http.HandlerFunc {
 				utils.OK(w, "Follow request cancelled successfully")
 				return
 			}
+		} else {
+			if err != nil {
+				utils.Internal(w, err)
+				return
+			}
+			err := sqlite.NewQuery(app.DB).Followers.DeleteFollower(r.Context(),
+				db_followers.DeleteFollowerParams{
+					FollowerID: currentUserID,
+					FolloweeID: user.UserID,
+				})
+			if err != nil {
+				utils.Internal(w, err)
+				return
+			}
+			utils.OK(w, "Unfollowed successfully")
+			return
 		}
+
 	}
 }
 
@@ -169,6 +186,7 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 			})
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.NotFound(w)
+			return
 		}
 		if err != nil {
 			utils.Internal(w, err)
@@ -179,15 +197,37 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 
 		err = json.NewDecoder(r.Body).Decode(&req)
 
-		if req["status"].(string) == "accepted" {
-			err = sqlite.NewQuery(app.DB).FollowRequests.AcceptFollowRequest(r.Context(), request.ID)
+		if err != nil {
+			utils.BadRequest(w, errors.New("bad request"))
+			return
+		}
+
+		status, ok := req["status"].(string)
+
+		if !ok {
+			utils.BadRequest(w, errors.New("bad request"))
+			return
+		}
+
+		if status == "accepted" {
+			err = sqlite.NewQuery(app.DB).FollowRequests.DeleteFollowRequest(r.Context(), request.ID)
 			if err != nil {
 				utils.Internal(w, err)
 				return
 			}
 
+			err = sqlite.NewQuery(app.DB).Followers.InsertFollower(r.Context(), db_followers.InsertFollowerParams{
+				FollowerID: request.FollowerID,
+				FolloweeID: request.FolloweeID,
+			})
+
+			if err != nil {
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+
 			utils.OK(w, "Follow request accepted")
-		} else if req["status"].(string) == "rejected" {
+		} else if status == "rejected" {
 			err = sqlite.NewQuery(app.DB).FollowRequests.DeleteFollowRequest(r.Context(), request.ID)
 			if err != nil {
 				utils.Internal(w, err)
@@ -218,7 +258,7 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		userID, err := hex.DecodeString(userIDHex)
+		userID, err := helpers.GenerateFromString(userIDHex)
 		if err != nil {
 			utils.BadRequest(w, errors.New("invalid user ID format"))
 			return
@@ -229,7 +269,7 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if !(string(user.UserID) == string(currentUserID) || user.IsPublic.Bool) {
+		if !(string(user.UserID) == string(currentUserID) || user.IsPublic) {
 			_, err = sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(),
 				db_followers.CheckIfUserFollowsParams{
 					FollowerID: currentUserID,
@@ -258,8 +298,9 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 				utils.Internal(w, err)
 				return
 			}
+			getUuid, _ := helpers.GenerateFromBytes(user.UserID)
 			followersList = append(followersList, FollowerResponse{
-				UserID:    hex.EncodeToString(user.UserID),
+				UserID:    getUuid,
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
 				Avatar: func() *string {
@@ -268,7 +309,12 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 					}
 					return nil
 				}(),
-				Nickname: &user.Nickname,
+				Nickname: func() *string {
+					if user.Nickname.Valid {
+						return &user.Nickname.String
+					}
+					return nil
+				}(),
 				CreatedAt: func() time.Time {
 					if follower.CreatedAt.Valid {
 						return follower.CreatedAt.Time
@@ -299,7 +345,7 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		userID, err := hex.DecodeString(userIDHex)
+		userID, err := helpers.GenerateFromString(userIDHex)
 		if err != nil {
 			utils.BadRequest(w, errors.New("invalid user ID format"))
 			return
@@ -310,7 +356,7 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if !(string(user.UserID) == string(currentUserID) || user.IsPublic.Bool) {
+		if !(string(user.UserID) == string(currentUserID) || user.IsPublic) {
 			_, err = sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(),
 				db_followers.CheckIfUserFollowsParams{
 					FollowerID: currentUserID,
@@ -334,13 +380,14 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 		var followersList []FollowerResponse
 
 		for _, follower := range followers {
-			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), follower.FollowerID)
+			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), follower.FolloweeID)
 			if err != nil {
 				utils.Internal(w, err)
 				return
 			}
+			getUuid, _ := helpers.GenerateFromBytes(user.UserID)
 			followersList = append(followersList, FollowerResponse{
-				UserID:    hex.EncodeToString(user.UserID),
+				UserID:    getUuid,
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
 				Avatar: func() *string {
@@ -349,7 +396,12 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 					}
 					return nil
 				}(),
-				Nickname: &user.Nickname,
+				Nickname: func() *string {
+					if user.Nickname.Valid {
+						return &user.Nickname.String
+					}
+					return nil
+				}(),
 				CreatedAt: func() time.Time {
 					if follower.CreatedAt.Valid {
 						return follower.CreatedAt.Time

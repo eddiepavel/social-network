@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"social-network/internal/helpers"
+	db_sessions "social-network/pkg/db/queries/sessions"
+	"social-network/pkg/db/sqlite"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,10 +49,11 @@ func GetUserIDFromContext(ctx context.Context) ([]byte, bool) {
 }
 
 // SetSessionCookie sets a session cookie in the response
-func SetSessionCookie(w http.ResponseWriter, sessionID string) {
+func SetSessionCookie(w http.ResponseWriter, sessionID []byte) {
+	setUuid, _ := helpers.GenerateFromBytes(sessionID)
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
-		Value:    sessionID,
+		Value:    setUuid,
 		Path:     "/",
 		MaxAge:   int(SessionDuration.Seconds()),
 		HttpOnly: true,
@@ -59,12 +63,13 @@ func SetSessionCookie(w http.ResponseWriter, sessionID string) {
 }
 
 // GetSessionCookie retrieves the session cookie from the request
-func GetSessionCookie(r *http.Request) (string, error) {
+func GetSessionCookie(r *http.Request) ([]byte, error) {
 	cookie, err := r.Cookie(SessionCookieName)
+	setUuid, _ := helpers.GenerateFromString(cookie.Value)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
-	return cookie.Value, nil
+	return setUuid, nil
 }
 
 // ClearSessionCookie clears the session cookie (for logout)
@@ -81,25 +86,26 @@ func ClearSessionCookie(w http.ResponseWriter) {
 }
 
 // CreateSession creates a new session for a user
-func CreateSession(db *sql.DB, userID []byte) (string, error) {
-	sessionID := uuid.New().String()
+func CreateSession(db *sql.DB, userID []byte) (db_sessions.Session, error) {
+	sessionID, _ := uuid.New().MarshalBinary()
 	expiresAt := time.Now().Add(SessionDuration)
 
-	query := `
-		INSERT INTO sessions (session_id, user_id, active, expires_at)
-		VALUES (?, ?, 1, ?)
-	`
+	session, err := sqlite.NewQuery(db).Sessions.CreateSession(context.Background(),
+		db_sessions.CreateSessionParams{
+			SessionID: sessionID,
+			UserID:    userID,
+			ExpiresAt: expiresAt,
+		})
 
-	_, err := db.Exec(query, sessionID, userID, expiresAt)
 	if err != nil {
-		return "", fmt.Errorf("failed to create session: %w", err)
+		return db_sessions.Session{}, err
 	}
 
-	return sessionID, nil
+	return session, nil
 }
 
 // ValidateSession checks if a session is valid and returns the user_id
-func ValidateSession(db *sql.DB, sessionID string) ([]byte, error) {
+func ValidateSession(db *sql.DB, sessionID []byte) ([]byte, error) {
 	var userID []byte
 	var active bool
 	var expiresAt time.Time
@@ -130,8 +136,8 @@ func ValidateSession(db *sql.DB, sessionID string) ([]byte, error) {
 }
 
 // InvalidateSession marks a session as inactive (for logout)
-func InvalidateSession(db *sql.DB, sessionID string) error {
-	query := `UPDATE sessions SET active = 0 WHERE session_id = ?`
+func InvalidateSession(db *sql.DB, sessionID []byte) error {
+	query := `DELETE FROM sessions WHERE session_id = ?`
 
 	_, err := db.Exec(query, sessionID)
 	if err != nil {

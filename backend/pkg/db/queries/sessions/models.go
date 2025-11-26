@@ -2,20 +2,19 @@
 // versions:
 //   sqlc v1.30.0
 
-package db_requests
+package db_sessions
 
 import (
 	"database/sql"
 	"time"
 )
 
-type FollowRequest struct {
-	ID          int64
-	FollowerID  []byte
-	FolloweeID  []byte
-	Status      sql.NullString
-	CreatedAt   time.Time
-	RespondedAt interface{}
+type Session struct {
+	SessionID []byte
+	UserID    []byte
+	Active    sql.NullBool
+	CreatedAt sql.NullTime
+	ExpiresAt time.Time
 }
 
 type User struct {

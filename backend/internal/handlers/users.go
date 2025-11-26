@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -33,7 +32,7 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		targetUserID, err := hex.DecodeString(targetUserIDHex)
+		targetUserID, err := helpers.GenerateFromString(targetUserIDHex)
 		if err != nil {
 			utils.BadRequest(w, err)
 			return
@@ -47,17 +46,18 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 
 		// Check if user can view this profile
 		access, err := helpers.AccessToProfile(currentUserID, user, app, r)
+
+		if !access && errors.Is(err, sql.ErrNoRows) {
+			app.Logger.Error("Error checking profile access", "error", err)
+			utils.Unauthorized(w, "you have no access to view this user profile")
+			return
+		}
+
 		if err != nil {
 			app.Logger.Error("Error checking profile access", "error", err)
 			utils.Internal(w, err)
 			return
 		}
-
-		if !access {
-			utils.Forbidden(w)
-			return
-		}
-
 		// Return user response
 		response := helpers.UserToResponse(user)
 
@@ -85,7 +85,7 @@ func UpdateProfile(app *app.App) http.HandlerFunc {
 		// Parse request body
 		var req models.UpdateProfileRequest
 
-		inputs := helpers.MakeValidateUpdateProfile()
+		inputs := helpers.ValidateUpdateProfile.Build(r, app)
 
 		ok, errValidation := utils.Validate(r, inputs, &req)
 
@@ -140,7 +140,7 @@ func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Update privacy setting
-		user, err := sqlite.NewQuery(app.DB).Users.UpdateUserPrivacy(r.Context(), db_users.UpdateUserPrivacyParams{UserID: userID})
+		user, err := sqlite.NewQuery(app.DB).Users.UpdateUserPrivacy(r.Context(), db_users.UpdateUserPrivacyParams{IsPublic: req.IsPublic, UserID: userID})
 		if err == sql.ErrNoRows {
 			utils.NotFound(w)
 			return

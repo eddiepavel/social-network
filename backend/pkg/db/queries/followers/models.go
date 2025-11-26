@@ -11,6 +11,5 @@ import (
 type Follower struct {
 	FollowerID []byte
 	FolloweeID []byte
-	Status     string
 	CreatedAt  sql.NullTime
 }

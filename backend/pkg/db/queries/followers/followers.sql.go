@@ -10,7 +10,7 @@ import (
 )
 
 const checkIfUserFollows = `-- name: CheckIfUserFollows :one
-SELECT follower_id, followee_id, status, created_at FROM followers WHERE follower_id = ? AND followee_id = ?
+SELECT follower_id, followee_id, created_at FROM followers WHERE follower_id = ? AND followee_id = ?
 `
 
 type CheckIfUserFollowsParams struct {
@@ -21,12 +21,7 @@ type CheckIfUserFollowsParams struct {
 func (q *Queries) CheckIfUserFollows(ctx context.Context, arg CheckIfUserFollowsParams) (Follower, error) {
 	row := q.db.QueryRowContext(ctx, checkIfUserFollows, arg.FollowerID, arg.FolloweeID)
 	var i Follower
-	err := row.Scan(
-		&i.FollowerID,
-		&i.FolloweeID,
-		&i.Status,
-		&i.CreatedAt,
-	)
+	err := row.Scan(&i.FollowerID, &i.FolloweeID, &i.CreatedAt)
 	return i, err
 }
 
@@ -45,7 +40,7 @@ func (q *Queries) DeleteFollower(ctx context.Context, arg DeleteFollowerParams) 
 }
 
 const getFollowees = `-- name: GetFollowees :many
-SELECT follower_id, followee_id, status, created_at FROM followers WHERE follower_id = ?
+SELECT follower_id, followee_id, created_at FROM followers WHERE follower_id = ?
 `
 
 func (q *Queries) GetFollowees(ctx context.Context, followerID []byte) ([]Follower, error) {
@@ -57,12 +52,7 @@ func (q *Queries) GetFollowees(ctx context.Context, followerID []byte) ([]Follow
 	var items []Follower
 	for rows.Next() {
 		var i Follower
-		if err := rows.Scan(
-			&i.FollowerID,
-			&i.FolloweeID,
-			&i.Status,
-			&i.CreatedAt,
-		); err != nil {
+		if err := rows.Scan(&i.FollowerID, &i.FolloweeID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -77,7 +67,7 @@ func (q *Queries) GetFollowees(ctx context.Context, followerID []byte) ([]Follow
 }
 
 const getFollowers = `-- name: GetFollowers :many
-SELECT follower_id, followee_id, status, created_at FROM followers WHERE followee_id = ?
+SELECT follower_id, followee_id, created_at FROM followers WHERE followee_id = ?
 `
 
 func (q *Queries) GetFollowers(ctx context.Context, followeeID []byte) ([]Follower, error) {
@@ -89,12 +79,7 @@ func (q *Queries) GetFollowers(ctx context.Context, followeeID []byte) ([]Follow
 	var items []Follower
 	for rows.Next() {
 		var i Follower
-		if err := rows.Scan(
-			&i.FollowerID,
-			&i.FolloweeID,
-			&i.Status,
-			&i.CreatedAt,
-		); err != nil {
+		if err := rows.Scan(&i.FollowerID, &i.FolloweeID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

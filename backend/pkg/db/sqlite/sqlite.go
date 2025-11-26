@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	db_followers "social-network/pkg/db/queries/followers"
 	db_requests "social-network/pkg/db/queries/followers/requests"
+	db_sessions "social-network/pkg/db/queries/sessions"
 	db_users "social-network/pkg/db/queries/users"
 	"sort"
 	"strings"
@@ -30,11 +31,15 @@ type Transactions struct {
 	Users          *db_users.Queries
 	Followers      *db_followers.Queries
 	FollowRequests *db_requests.Queries
+	Sessions       *db_sessions.Queries
 }
 
 func NewQuery(db *sql.DB) *Transactions {
 	return &Transactions{
 		Users: db_users.New(db),
+		Followers: db_followers.New(db),
+		FollowRequests: db_requests.New(db),
+		Sessions: db_sessions.New(db),
 	}
 }
 

@@ -1,0 +1,285 @@
+{
+	"info": {
+		"_postman_id": "585ad2bd-df1e-41ee-aedf-b08c07b9074c",
+		"name": "Social Network",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28927006"
+	},
+	"item": [
+		{
+			"name": "Public",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/public/register",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"public",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/public/login",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"public",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{url}}/auth/logout",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Profile",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}"
+						},
+						"url": {
+							"raw": "{{url}}/users/profile/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"profile",
+								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Privacy",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"is_public\": false\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/users/privacy",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"privacy"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"first_name\": \"tzitzikas\",\r\n    \"last_name\": \"MERMIGAS\",\r\n    \"nickname\": \"gg\",\r\n    \"about_me\": \"gg2\",\r\n    \"avatar\" : \"\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/users/profile",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Follow",
+			"item": [
+				{
+					"name": "Follow User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/follow",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
+								"follow"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Following",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/following",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
+								"following"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Followers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/followers",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
+								"followers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Follow respond",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"status\": \"accepted\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/followers/requests/4/respond",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"requests",
+								"4",
+								"respond"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Follow Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/followers/requests",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"requests"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

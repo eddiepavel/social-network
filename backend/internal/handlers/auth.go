@@ -26,7 +26,7 @@ func Register(app *app.App) http.HandlerFunc {
 
 		var req models.CreateUserRequest
 
-		inputs := helpers.MakeValidateRegister(r, app.DB)
+		inputs := helpers.ValidateRegister.Build(r, app)
 
 		ok, errValidation := utils.Validate(r, inputs, &req)
 
@@ -60,7 +60,7 @@ func Register(app *app.App) http.HandlerFunc {
 			LastName:     req.LastName,
 			Dob:          req.DOB,
 			Avatar:       sql.NullString{String: req.Avatar, Valid: true},
-			Nickname:     req.Nickname,
+			Nickname:     sql.NullString{String: req.Nickname, Valid: true},
 			AboutMe:      sql.NullString{String: req.AboutMe, Valid: true},
 		})
 
@@ -71,7 +71,7 @@ func Register(app *app.App) http.HandlerFunc {
 		}
 
 		// Create session for auto-login
-		sessionID, err := middleware.CreateSession(app.DB, transaction.UserID)
+		session, err := middleware.CreateSession(app.DB, transaction.UserID)
 		if err != nil {
 			app.Logger.Error("failed to create session", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -79,7 +79,7 @@ func Register(app *app.App) http.HandlerFunc {
 		}
 
 		// Set session cookie
-		middleware.SetSessionCookie(w, sessionID)
+		middleware.SetSessionCookie(w, session.SessionID)
 
 		// return user response
 		response := helpers.UserToResponse(transaction)
@@ -122,16 +122,36 @@ func Login(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		// Create session
-		sessionID, err := middleware.CreateSession(app.DB, transaction.UserID)
-		if err != nil {
-			app.Logger.Error("Failed to create session", "error", err)
+		// Check if session exists for user
+		session, err := sqlite.NewQuery(app.DB).Sessions.GetSessionByUserID(r.Context(), transaction.UserID)
+		// If no session exists OR session is invalid, create a new one
+		if errors.Is(err, sql.ErrNoRows) {
+			// No session exists, create new one
+			session, err = middleware.CreateSession(app.DB, transaction.UserID)
+			if err != nil {
+				app.Logger.Error("Failed to create session", "error", err)
+				utils.Internal(w, err)
+				return
+			}
+		} else if err != nil {
+			// Database error
 			utils.Internal(w, err)
 			return
+		} else {
+			// Session exists, validate it
+			_, err = middleware.ValidateSession(app.DB, session.SessionID)
+			if err != nil {
+				// Session exists but is invalid/expired, create new one
+				session, err = middleware.CreateSession(app.DB, transaction.UserID)
+				if err != nil {
+					app.Logger.Error("Failed to create session", "error", err)
+					utils.Internal(w, err)
+					return
+				}
+			}
 		}
-
 		// Set session cookie
-		middleware.SetSessionCookie(w, sessionID)
+		middleware.SetSessionCookie(w, session.SessionID)
 
 		// Return user response
 		response := helpers.UserToResponse(transaction)
