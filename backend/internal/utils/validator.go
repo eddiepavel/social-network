@@ -48,9 +48,6 @@ func (v *Validator) ValidateEmail(value interface{}) error {
 		return errors.New("value is not a string")
 	}
 	str = strings.TrimSpace(str)
-	if str == "" {
-		return errors.New("email is required")
-	}
 	if _, err := mail.ParseAddress(str); err != nil {
 		return errors.New("invalid email format")
 	}

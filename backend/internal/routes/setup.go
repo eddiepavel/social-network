@@ -33,6 +33,12 @@ func Setup(app *app.App) http.Handler {
 		App: app,
 	}
 
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
 	authGroup := handler.createGroup(handler.authRoutes, []string{"auth"})
 	publicGroup := handler.createGroup(handler.publicRoutes, []string{})
 	usersGroup := handler.createGroup(handler.userRoutes, []string{"auth"})
@@ -44,29 +50,15 @@ func Setup(app *app.App) http.Handler {
 	mux.Handle("/users/", http.StripPrefix("/users", usersGroup))
 	mux.Handle("/followers/", http.StripPrefix("/followers", followersGroup))
 
-	// Progress so far:
-	// 1. Grouped endpoints with middleware for easier route management.
-	// 2. Planning to move query logic from handlers/middleware to pkg/db using sqlc (see new YAML file).
-	// 3. Added .env helper for consistent environment variable usage.
-	// 4. Database migration logic needs refactoring.... migration paths should be fixed and not depend on execution locations.
-	// 5. App struct that wraps entire application with packages that are needed throughout request lifecycle.
-
-	// Disclaimer:
-	// The app requires significant refactoring for better organization (aiming for a mini-framework structure).
-	// Error responses should be standardized to JSON for all REST API endpoints, instead of plain text.
-
 	// Initialize handlers
 	groupsHandler := handlers.NewGroupsHandler(app.DB)
-
-	// Health check endpoint
-	mux.HandleFunc("/health", healthCheck)
 
 	// Groups endpoints (protected)
 	// Route to /api/groups for both GET (list all) and POST (create)
 	bb := middleware.MiddlewareChain{
 		App: app,
 	}
-	mux.HandleFunc("/api/groups", bb.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/groups", bb.ChainMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			groupsHandler.GetGroups(w, r)
 		} else if r.Method == http.MethodPost {
@@ -74,21 +66,15 @@ func Setup(app *app.App) http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	}))
+	}, []string{"auth"}))
 
 	// Route to /api/groups/* for dynamic paths
 
-	mux.HandleFunc("/api/groups/", bb.AuthMiddleware(groupsRouter(groupsHandler)))
+	mux.HandleFunc("/api/groups/", bb.ChainMiddleware(groupsRouter(groupsHandler), []string{"auth"}))
 
 	// TODO: Add more endpoints as features are implemented
 
 	return mux
-}
-
-// healthCheck is a simple health check endpoint
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
 }
 
 // groupsRouter routes group-related requests to the appropriate handler

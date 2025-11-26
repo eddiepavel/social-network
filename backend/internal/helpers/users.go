@@ -29,24 +29,24 @@ func FetchUser(app *app.App, userID []byte, ctx context.Context, w http.Response
 
 func UpdateUser(user db_users.User, req models.UpdateProfileRequest) db_users.User {
 	empty := 5
-	if req.FirstName != nil || *req.FirstName == user.FirstName {
+	if req.FirstName != nil && *req.FirstName != user.FirstName {
 		empty--
 		user.FirstName = *req.FirstName
 	}
-	if req.LastName != nil || *req.LastName == user.LastName {
+	if req.LastName != nil && *req.LastName != user.LastName {
 		empty--
 		user.LastName = *req.LastName
 	}
-	if req.Avatar != nil || *req.Avatar == user.Avatar.String {
+	if req.Avatar != nil && *req.Avatar != user.Avatar.String {
 		empty--
 		user.Avatar.String = *req.Avatar
 		user.Avatar.Valid = true
 	}
-	if req.Nickname != nil || *req.Nickname == user.Nickname.String {
+	if req.Nickname != nil && *req.Nickname != user.Nickname.String {
 		empty--
 		user.Nickname = sql.NullString{Valid: true, String: *req.Nickname}
 	}
-	if req.AboutMe != nil || *req.AboutMe == user.AboutMe.String {
+	if req.AboutMe != nil && *req.AboutMe != user.AboutMe.String {
 		empty--
 		user.AboutMe.String = *req.AboutMe
 		user.AboutMe.Valid = true

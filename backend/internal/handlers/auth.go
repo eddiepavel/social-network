@@ -31,7 +31,7 @@ func Register(app *app.App) http.HandlerFunc {
 		ok, errValidation := utils.Validate(r, inputs, &req)
 
 		if !ok {
-			utils.Error(w, http.StatusBadRequest, "400", "validation error", errValidation)
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
 			return
 		}
 

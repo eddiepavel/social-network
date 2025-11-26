@@ -57,19 +57,19 @@ func BadRequest(w http.ResponseWriter, err error) {
 }
 
 func Unauthorized(w http.ResponseWriter, reason string) {
-	Error(w, http.StatusUnauthorized, "unauthorized", "Authentication required.", reason)
+	Error(w, http.StatusUnauthorized, "401", "Authentication required.", reason)
 }
 
 func Forbidden(w http.ResponseWriter) {
-	Error(w, http.StatusForbidden, "forbidden", "You don't have access to this resource.", nil)
+	Error(w, http.StatusForbidden, "403", "You don't have access to this resource.", nil)
 }
 
 func NotFound(w http.ResponseWriter) {
-	Error(w, http.StatusNotFound, "not_found", "Resource not found.", nil)
+	Error(w, http.StatusNotFound, "404", "Resource not found.", nil)
 }
 
 func Internal(w http.ResponseWriter, err error) {
-	Error(w, http.StatusInternalServerError, "internal", "Something went wrong.", errText(err))
+	Error(w, http.StatusInternalServerError, "500", "Something went wrong.", errText(err))
 }
 
 func errText(err error) string {

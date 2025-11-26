@@ -18,7 +18,7 @@ type RegisterValidator struct{}
 
 func (rv RegisterValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
-		"email": {"required", "email", "string", func(v interface{}) error {
+		"email": {"required", "email", func(v interface{}) error {
 			email, _ := v.(string)
 			_, err := sqlite.NewQuery(app.DB).Users.GetUserByEmail(r.Context(), email)
 
