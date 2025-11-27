@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,14 +29,21 @@ func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID, err := GetSessionCookie(r)
 		if err != nil {
+			m.App.Logger.Error("cookie validation failed", "err", err)
 			utils.Unauthorized(w, "Unauthorized")
 			return
 		}
 
 		userID, err := ValidateSession(m.App.DB, sessionID)
 		if err != nil {
-			m.App.Logger.Error("validation failed", "err", err)
+			m.App.Logger.Error("user validation failed", "err", err)
 			utils.Unauthorized(w, "Unauthorized")
+			//always delete session if expired after response
+			if userID != nil {
+				if err := InvalidateSession(m.App.DB, userID); err != nil {
+					m.App.Logger.Error("failed to delete session", "err", err)
+				}
+			}
 			return
 		}
 
@@ -87,11 +95,13 @@ func GetSessionCookie(r *http.Request) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	setUuid, _ := helpers.GenerateFromString(cookie.Value)
+
+	setUuid, err := helpers.GenerateFromString(cookie.Value)
 
 	if err != nil {
-		return []byte{}, err
+		return nil, errors.New("invalid cookie")
 	}
+
 	return setUuid, nil
 }
 
@@ -129,40 +139,28 @@ func CreateSession(db *sql.DB, userID []byte) (db_sessions.Session, error) {
 
 // ValidateSession checks if a session is valid and returns the user_id
 func ValidateSession(db *sql.DB, sessionID []byte) ([]byte, error) {
-	var userID []byte
-	var active bool
-	var expiresAt time.Time
 
-	query := `
-		SELECT user_id, active, expires_at
-		FROM sessions
-		WHERE session_id = ?
-	`
+	validate, err := sqlite.NewQuery(db).Sessions.ValidateSession(context.Background(), sessionID)
 
-	err := db.QueryRow(query, sessionID).Scan(&userID, &active, &expiresAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("session not found")
 	}
-	if err != nil {
-		return nil, fmt.Errorf("database error: %w", err)
-	}
 
-	if !active {
+	if !validate.Active.Bool || !validate.Active.Valid {
 		return nil, fmt.Errorf("session is not active")
 	}
 
-	if time.Now().After(expiresAt) {
-		return nil, fmt.Errorf("session has expired")
+	if time.Now().After(validate.ExpiresAt) && !errors.Is(err, sql.ErrNoRows) {
+		return validate.SessionID, fmt.Errorf("session has expired")
 	}
 
-	return userID, nil
+	return validate.UserID, nil
 }
 
 // InvalidateSession marks a session as inactive (for logout)
 func InvalidateSession(db *sql.DB, sessionID []byte) error {
-	query := `DELETE FROM sessions WHERE session_id = ?`
+	err := sqlite.NewQuery(db).Sessions.InvalidateSession(context.Background(), sessionID)
 
-	_, err := db.Exec(query, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to invalidate session: %w", err)
 	}

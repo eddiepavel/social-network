@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"social-network/app"
@@ -134,8 +133,13 @@ func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
 
 		// Parse request body
 		var req models.UpdatePrivacyRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			utils.BadRequest(w, err)
+
+		inputs := helpers.ValidatePrivacy.Build(r, app)
+
+		ok, errorValidation := utils.Validate(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errorValidation)
 			return
 		}
 

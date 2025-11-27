@@ -49,3 +49,32 @@ func (q *Queries) GetSessionByUserID(ctx context.Context, userID []byte) (Sessio
 	)
 	return i, err
 }
+
+const invalidateSession = `-- name: InvalidateSession :exec
+DELETE FROM sessions WHERE session_id = ?
+`
+
+func (q *Queries) InvalidateSession(ctx context.Context, sessionID []byte) error {
+	_, err := q.db.ExecContext(ctx, invalidateSession, sessionID)
+	return err
+}
+
+const validateSession = `-- name: ValidateSession :one
+SELECT session_id, user_id, active, created_at, expires_at
+FROM sessions
+WHERE session_id = ?
+LIMIT 1
+`
+
+func (q *Queries) ValidateSession(ctx context.Context, sessionID []byte) (Session, error) {
+	row := q.db.QueryRowContext(ctx, validateSession, sessionID)
+	var i Session
+	err := row.Scan(
+		&i.SessionID,
+		&i.UserID,
+		&i.Active,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}

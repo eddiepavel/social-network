@@ -75,6 +75,17 @@ func (v *Validator) Required(value interface{}, key string) error {
 	return nil
 }
 
+func (v *Validator) IsBoolean(value interface{}, key string) error {
+
+	_, ok := value.(bool)
+
+	if !ok {
+		return errors.New(key + " must be a boolean")
+	}
+
+	return nil
+}
+
 // helper: fetch nested keys like "user.email"
 func getByPath(m map[string]any, path string) (any, bool) {
 	cur := any(m)
@@ -106,6 +117,10 @@ func (v *Validator) ValidateInput(value interface{}, rules []interface{}, key st
 			case r == "string":
 				if _, ok := value.(string); !ok {
 					errs = append(errs, key+" value is not a valid string")
+				}
+			case r == "boolean":
+				if err := v.IsBoolean(value, key); err != nil {
+					errs = append(errs, err.Error())
 				}
 			case r == "int":
 				if err := v.ValidateInt(value, key); err != nil {

@@ -9,6 +9,7 @@ import (
 	"social-network/app"
 	"social-network/internal/helpers"
 	"social-network/internal/middleware"
+	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_followers "social-network/pkg/db/queries/followers"
 	db_requests "social-network/pkg/db/queries/followers/requests"
@@ -16,23 +17,6 @@ import (
 	"strconv"
 	"time"
 )
-
-// FollowerResponse represents a follower/following user
-type FollowerResponse struct {
-	UserID    string    `json:"user_id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Avatar    *string   `json:"avatar,omitempty"`
-	Nickname  *string   `json:"nickname,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type FollowRequestsResponse struct {
-	ID           int64     `json:"id"`
-	FollowerID   string    `json:"follower_id"`
-	FollowerName string    `json:"follower_name"`
-	CreatedAt    time.Time `json:"created_at"`
-}
 
 // FollowUser handles POST /api/follow/:userId
 // Sends follow request or auto-follows if public profile
@@ -276,7 +260,7 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 					FolloweeID: user.UserID,
 				})
 			if errors.Is(err, sql.ErrNoRows) {
-				utils.OK(w, []FollowerResponse{})
+				utils.OK(w, []models.FollowerResponse{})
 			}
 			if err != nil {
 				utils.Internal(w, err)
@@ -290,7 +274,7 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		var followersList []FollowerResponse
+		var followersList []models.FollowerResponse
 
 		for _, follower := range followers {
 			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), follower.FollowerID)
@@ -299,7 +283,7 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 				return
 			}
 			getUuid, _ := helpers.GenerateFromBytes(user.UserID)
-			followersList = append(followersList, FollowerResponse{
+			followersList = append(followersList, models.FollowerResponse{
 				UserID:    getUuid,
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
@@ -363,7 +347,7 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 					FolloweeID: user.UserID,
 				})
 			if errors.Is(err, sql.ErrNoRows) {
-				utils.OK(w, []FollowerResponse{})
+				utils.OK(w, []models.FollowerResponse{})
 			}
 			if err != nil {
 				utils.Internal(w, err)
@@ -377,7 +361,7 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		var followersList []FollowerResponse
+		var followersList []models.FollowerResponse
 
 		for _, follower := range followers {
 			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), follower.FolloweeID)
@@ -386,7 +370,7 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 				return
 			}
 			getUuid, _ := helpers.GenerateFromBytes(user.UserID)
-			followersList = append(followersList, FollowerResponse{
+			followersList = append(followersList, models.FollowerResponse{
 				UserID:    getUuid,
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
@@ -429,7 +413,7 @@ func GetFollowRequests(app *app.App) http.HandlerFunc {
 		// Get pending follow requests
 		requests, err := sqlite.NewQuery(app.DB).FollowRequests.GetFollowRequests(r.Context(), currentUserID)
 		if errors.Is(err, sql.ErrNoRows) {
-			utils.OK(w, []FollowRequestsResponse{})
+			utils.OK(w, []models.FollowRequestsResponse{})
 			return
 		}
 		if err != nil {
@@ -438,11 +422,11 @@ func GetFollowRequests(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		var response []FollowRequestsResponse
+		var response []models.FollowRequestsResponse
 
 		for _, request := range requests {
 			user, _ := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), request.FollowerID)
-			response = append(response, FollowRequestsResponse{
+			response = append(response, models.FollowRequestsResponse{
 				ID:           request.ID,
 				FollowerID:   hex.EncodeToString(request.FollowerID),
 				FollowerName: user.FirstName + " " + user.LastName,

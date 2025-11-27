@@ -44,6 +44,23 @@ func (rv RegisterValidator) Build(r *http.Request, app *app.App) map[string][]in
 	}
 }
 
+type LoginValidator struct{}
+
+func (l LoginValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"email":    {"required", "email"},
+		"password": {"required", "string"},
+	}
+}
+
+type PrivacyValidator struct{}
+
+func (p PrivacyValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"is_public": {"required", "boolean"},
+	}
+}
+
 // UpdateProfileValidator implements ValidationRuleBuilder for profile updates
 type UpdateProfileValidator struct{}
 
@@ -69,4 +86,6 @@ func (upv UpdateProfileValidator) Build(r *http.Request, app *app.App) map[strin
 var (
 	ValidateRegister      ValidationRuleBuilder = RegisterValidator{}
 	ValidateUpdateProfile ValidationRuleBuilder = UpdateProfileValidator{}
+	ValidateLogin         ValidationRuleBuilder = LoginValidator{}
+	ValidatePrivacy       ValidationRuleBuilder = PrivacyValidator{}
 )

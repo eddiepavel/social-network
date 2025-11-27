@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -94,14 +93,13 @@ func Login(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var req models.LoginRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			utils.BadRequest(w, err)
-			return
-		}
 
-		// Validate required fields
-		if req.Email == "" || req.Password == "" {
-			utils.BadRequest(w, errors.New("email and password are required"))
+		inputs := helpers.ValidateLogin.Build(r, app)
+
+		ok, errorValidation := utils.Validate(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errorValidation)
 			return
 		}
 
