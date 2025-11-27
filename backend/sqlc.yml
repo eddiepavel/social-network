@@ -9,18 +9,14 @@ sql:
         out: "/pkg/db/queries/users"
   - engine: "sqlite"
     queries: ["/pkg/db/queries/followers/followers.sql"]
-    schema: ["/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql", "/pkg/db/migrations/sqlite/up/000016_remove_status_followers.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql",
+             "/pkg/db/migrations/sqlite/up/000016_remove_status_followers.sql",
+             "/pkg/db/migrations/sqlite/up/000015_create_follow_requests_table.sql",
+             "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql"]
     gen:
       go:
         package: "db_followers"
         out: "/pkg/db/queries/followers"
-  - engine: "sqlite"
-    queries: ["/pkg/db/queries/followers/requests/requests.sql"]
-    schema: ["/pkg/db/migrations/sqlite/up/000015_create_follow_requests_table.sql", "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql"]
-    gen:
-      go:
-        package: "db_requests"
-        out: "/pkg/db/queries/followers/requests"
   - engine: "sqlite"
     queries: ["/pkg/db/queries/sessions/sessions.sql"]
     schema: ["/pkg/db/migrations/sqlite/up/000002_create_sessions_table.sql", "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql"]
@@ -28,3 +24,15 @@ sql:
       go:
         package: "db_sessions"
         out: "/pkg/db/queries/sessions"
+  - engine: "sqlite"
+    queries: ["/pkg/db/queries/posts/posts.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000005_create_posts_table.sql",
+             "/pkg/db/migrations/sqlite/up/000007_create_comments_table.sql",
+             "/pkg/db/migrations/sqlite/up/000008_create_reactions_table.sql",
+             "/pkg/db/migrations/sqlite/up/000006_create_viewing_permissions_table.sql",
+             "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql",
+             "/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql"]
+    gen:
+      go:
+        package: "db_posts"
+        out: "/pkg/db/queries/posts"

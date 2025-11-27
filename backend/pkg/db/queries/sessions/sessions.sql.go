@@ -60,10 +60,7 @@ func (q *Queries) InvalidateSession(ctx context.Context, sessionID []byte) error
 }
 
 const validateSession = `-- name: ValidateSession :one
-SELECT session_id, user_id, active, created_at, expires_at
-FROM sessions
-WHERE session_id = ?
-LIMIT 1
+SELECT session_id, user_id, active, created_at, expires_at FROM sessions WHERE session_id = ? LIMIT 1
 `
 
 func (q *Queries) ValidateSession(ctx context.Context, sessionID []byte) (Session, error) {

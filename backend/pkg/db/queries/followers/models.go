@@ -6,10 +6,34 @@ package db_followers
 
 import (
 	"database/sql"
+	"time"
 )
+
+type FollowRequest struct {
+	ID          int64
+	FollowerID  []byte
+	FolloweeID  []byte
+	Status      sql.NullString
+	CreatedAt   time.Time
+	RespondedAt interface{}
+}
 
 type Follower struct {
 	FollowerID []byte
 	FolloweeID []byte
 	CreatedAt  sql.NullTime
+}
+
+type User struct {
+	UserID       []byte
+	Email        string
+	PasswordHash []byte
+	FirstName    string
+	LastName     string
+	Dob          string
+	Avatar       sql.NullString
+	Nickname     sql.NullString
+	AboutMe      sql.NullString
+	IsPublic     bool
+	CreatedAt    sql.NullTime
 }

@@ -12,7 +12,6 @@ import (
 	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_followers "social-network/pkg/db/queries/followers"
-	db_requests "social-network/pkg/db/queries/followers/requests"
 	"social-network/pkg/db/sqlite"
 	"strconv"
 	"time"
@@ -96,14 +95,14 @@ func FollowUser(app *app.App) http.HandlerFunc {
 				FolloweeID: user.UserID,
 			})
 		if errors.Is(err, sql.ErrNoRows) {
-			request, err := sqlite.NewQuery(app.DB).FollowRequests.GetFollowRequest(r.Context(),
-				db_requests.GetFollowRequestParams{
+			request, err := sqlite.NewQuery(app.DB).Followers.GetFollowRequest(r.Context(),
+				db_followers.GetFollowRequestParams{
 					FollowerID: currentUserID,
 					FolloweeID: user.UserID,
 				})
 			if errors.Is(err, sql.ErrNoRows) {
-				err := sqlite.NewQuery(app.DB).FollowRequests.CreateFollowRequest(r.Context(),
-					db_requests.CreateFollowRequestParams{
+				err := sqlite.NewQuery(app.DB).Followers.CreateFollowRequest(r.Context(),
+					db_followers.CreateFollowRequestParams{
 						FollowerID: currentUserID,
 						FolloweeID: user.UserID,
 					})
@@ -118,7 +117,7 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
-				err := sqlite.NewQuery(app.DB).FollowRequests.DeleteFollowRequest(r.Context(), request.ID)
+				err := sqlite.NewQuery(app.DB).Followers.DeleteFollowRequest(r.Context(), request.ID)
 				if err != nil {
 					utils.Internal(w, err)
 					return
@@ -163,8 +162,8 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		request, err := sqlite.NewQuery(app.DB).FollowRequests.GetFollowRequestByID(r.Context(),
-			db_requests.GetFollowRequestByIDParams{
+		request, err := sqlite.NewQuery(app.DB).Followers.GetFollowRequestByID(r.Context(),
+			db_followers.GetFollowRequestByIDParams{
 				ID:         int64(requestRaw),
 				FolloweeID: currentUserID,
 			})
@@ -194,7 +193,7 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 		}
 
 		if status == "accepted" {
-			err = sqlite.NewQuery(app.DB).FollowRequests.DeleteFollowRequest(r.Context(), request.ID)
+			err = sqlite.NewQuery(app.DB).Followers.DeleteFollowRequest(r.Context(), request.ID)
 			if err != nil {
 				utils.Internal(w, err)
 				return
@@ -212,7 +211,7 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 
 			utils.OK(w, "Follow request accepted")
 		} else if status == "rejected" {
-			err = sqlite.NewQuery(app.DB).FollowRequests.DeleteFollowRequest(r.Context(), request.ID)
+			err = sqlite.NewQuery(app.DB).Followers.DeleteFollowRequest(r.Context(), request.ID)
 			if err != nil {
 				utils.Internal(w, err)
 				return
@@ -411,7 +410,7 @@ func GetFollowRequests(app *app.App) http.HandlerFunc {
 		}
 
 		// Get pending follow requests
-		requests, err := sqlite.NewQuery(app.DB).FollowRequests.GetFollowRequests(r.Context(), currentUserID)
+		requests, err := sqlite.NewQuery(app.DB).Followers.GetFollowRequests(r.Context(), currentUserID)
 		if errors.Is(err, sql.ErrNoRows) {
 			utils.OK(w, []models.FollowRequestsResponse{})
 			return
