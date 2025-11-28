@@ -36,3 +36,13 @@ sql:
       go:
         package: "db_posts"
         out: "/pkg/db/queries/posts"
+  - engine: "sqlite"
+    queries: ["/pkg/db/queries/groups/groups.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000009_create_groups_table.sql",
+             "/pkg/db/migrations/sqlite/up/000010_create_group_members_table.sql",
+             "/pkg/db/migrations/sqlite/up/000011_create_group_events_table.sql"
+            ]
+    gen:
+      go:
+        package: "db_groups"
+        out: "/pkg/db/queries/groups"

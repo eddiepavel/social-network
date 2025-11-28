@@ -22,7 +22,7 @@ export function GroupsPage() {
       setIsLoading(true);
       setError(null);
       const data = await listGroups();
-      setGroups(data);
+      setGroups(data.data);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

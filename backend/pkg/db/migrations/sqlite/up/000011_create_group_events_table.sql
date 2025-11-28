@@ -1,6 +1,6 @@
 -- 000011_create_group_events_table.up.sql
 CREATE TABLE IF NOT EXISTS group_events (
-    event_id TEXT PRIMARY KEY,
+    event_id BLOB PRIMARY KEY,
     creator_id BLOB NOT NULL,
     group_id BLOB NOT NULL,
     title TEXT NOT NULL,

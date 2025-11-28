@@ -26,9 +26,9 @@ type GroupMember struct {
 
 // CreateGroupRequest represents the request body for creating a group
 type CreateGroupRequest struct {
-	GroupName   string  `json:"group_name"`
-	Description string  `json:"description"`
-	Image       *string `json:"image"`
+	GroupName   string `json:"group_name"`
+	Description string `json:"description"`
+	Image       string `json:"image,omitempty"`
 }
 
 // GroupResponse represents a group returned to the client
@@ -39,7 +39,7 @@ type GroupResponse struct {
 	Image       *string `json:"image"`
 	CreatorID   string  `json:"creator_id"`
 	CreatedAt   string  `json:"created_at"`
-	MemberCount *int    `json:"member_count,omitempty"`
+	MemberCount int64   `json:"member_count"`
 }
 
 // GroupMemberResponse represents a group member returned to the client

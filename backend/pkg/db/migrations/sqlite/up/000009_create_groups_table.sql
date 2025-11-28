@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS groups (
     group_name TEXT NOT NULL,
     description TEXT NOT NULL,
     image TEXT,
-    creator_id TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    creator_id BLOB NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (creator_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (image) REFERENCES images(image_id) ON DELETE SET NULL
 );

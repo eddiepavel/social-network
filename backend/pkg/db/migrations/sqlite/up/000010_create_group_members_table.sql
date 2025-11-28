@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS group_members (
     user_id BLOB NOT NULL,
     group_id BLOB NOT NULL,
-    status TEXT CHECK(status IN ('joined', 'requested', 'rejected')) NOT NULL,
+    status TEXT CHECK(status IN ('joined', 'requested')) NOT NULL,
     invited_by BLOB,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, group_id),

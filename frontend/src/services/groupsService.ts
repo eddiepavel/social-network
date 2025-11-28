@@ -18,7 +18,7 @@ export async function listGroups(): Promise<Group[]> {
 
 // Create a new group
 export async function createGroup(data: CreateGroupRequest): Promise<Group> {
-  return apiRequest<Group>(API_ENDPOINTS.GROUPS, {
+  return apiRequest<Group>(API_ENDPOINTS.GROUP_CREATE, {
     method: 'POST',
     body: JSON.stringify(data),
           credentials: 'include',

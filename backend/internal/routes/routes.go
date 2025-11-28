@@ -61,3 +61,12 @@ func (h *Handler) postsRoutes() *http.ServeMux {
 
 	return mux
 }
+
+func (h *Handler) groupsRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /all", handlers.GetGroups(h.App))
+	mux.HandleFunc("POST /create", handlers.CreateGroup(h.App))
+
+	return mux
+}

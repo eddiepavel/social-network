@@ -82,10 +82,29 @@ func (upv UpdateProfileValidator) Build(r *http.Request, app *app.App) map[strin
 	}
 }
 
+type CreateGroupValidator struct{}
+
+func (c CreateGroupValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"group_name": {"required", "string", func(v interface{}) error {
+			groupName := v.(string)
+			_, err := sqlite.NewQuery(app.DB).Groups.GetGroupByName(r.Context(), groupName)
+
+			if !errors.Is(err, sql.ErrNoRows) {
+				return errors.New("group name already exists")
+			}
+			return nil
+		}},
+		"description": {"required", "string", "min:10", "max:50"},
+		"image":       {"sometimes"},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister      ValidationRuleBuilder = RegisterValidator{}
 	ValidateUpdateProfile ValidationRuleBuilder = UpdateProfileValidator{}
 	ValidateLogin         ValidationRuleBuilder = LoginValidator{}
 	ValidatePrivacy       ValidationRuleBuilder = PrivacyValidator{}
+	ValidateCreateGroup   ValidationRuleBuilder = CreateGroupValidator{}
 )
