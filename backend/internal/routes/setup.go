@@ -43,12 +43,14 @@ func Setup(app *app.App) http.Handler {
 	publicGroup := handler.createGroup(handler.publicRoutes, []string{})
 	usersGroup := handler.createGroup(handler.userRoutes, []string{"auth"})
 	followersGroup := handler.createGroup(handler.followersRoutes, []string{"auth"})
+	postsGroup := handler.createGroup(handler.postsRoutes, []string{"auth"})
 
 	mux.Handle("/api/", http.StripPrefix("/api", mux))
 	mux.Handle("/public/", http.StripPrefix("/public", publicGroup))
 	mux.Handle("/auth/", http.StripPrefix("/auth", authGroup))
 	mux.Handle("/users/", http.StripPrefix("/users", usersGroup))
 	mux.Handle("/followers/", http.StripPrefix("/followers", followersGroup))
+	mux.Handle("/posts/", http.StripPrefix("/posts", postsGroup))
 
 	// Initialize handlers
 	groupsHandler := handlers.NewGroupsHandler(app.DB)

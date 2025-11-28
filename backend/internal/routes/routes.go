@@ -46,3 +46,18 @@ func (h *Handler) followersRoutes() *http.ServeMux {
 
 	return mux
 }
+
+func (h *Handler) postsRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /create", handlers.CreatePost(h.App))
+	mux.HandleFunc("GET /feed", handlers.GetFeedPosts(h.App))
+	mux.HandleFunc("GET /id/{postId}", handlers.GetPostWithCommentsReactions(h.App))
+	mux.HandleFunc("PUT /id/{postId}", handlers.EditPost(h.App))
+	mux.HandleFunc("DELETE /id/{postId}", handlers.DeletePost(h.App))
+	mux.HandleFunc("PUT /id/{postId}/privacy", handlers.UpdatePostVisibility(h.App))
+	mux.HandleFunc("POST /id/{postId}/privacy", handlers.AddUserToPrivatePostList(h.App))
+	mux.HandleFunc("DELETE /id/{postId}/privacy", handlers.RemoveUserFromPrivatePostList(h.App))
+
+	return mux
+}
