@@ -61,7 +61,7 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 			}
 		}()
 
-		group, err := sqlite.NewQuery(app.DB).Groups.CreateGroup(r.Context(), db_groups.CreateGroupParams{
+		group, err := sqlite.NewQuery(app.DB).Groups.WithTx(tx).CreateGroup(r.Context(), db_groups.CreateGroupParams{
 			GroupID:     groupUUID,
 			GroupName:   req.GroupName,
 			Description: req.Description,
@@ -80,11 +80,11 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		err = sqlite.NewQuery(app.DB).Groups.CreateGroupMember(r.Context(), db_groups.CreateGroupMemberParams{
+		err = sqlite.NewQuery(app.DB).Groups.WithTx(tx).CreateGroupMember(r.Context(), db_groups.CreateGroupMemberParams{
 			UserID:  userID,
 			GroupID: group.GroupID,
 		})
-
+		
 		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			app.Logger.Error("failed to commit transaction", "err", err, "req", r.URL.Path)
