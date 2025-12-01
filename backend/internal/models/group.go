@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/hex"
 	"time"
 )
 
@@ -39,20 +38,40 @@ type GroupResponse struct {
 	Image       *string `json:"image"`
 	CreatorID   string  `json:"creator_id"`
 	CreatedAt   string  `json:"created_at"`
-	MemberCount int64   `json:"member_count"`
+	MemberCount int64   `json:"member_count,omitempty"`
 }
 
 // GroupMemberResponse represents a group member returned to the client
 type GroupMemberResponse struct {
 	UserID    string  `json:"user_id"`
-	GroupID   string  `json:"group_id"`
+	GroupID   string  `json:"group_id,omitempty"`
 	Status    string  `json:"status"`
 	InvitedBy *string `json:"invited_by,omitempty"`
-	CreatedAt string  `json:"created_at"`
+	CreatedAt string  `json:"created_at,omitempty"`
 	// User details (populated via JOIN)
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
 	Avatar    *string `json:"avatar,omitempty"`
+}
+
+// EventResponse represents a group event returned to the client
+type EventResponse struct {
+	EventID     string         `json:"event_id"`
+	EventName   string         `json:"event_name"`
+	Description string         `json:"description"`
+	Timestamp   string         `json:"timestamp"`
+	CreatedAt   time.Time      `json:"created_at"`
+	RSVPs       []RSVPResponse `json:"rsvps"`
+}
+
+// RSVPResponse represents an event RSVP returned to the client
+type RSVPResponse struct {
+	UserID    string  `json:"user_id"`
+	Status    string  `json:"status"` // 'going', 'not_going'
+	FirstName *string `json:"first_name,omitempty"`
+	LastName  *string `json:"last_name,omitempty"`
+	Avatar    *string `json:"avatar,omitempty"`
+	CreatedAt string  `json:"created_at"`
 }
 
 // InviteUserRequest represents the request body for inviting a user to a group
@@ -65,26 +84,9 @@ type HandleJoinRequestRequest struct {
 	Action string `json:"action"` // 'accept' or 'reject'
 }
 
-type Events struct {
-	EventName string `json:"event_name"`
-}
-
 // GroupDetailsResponse represents detailed group information
 type GroupDetailsResponse struct {
-	GroupResponse `json:"group"`
-	Members       []GroupMemberResponse `json:"members"`
-	Events        []Events
-}
-
-// Helper function to convert binary UUID to hex string
-func UUIDBytesToString(b []byte) string {
-	if b == nil {
-		return ""
-	}
-	return hex.EncodeToString(b)
-}
-
-// Helper function to convert hex string to binary UUID
-func UUIDStringToBytes(s string) ([]byte, error) {
-	return hex.DecodeString(s)
+	Group   GroupResponse         `json:"group"`
+	Members []GroupMemberResponse `json:"members"`
+	Events  []EventResponse       `json:"events"`
 }

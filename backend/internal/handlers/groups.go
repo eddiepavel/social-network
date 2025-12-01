@@ -197,27 +197,17 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		}
 
 		// Fetch group details
-		getGroup, err := sqlite.NewQuery(app.DB).Groups.GetGroupDetailsById(r.Context(), groupIDHex)
+		init := sqlite.NewQuery(app.DB)
+
+		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init)
 
 		if err != nil {
 			app.Logger.Error("error fetching group details", "err", err)
 			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
-		// // Build response
-		// response := models.GroupDetailsResponse{
-		// 	GroupResponse: models.GroupResponse{
-		// 		GroupID:     hex.EncodeToString(group.GroupID),
-		// 		GroupName:   group.GroupName,
-		// 		Description: group.Description,
-		// 		Image:       group.Image,
-		// 		CreatorID:   group.CreatorID,
-		// 		CreatedAt:   group.CreatedAt.Format(time.RFC3339),
-		// 	},
-		// 	Members: members,
-		// }
 
-		utils.OK(w, getGroup)
+		utils.OK(w, group)
 	}
 }
 
