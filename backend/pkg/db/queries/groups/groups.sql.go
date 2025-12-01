@@ -74,6 +74,127 @@ func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (string,
 	return group_name, err
 }
 
+const getGroupDetailsById = `-- name: GetGroupDetailsById :many
+SELECT
+    g.group_name as group_group_name,
+    g.created_at as group_created_at,
+    
+    -- Group members
+    gm.user_id as member_user_id,
+    gm.status as member_status,
+    gm.invited_by,
+    gm.created_at as member_joined_at,
+    u.email as member_email,
+    u.first_name as member_first_name,
+    u.last_name as member_last_name,
+    u.avatar as member_avatar,
+    u.nickname as member_nickname,
+    u.about_me as member_about_me,
+    
+    -- Events
+    ge.event_id,
+    ge.title as event_title,
+    ge.description as event_description,
+    ge.event_timestamp,
+    ge.created_at as event_created_at,
+    
+    -- RSVPs
+    gr.user_id as rsvp_user_id,
+    gr.status as rsvp_status,
+    gr.created_at as rsvp_created_at,
+    ru.first_name as rsvp_first_name,
+    ru.last_name as rsvp_last_name,
+    ru.avatar as rsvp_avatar,
+    ru.nickname as rsvp_nickname
+
+FROM groups g
+
+LEFT JOIN group_members gm ON g.group_id = gm.group_id AND gm.status = 'joined'
+LEFT JOIN users u ON gm.user_id = u.user_id
+
+LEFT JOIN group_events ge ON g.group_id = ge.group_id
+
+LEFT JOIN group_rsvp gr ON ge.event_id = gr.event_id
+LEFT JOIN users ru ON gr.user_id = ru.user_id
+
+WHERE g.group_id = ?
+`
+
+type GetGroupDetailsByIdRow struct {
+	GroupGroupName   string
+	GroupCreatedAt   time.Time
+	MemberUserID     []byte
+	MemberStatus     sql.NullString
+	InvitedBy        []byte
+	MemberJoinedAt   sql.NullTime
+	MemberEmail      sql.NullString
+	MemberFirstName  sql.NullString
+	MemberLastName   sql.NullString
+	MemberAvatar     sql.NullString
+	MemberNickname   sql.NullString
+	MemberAboutMe    sql.NullString
+	EventID          []byte
+	EventTitle       sql.NullString
+	EventDescription sql.NullString
+	EventTimestamp   sql.NullTime
+	EventCreatedAt   sql.NullTime
+	RsvpUserID       []byte
+	RsvpStatus       sql.NullString
+	RsvpCreatedAt    sql.NullTime
+	RsvpFirstName    sql.NullString
+	RsvpLastName     sql.NullString
+	RsvpAvatar       sql.NullString
+	RsvpNickname     sql.NullString
+}
+
+func (q *Queries) GetGroupDetailsById(ctx context.Context, groupID []byte) ([]GetGroupDetailsByIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupDetailsById, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGroupDetailsByIdRow
+	for rows.Next() {
+		var i GetGroupDetailsByIdRow
+		if err := rows.Scan(
+			&i.GroupGroupName,
+			&i.GroupCreatedAt,
+			&i.MemberUserID,
+			&i.MemberStatus,
+			&i.InvitedBy,
+			&i.MemberJoinedAt,
+			&i.MemberEmail,
+			&i.MemberFirstName,
+			&i.MemberLastName,
+			&i.MemberAvatar,
+			&i.MemberNickname,
+			&i.MemberAboutMe,
+			&i.EventID,
+			&i.EventTitle,
+			&i.EventDescription,
+			&i.EventTimestamp,
+			&i.EventCreatedAt,
+			&i.RsvpUserID,
+			&i.RsvpStatus,
+			&i.RsvpCreatedAt,
+			&i.RsvpFirstName,
+			&i.RsvpLastName,
+			&i.RsvpAvatar,
+			&i.RsvpNickname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupsWithMemberCount = `-- name: GetGroupsWithMemberCount :many
 SELECT
     g.group_id,
@@ -128,4 +249,21 @@ func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]GetGroupsWith
 		return nil, err
 	}
 	return items, nil
+}
+
+const isGroupMember = `-- name: IsGroupMember :one
+SELECT COUNT(*) FROM group_members
+WHERE user_id = ? AND group_id = ? AND status = 'joined'
+`
+
+type IsGroupMemberParams struct {
+	UserID  []byte
+	GroupID []byte
+}
+
+func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, isGroupMember, arg.UserID, arg.GroupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

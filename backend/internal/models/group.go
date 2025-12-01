@@ -65,10 +65,15 @@ type HandleJoinRequestRequest struct {
 	Action string `json:"action"` // 'accept' or 'reject'
 }
 
+type Events struct {
+	EventName string `json:"event_name"`
+}
+
 // GroupDetailsResponse represents detailed group information
 type GroupDetailsResponse struct {
-	GroupResponse
-	Members []GroupMemberResponse `json:"members"`
+	GroupResponse `json:"group"`
+	Members       []GroupMemberResponse `json:"members"`
+	Events        []Events
 }
 
 // Helper function to convert binary UUID to hex string

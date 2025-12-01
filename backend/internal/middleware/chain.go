@@ -20,9 +20,10 @@ func (m *MiddlewareChain) ChainMiddleware(h http.HandlerFunc, k []string) http.H
 		"auth":    m.AuthMiddleware,
 		"cors":    m.CorsMiddleware,
 		"recover": m.RecoveryMiddleware,
+		"log":     m.LoggingMiddleware,
 	}
 
-	globalMiddle := []string{"cors", "recover"}
+	globalMiddle := []string{"cors", "recover", "log"}
 
 	wrapped := h
 

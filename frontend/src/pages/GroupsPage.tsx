@@ -96,7 +96,7 @@ export function GroupsPage() {
         )}
 
         <div className="groups-container">
-          {groups.length === 0 ? (
+          {!groups ? (
             <div className="no-groups">
               <p>No groups found.</p>
               {!showCreateForm && (

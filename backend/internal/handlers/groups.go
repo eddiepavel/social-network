@@ -84,7 +84,7 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 			UserID:  userID,
 			GroupID: group.GroupID,
 		})
-		
+
 		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			app.Logger.Error("failed to commit transaction", "err", err, "req", r.URL.Path)
@@ -160,148 +160,66 @@ func GetGroups(app *app.App) http.HandlerFunc {
 	}
 }
 
-// // GetGroupDetails handles GET /api/groups/:id
-// // Returns group details with members list (only accessible to members with status 'joined')
-// func (h *GroupsHandler) GetGroupDetails(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodGet {
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
+// GetGroupDetails handles GET /api/groups/:id
+// Returns group details with members list (only accessible to members with status 'joined')
+func GetGroup(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get current user from context
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
 
-// 	// Get current user from context
-// 	userID, ok := middleware.GetUserIDFromContext(r.Context())
-// 	if !ok {
-// 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-// 		return
-// 	}
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
 
-// 	// Extract group ID from URL
-// 	groupIDHex := strings.TrimPrefix(r.URL.Path, "/api/groups/")
-// 	if groupIDHex == "" {
-// 		http.Error(w, "Group ID required", http.StatusBadRequest)
-// 		return
-// 	}
+		// Extract group ID from URL
+		groupIDHex, err := helpers.GenerateFromString(r.PathValue("groupId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("group id missing from path"))
+			return
+		}
 
-// 	groupID, err := hex.DecodeString(groupIDHex)
-// 	if err != nil {
-// 		http.Error(w, "Invalid group ID format", http.StatusBadRequest)
-// 		return
-// 	}
+		// Check if user is a member with status 'joined'
+		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			GroupID: groupIDHex,
+			UserID:  userID,
+		})
 
-// 	// Check if user is a member with status 'joined'
-// 	isMember, err := h.isGroupMember(userID, groupID)
-// 	if err != nil {
-// 		log.Printf("Error checking membership: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
+		if err != nil {
+			app.Logger.Error("error checking is member", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
 
-// 	if !isMember {
-// 		http.Error(w, "You must be a member to view group details", http.StatusForbidden)
-// 		return
-// 	}
+		if isMember == 0 {
+			utils.Forbidden(w)
+			return
+		}
 
-// 	// Fetch group details
-// 	groupQuery := `
-// 		SELECT group_id, group_name, description, image, creator_id, created_at
-// 		FROM groups
-// 		WHERE group_id = ?
-// 	`
+		// Fetch group details
+		getGroup, err := sqlite.NewQuery(app.DB).Groups.GetGroupDetailsById(r.Context(), groupIDHex)
 
-// 	var group models.Group
-// 	err = h.db.QueryRow(groupQuery, groupID).Scan(
-// 		&group.GroupID,
-// 		&group.GroupName,
-// 		&group.Description,
-// 		&group.Image,
-// 		&group.CreatorID,
-// 		&group.CreatedAt,
-// 	)
-// 	if err == sql.ErrNoRows {
-// 		http.Error(w, "Group not found", http.StatusNotFound)
-// 		return
-// 	}
-// 	if err != nil {
-// 		log.Printf("Failed to fetch group: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
+		if err != nil {
+			app.Logger.Error("error fetching group details", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+		// // Build response
+		// response := models.GroupDetailsResponse{
+		// 	GroupResponse: models.GroupResponse{
+		// 		GroupID:     hex.EncodeToString(group.GroupID),
+		// 		GroupName:   group.GroupName,
+		// 		Description: group.Description,
+		// 		Image:       group.Image,
+		// 		CreatorID:   group.CreatorID,
+		// 		CreatedAt:   group.CreatedAt.Format(time.RFC3339),
+		// 	},
+		// 	Members: members,
+		// }
 
-// 	// Fetch members with user details
-// 	membersQuery := `
-// 		SELECT
-// 			gm.user_id,
-// 			gm.group_id,
-// 			gm.status,
-// 			gm.invited_by,
-// 			gm.created_at,
-// 			u.first_name,
-// 			u.last_name,
-// 			u.avatar
-// 		FROM group_members gm
-// 		JOIN users u ON gm.user_id = u.user_id
-// 		WHERE gm.group_id = ? AND gm.status = 'joined'
-// 		ORDER BY gm.created_at ASC
-// 	`
-
-// 	rows, err := h.db.Query(membersQuery, groupID)
-// 	if err != nil {
-// 		log.Printf("Failed to fetch members: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	defer rows.Close()
-
-// 	members := []models.GroupMemberResponse{}
-// 	for rows.Next() {
-// 		var member models.GroupMemberResponse
-// 		var userID, groupID []byte
-// 		var invitedBy *[]byte
-// 		var createdAt time.Time
-
-// 		err := rows.Scan(
-// 			&userID,
-// 			&groupID,
-// 			&member.Status,
-// 			&invitedBy,
-// 			&createdAt,
-// 			&member.FirstName,
-// 			&member.LastName,
-// 			&member.Avatar,
-// 		)
-// 		if err != nil {
-// 			log.Printf("Failed to scan member: %v", err)
-// 			continue
-// 		}
-
-// 		member.UserID = hex.EncodeToString(userID)
-// 		member.GroupID = hex.EncodeToString(groupID)
-// 		member.CreatedAt = createdAt.Format(time.RFC3339)
-
-// 		if invitedBy != nil {
-// 			invitedByStr := hex.EncodeToString(*invitedBy)
-// 			member.InvitedBy = &invitedByStr
-// 		}
-
-// 		members = append(members, member)
-// 	}
-
-// 	// Build response
-// 	response := models.GroupDetailsResponse{
-// 		GroupResponse: models.GroupResponse{
-// 			GroupID:     hex.EncodeToString(group.GroupID),
-// 			GroupName:   group.GroupName,
-// 			Description: group.Description,
-// 			Image:       group.Image,
-// 			CreatorID:   group.CreatorID,
-// 			CreatedAt:   group.CreatedAt.Format(time.RFC3339),
-// 		},
-// 		Members: members,
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(response)
-// }
+		utils.OK(w, getGroup)
+	}
+}
 
 // // InviteUser handles POST /api/groups/:id/invite
 // // Invites a user to join the group (requester must be a member)

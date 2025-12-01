@@ -35,3 +35,24 @@ type GroupMember struct {
 	InvitedBy []byte
 	CreatedAt sql.NullTime
 }
+
+type GroupRsvp struct {
+	EventID   string
+	UserID    []byte
+	Status    sql.NullString
+	CreatedAt sql.NullTime
+}
+
+type User struct {
+	UserID       []byte
+	Email        string
+	PasswordHash []byte
+	FirstName    string
+	LastName     string
+	Dob          string
+	Avatar       sql.NullString
+	Nickname     sql.NullString
+	AboutMe      sql.NullString
+	IsPublic     bool
+	CreatedAt    sql.NullTime
+}
