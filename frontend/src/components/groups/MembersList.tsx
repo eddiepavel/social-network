@@ -24,30 +24,39 @@ export function MembersList({
   const pendingRequests = members.filter((m) => m.status === 'requested');
 
   return (
-    <div className="members-section">
-      <h3>Members ({activeMembers.length})</h3>
-      <div className="members-list">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">
+          Members ({activeMembers.length})
+        </h3>
+      </div>
+      <div className="grid gap-4">
         {activeMembers.length === 0 ? (
-          <p className="no-members">No members yet</p>
+          <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-muted">
+            No members yet
+          </p>
         ) : (
           activeMembers.map((member) => (
-            <div key={member.user_id} className="member-card">
-              <div className="member-info">
-                <div className="member-avatar">
+            <div
+              key={member.user_id}
+              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 overflow-hidden rounded-full bg-primary-500/30 flex items-center justify-center text-white font-semibold">
                   {member.avatar ? (
                     <img src={member.avatar} alt={member.first_name || 'Member'} />
                   ) : (
-                    <div className="avatar-placeholder">
-                      {member.first_name?.[0] || 'U'}
-                    </div>
+                    <span>{member.first_name?.[0] || 'U'}</span>
                   )}
                 </div>
-                <div className="member-details">
-                  <p className="member-name">
+                <div>
+                  <p className="font-semibold text-white">
                     {member.first_name} {member.last_name}
                   </p>
                   {member.user_id === creatorId && (
-                    <span className="creator-badge">Creator</span>
+                    <span className="ml-2 rounded-full bg-primary-600/30 px-3 py-1 text-xs text-primary-100">
+                      Creator
+                    </span>
                   )}
                 </div>
               </div>
@@ -57,41 +66,44 @@ export function MembersList({
       </div>
 
       {isCreator && pendingRequests.length > 0 && (
-        <div className="pending-requests-section">
-          <h3>Pending Requests ({pendingRequests.length})</h3>
-          <div className="requests-list">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-white">
+            Pending Requests ({pendingRequests.length})
+          </h3>
+          <div className="space-y-3">
             {pendingRequests.map((request) => (
-              <div key={request.user_id} className="request-card">
-                <div className="request-info">
-                  <div className="member-avatar">
+              <div
+                key={request.user_id}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 overflow-hidden rounded-full bg-primary-500/30 flex items-center justify-center text-white font-semibold">
                     {request.avatar ? (
                       <img src={request.avatar} alt={request.first_name || 'User'} />
                     ) : (
-                      <div className="avatar-placeholder">
-                        {request.first_name?.[0] || 'U'}
-                      </div>
+                      <span>{request.first_name?.[0] || 'U'}</span>
                     )}
                   </div>
-                  <div className="member-details">
-                    <p className="member-name">
+                  <div>
+                    <p className="font-semibold text-white">
                       {request.first_name} {request.last_name}
                     </p>
-                    <p className="request-date">
+                    <p className="text-xs text-muted">
                       Requested {new Date(request.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 {onAcceptRequest && onRejectRequest && (
-                  <div className="request-actions">
+                  <div className="flex gap-2">
                     <button
-                      className="accept-btn"
+                      className="rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
                       onClick={() => onAcceptRequest(request.user_id)}
                       disabled={isProcessing}
                     >
                       Accept
                     </button>
                     <button
-                      className="reject-btn"
+                      className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-slate-100 hover:bg-white/10 transition disabled:opacity-60 disabled:cursor-not-allowed"
                       onClick={() => onRejectRequest(request.user_id)}
                       disabled={isProcessing}
                     >

@@ -1,4 +1,5 @@
-import { createContext, useReducer, ReactNode } from 'react';
+import { createContext, useReducer } from 'react';
+import type { ReactNode } from 'react';
 import type { AuthState, LoginFormData, RegisterFormData, User } from '../types';
 import { authReducer, initialAuthState } from './authReducer';
 import * as authService from '../services/authService';

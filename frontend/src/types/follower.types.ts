@@ -5,14 +5,13 @@ export interface FollowerUser {
   last_name: string;
   avatar?: string;
   nickname?: string;
-  status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
 }
 
-// Follow relationship response
-export interface FollowResponse {
+// Pending follow request
+export interface FollowRequest {
+  id: number;
   follower_id: string;
-  followee_id: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  message: string;
+  follower_name: string;
+  created_at: string;
 }

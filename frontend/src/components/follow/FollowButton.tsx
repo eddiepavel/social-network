@@ -16,15 +16,9 @@ export function FollowButton({ userId, isFollowing, onFollowChange }: FollowButt
     setError(null);
 
     try {
-      const response = await followUser(userId);
+      const message = await followUser(userId);
       onFollowChange();
-
-      // Show message based on response
-      if (response.status === 'pending') {
-        alert('Follow request sent!');
-      } else {
-        alert('Now following user!');
-      }
+      alert(message || 'Follow action completed');
     } catch (err: any) {
       setError(err.message || 'Failed to follow user');
       console.error('Follow error:', err);
@@ -42,9 +36,9 @@ export function FollowButton({ userId, isFollowing, onFollowChange }: FollowButt
     setError(null);
 
     try {
-      await unfollowUser(userId);
+      const message = await unfollowUser(userId);
       onFollowChange();
-      alert('Unfollowed successfully!');
+      alert(message || 'Unfollowed successfully!');
     } catch (err: any) {
       setError(err.message || 'Failed to unfollow user');
       console.error('Unfollow error:', err);
@@ -54,15 +48,19 @@ export function FollowButton({ userId, isFollowing, onFollowChange }: FollowButt
   };
 
   return (
-    <div>
+    <div className="space-y-2">
       <button
         onClick={isFollowing ? handleUnfollow : handleFollow}
         disabled={loading}
-        className={isFollowing ? 'btn-unfollow' : 'btn-follow'}
+        className={`w-full rounded-lg border border-white/10 px-4 py-2 font-semibold transition ${
+          isFollowing
+            ? 'bg-white/5 text-slate-100 hover:bg-white/10'
+            : 'bg-primary-600 text-white hover:bg-primary-500 shadow-sm shadow-primary-900/40'
+        } disabled:opacity-60 disabled:cursor-not-allowed`}
       >
         {loading ? 'Loading...' : isFollowing ? 'Unfollow' : 'Follow'}
       </button>
-      {error && <p className="error-text">{error}</p>}
+      {error && <p className="text-sm text-red-200">{error}</p>}
     </div>
   );
 }

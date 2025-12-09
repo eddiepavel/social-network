@@ -13,7 +13,8 @@ import { EditProfilePage } from './pages/EditProfilePage';
 import { FollowRequestsPage } from './pages/FollowRequestsPage';
 import { FollowersListPage } from './pages/FollowersListPage';
 import { FollowingListPage } from './pages/FollowingListPage';
-import './App.css';
+import { FeedPage } from './pages/FeedPage';
+import { PostDetailsPage } from './pages/PostDetailsPage';
 
 // AppContent component to handle session check on mount
 function AppContent() {
@@ -89,6 +90,22 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <FollowingListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/feed"
+        element={
+          <ProtectedRoute>
+            <FeedPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts/:postId"
+        element={
+          <ProtectedRoute>
+            <PostDetailsPage />
           </ProtectedRoute>
         }
       />

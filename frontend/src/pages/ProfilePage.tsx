@@ -81,9 +81,12 @@ export function ProfilePage() {
 
   if (error) {
     return (
-      <div className="center-content">
+      <div className="min-h-screen bg-surface text-slate-50 px-4 py-10">
         <ErrorMessage message={error} />
-        <button onClick={() => navigate('/dashboard')} className="btn-secondary">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mt-4 rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 transition"
+        >
           Back to Dashboard
         </button>
       </div>
@@ -92,74 +95,78 @@ export function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="center-content">
+      <div className="min-h-screen bg-surface text-slate-50 px-4 py-10">
         <p>Profile not found</p>
       </div>
     );
   }
 
+  const targetUserId = profile.user_id;
+
   return (
-    <div className="profile-container">
-      {/* Navigation */}
-      <nav className="profile-nav">
-        <div className="profile-nav-content">
-          <div className="profile-nav-links">
-            <Link to="/dashboard" className="profile-nav-link">
+    <div className="min-h-screen bg-surface text-slate-50 px-4 py-10">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <nav className="flex items-center justify-between rounded-2xl border border-white/10 bg-card/70 px-4 py-3 shadow-soft">
+          <div className="flex items-center gap-4 text-sm text-muted">
+            <Link to="/dashboard" className="font-semibold text-primary-300 hover:text-primary-200">
               Dashboard
             </Link>
+            <span className="text-white/30">/</span>
+            <span>Profile</span>
             {isOwnProfile && (
               <>
-                <Link to="/profile/edit" className="profile-nav-link">
-                  Edit Profile
-                </Link>
-                <Link to="/follow-requests" className="profile-nav-link">
+                <span className="text-white/30">/</span>
+                <Link to="/follow-requests" className="font-semibold text-primary-300 hover:text-primary-200">
                   Follow Requests
                 </Link>
               </>
             )}
           </div>
           <LogoutButton />
-        </div>
-      </nav>
+        </nav>
 
-      {/* Profile Content */}
-      <div className="profile-content">
-        <div className="profile-card">
-          {/* Profile Header */}
-          <div className="profile-header">
-            <div className="profile-avatar">
-              {profile.first_name[0]}{profile.last_name[0]}
+        <div className="rounded-2xl border border-white/10 bg-card/70 p-6 shadow-soft space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary-500/30 flex items-center justify-center text-xl font-bold text-white">
+              {profile.first_name[0]}
+              {profile.last_name[0]}
             </div>
-            <div className="profile-info">
-              <h1 className="profile-name">
-                {profile.first_name} {profile.last_name}
-              </h1>
-              {profile.nickname && (
-                <p className="profile-nickname">"{profile.nickname}"</p>
-              )}
-              <div className="profile-meta">
-                <span className={`profile-badge ${profile.is_public ? 'badge-public' : 'badge-private'}`}>
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <h1 className="text-3xl font-semibold">
+                    {profile.first_name} {profile.last_name}
+                  </h1>
+                  {profile.nickname && (
+                    <p className="text-sm text-muted">"{profile.nickname}"</p>
+                  )}
+                </div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-100">
                   {profile.is_public ? '🌍 Public Profile' : '🔒 Private Profile'}
                 </span>
               </div>
 
-              {/* Follower Stats */}
-              <div className="follower-stats">
-                <Link to={`/profile/${userId}/followers`} className="stat-item">
-                  <span className="stat-count">{followersCount}</span>
-                  <span className="stat-label">Followers</span>
+              <div className="flex gap-4">
+                <Link
+                  to={`/profile/${targetUserId}/followers`}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white hover:border-primary-400/40"
+                >
+                  <span className="text-lg">{followersCount}</span>
+                  <span className="text-muted">Followers</span>
                 </Link>
-                <Link to={`/profile/${userId}/following`} className="stat-item">
-                  <span className="stat-count">{followingCount}</span>
-                  <span className="stat-label">Following</span>
+                <Link
+                  to={`/profile/${targetUserId}/following`}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white hover:border-primary-400/40"
+                >
+                  <span className="text-lg">{followingCount}</span>
+                  <span className="text-muted">Following</span>
                 </Link>
               </div>
 
-              {/* Follow Button for other users */}
               {!isOwnProfile && (
-                <div className="follow-actions">
+                <div className="max-w-xs">
                   <FollowButton
-                    userId={userId}
+                    userId={targetUserId}
                     isFollowing={isFollowing}
                     onFollowChange={handleFollowChange}
                   />
@@ -168,28 +175,24 @@ export function ProfilePage() {
             </div>
           </div>
 
-          {/* Profile Details */}
-          <div className="profile-details">
-            <div className="profile-detail">
-              <div className="profile-detail-label">Email</div>
-              <div className="profile-detail-value">{profile.email}</div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-muted">Email</div>
+              <div className="mt-1 text-white">{profile.email}</div>
             </div>
-
-            <div className="profile-detail">
-              <div className="profile-detail-label">Date of Birth</div>
-              <div className="profile-detail-value">{profile.dob}</div>
+            <div className="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-muted">Date of Birth</div>
+              <div className="mt-1 text-white">{profile.dob}</div>
             </div>
-
             {profile.about_me && (
-              <div className="profile-detail">
-                <div className="profile-detail-label">About Me</div>
-                <div className="profile-detail-value">{profile.about_me}</div>
+              <div className="rounded-xl border border-white/5 bg-white/5 px-4 py-3 sm:col-span-2">
+                <div className="text-xs uppercase tracking-wide text-muted">About Me</div>
+                <div className="mt-1 text-white">{profile.about_me}</div>
               </div>
             )}
-
-            <div className="profile-detail">
-              <div className="profile-detail-label">Member Since</div>
-              <div className="profile-detail-value">
+            <div className="rounded-xl border border-white/5 bg-white/5 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-muted">Member Since</div>
+              <div className="mt-1 text-white">
                 {new Date(profile.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -199,12 +202,11 @@ export function ProfilePage() {
             </div>
           </div>
 
-          {/* Edit Button for Own Profile */}
           {isOwnProfile && (
-            <div className="profile-actions">
+            <div className="flex">
               <button
                 onClick={() => navigate('/profile/edit')}
-                className="btn-edit-profile"
+                className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500 transition shadow-sm shadow-primary-900/40"
               >
                 Edit Profile
               </button>

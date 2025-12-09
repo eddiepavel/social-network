@@ -2,9 +2,12 @@ import { API_BASE_URL } from '../utils/constants';
 
 // API Error class for better error handling
 export class APIError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+
+  constructor(status: number, message: string) {
     super(message);
     this.name = 'APIError';
+    this.status = status;
   }
 }
 
@@ -29,19 +32,31 @@ export async function apiRequest<T>(
 
     // Handle different response types
     const contentType = response.headers.get('content-type');
-    let data: any;
+    let payload: any;
 
     if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
+      payload = await response.json();
     } else {
-      data = await response.text();
+      payload = await response.text();
     }
+
+    // API returns envelope { data, error }, so unwrap when present
+    const data =
+      payload && typeof payload === 'object' && 'data' in payload
+        ? (payload as { data: any }).data
+        : payload;
+    const errorBody =
+      payload && typeof payload === 'object' && 'error' in payload
+        ? (payload as { error: { message?: string } }).error
+        : null;
 
     // If response is not ok, throw APIError
     if (!response.ok) {
       throw new APIError(
         response.status,
-        data.error || data || `HTTP error! status: ${response.status}`
+        errorBody?.message ||
+          data ||
+          `HTTP error! status: ${response.status}`
       );
     }
 
