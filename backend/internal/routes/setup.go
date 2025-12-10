@@ -46,6 +46,7 @@ func Setup(app *app.App) http.Handler {
 	postsGroup := handler.createGroup(handler.postsRoutes, []string{"auth"})
 	groupsGroup := handler.createGroup(handler.groupsRoutes, []string{"auth"})
 	storageRoutes := handler.createGroup(handler.storageRoutes, []string{"auth"})
+	notificationsGroup := handler.createGroup(handler.notificationsRoutes, []string{"auth"})
 
 	// prefix
 	apiMux.Handle("/public/", http.StripPrefix("/public", publicGroup))
@@ -55,6 +56,7 @@ func Setup(app *app.App) http.Handler {
 	apiMux.Handle("/posts/", http.StripPrefix("/posts", postsGroup))
 	apiMux.Handle("/groups/", http.StripPrefix("/groups", groupsGroup))
 	apiMux.Handle("/storage/", http.StripPrefix("/storage", storageRoutes))
+	apiMux.Handle("/notifications/", http.StripPrefix("/notifications", notificationsGroup))
 	mux.Handle("/api/", http.StripPrefix("/api", apiMux))
 
 	return mux

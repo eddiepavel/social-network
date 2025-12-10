@@ -99,3 +99,18 @@ func (h *Handler) storageRoutes() *http.ServeMux {
 
 	return mux
 }
+
+func (h *Handler) notificationsRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	// Read-only endpoints for frontend
+	mux.HandleFunc("GET /", handlers.GetNotifications(h.App))
+	mux.HandleFunc("GET /unseen", handlers.GetUnseenNotifications(h.App))
+	mux.HandleFunc("GET /details", handlers.GetNotificationsWithUserDetails(h.App))
+	mux.HandleFunc("GET /unseen/count", handlers.GetUnseenNotificationCount(h.App))
+	mux.HandleFunc("PUT /{notificationId}/seen", handlers.MarkNotificationAsSeen(h.App))
+	mux.HandleFunc("PUT /seen/all", handlers.MarkAllNotificationsAsSeen(h.App))
+	mux.HandleFunc("DELETE /{notificationId}", handlers.DeleteNotification(h.App))
+
+	return mux
+}

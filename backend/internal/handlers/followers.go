@@ -117,6 +117,14 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
+
+				// Create notification for follow request
+				err = helpers.CreateNotification(app, user.UserID, "follow_request", currentUserID, nil, nil)
+				if err != nil {
+					app.Logger.Error("failed to create follow request notification", "err", err)
+					// Don't fail the request if notification fails
+				}
+
 				utils.OK(w, "Follow requested successfully")
 				return
 			} else {
