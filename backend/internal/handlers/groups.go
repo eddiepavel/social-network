@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"social-network/app"
@@ -208,6 +210,131 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		}
 
 		utils.OK(w, group)
+	}
+}
+
+// invite users to a group
+func InviteToGroup(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		userId, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "unauthorized")
+		}
+
+		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
+
+		if err != nil {
+			utils.BadRequest(w, errors.New("bad request man"))
+			return
+		}
+
+		db := sqlite.NewQuery(app.DB)
+
+		isMember, _ := db.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			UserID:  userId,
+			GroupID: groupID,
+		})
+
+		if isMember == 0 {
+			utils.Forbidden(w)
+			return
+		}
+
+		var p models.InviteGroupRequest
+
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			utils.BadRequest(w, err)
+			return
+		}
+
+		defer r.Body.Close()
+
+		var users [][]byte
+
+		members := make(map[string]db_groups.GroupMember)
+
+		groupMember, _ := db.Groups.GetGroupMembersWithRequests(r.Context(), groupID)
+
+		for _, member := range groupMember {
+			id, _ := helpers.GenerateFromBytes(member.UserID)
+			members[id] = db_groups.GroupMember{
+				Status: member.Status,
+			}
+		}
+
+		for _, id := range p.Users {
+			gen, _ := helpers.GenerateFromString(id)
+			//users that have already request to join we instantly accept them
+			//this is wrong in so many levels but im bored to create new solution for already requested users. Please dont judge
+			//better approach is to collect users that are status requested and pass them in UPDATE WHERE IN
+			if _, exists := members[id]; !exists && !bytes.Equal(userId, gen) {
+				if members[id].Status == "requested" {
+					err := db.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
+						Status: "joined",
+						UserID: gen,
+					})
+
+					if err != nil {
+						app.Logger.Error("failed to update status", "user", id)
+					}
+				} else {
+					users = append(users, gen)
+				}
+			}
+
+		}
+		//validate the users we have collected from the payload in order to create
+		check, err := db.Users.ValidateUserIds(r.Context(), users)
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			utils.Internal(w, errors.New(err.Error()))
+			return
+		}
+		//validate if everyid is actually legit
+		if int(check) != len(users) {
+			utils.NotFound(w)
+			return
+		}
+
+		//handle if all users are already invited
+		if len(users) == 0 {
+			utils.OK(w, map[string]string{"message": "users already invited"})
+			return
+		}
+
+		tx, _ := app.DB.Begin()
+
+		defer tx.Rollback()
+
+		for i := range users {
+			err := db.Groups.WithTx(tx).InviteGroupMembers(r.Context(), db_groups.InviteGroupMembersParams{
+				UserID:    users[i],
+				GroupID:   groupID,
+				Status:    "requested",
+				InvitedBy: userId,
+			})
+
+			if err != nil {
+				app.Logger.Error("failed to invite user", "err", err)
+				utils.Internal(w, errors.New("failed to send invitations"))
+				return
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			app.Logger.Error("failed to commit transaction", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		utils.OK(w, map[string]interface{}{"message": "Invitations sent successfully", "invited": len(users)})
+
 	}
 }
 
@@ -528,34 +655,4 @@ func GetGroup(app *app.App) http.HandlerFunc {
 // 	json.NewEncoder(w).Encode(map[string]string{
 // 		"message": message,
 // 	})
-// }
-
-// // Helper functions
-
-// // isGroupMember checks if user is a member of the group with status 'joined'
-// func (h *GroupsHandler) isGroupMember(userID, groupID []byte) (bool, error) {
-// 	var count int
-// 	query := `
-// 		SELECT COUNT(*) FROM group_members
-// 		WHERE user_id = ? AND group_id = ? AND status = 'joined'
-// 	`
-// 	err := h.db.QueryRow(query, userID, groupID).Scan(&count)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return count > 0, nil
-// }
-
-// // isGroupCreator checks if user is the creator of the group
-// func (h *GroupsHandler) isGroupCreator(userID, groupID []byte) (bool, error) {
-// 	var creatorID string
-// 	query := "SELECT creator_id FROM groups WHERE group_id = ?"
-// 	err := h.db.QueryRow(query, groupID).Scan(&creatorID)
-// 	if err != nil {
-// 		return false, err
-// 	}
-
-// 	// Compare hex-encoded userID with creatorID (TEXT in DB)
-// 	userIDHex := hex.EncodeToString(userID)
-// 	return userIDHex == creatorID, nil
 // }

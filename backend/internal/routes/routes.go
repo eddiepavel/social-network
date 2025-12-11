@@ -68,6 +68,7 @@ func (h *Handler) groupsRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /group/{groupId}", handlers.GetGroup(h.App))
 	mux.HandleFunc("GET /all", handlers.GetGroups(h.App))
 	mux.HandleFunc("POST /create", handlers.CreateGroup(h.App))
+	mux.HandleFunc("POST /invite/{groupId}", handlers.InviteToGroup(h.App))
 
 	return mux
 }

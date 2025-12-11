@@ -42,6 +42,15 @@ FROM group_members gm
 JOIN users u ON gm.user_id = u.user_id
 WHERE gm.group_id = ? AND gm.status = 'joined';
 
+-- name: GetGroupMembersWithRequests :many
+SELECT * FROM group_members WHERE group_id = ?;
+
+-- name: UpdateGroupMemberStatus :exec
+UPDATE group_members SET status = ? WHERE user_id = ?; 
+
+-- name: InviteGroupMembers :exec
+INSERT INTO group_members (user_id, group_id, status, invited_by) VALUES (?, ?, ?, ?);
+
 -- name: GetGroupEventsWithRSVPs :many
 SELECT 
     ge.event_id,

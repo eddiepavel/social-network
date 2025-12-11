@@ -210,6 +210,39 @@ func (q *Queries) GetGroupMembers(ctx context.Context, groupID []byte) ([]GetGro
 	return items, nil
 }
 
+const getGroupMembersWithRequests = `-- name: GetGroupMembersWithRequests :many
+SELECT user_id, group_id, status, invited_by, created_at FROM group_members WHERE group_id = ?
+`
+
+func (q *Queries) GetGroupMembersWithRequests(ctx context.Context, groupID []byte) ([]GroupMember, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupMembersWithRequests, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupMember
+	for rows.Next() {
+		var i GroupMember
+		if err := rows.Scan(
+			&i.UserID,
+			&i.GroupID,
+			&i.Status,
+			&i.InvitedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupsWithMemberCount = `-- name: GetGroupsWithMemberCount :many
 SELECT
     g.group_id,
@@ -266,6 +299,27 @@ func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]GetGroupsWith
 	return items, nil
 }
 
+const inviteGroupMembers = `-- name: InviteGroupMembers :exec
+INSERT INTO group_members (user_id, group_id, status, invited_by) VALUES (?, ?, ?, ?)
+`
+
+type InviteGroupMembersParams struct {
+	UserID    []byte
+	GroupID   []byte
+	Status    string
+	InvitedBy []byte
+}
+
+func (q *Queries) InviteGroupMembers(ctx context.Context, arg InviteGroupMembersParams) error {
+	_, err := q.db.ExecContext(ctx, inviteGroupMembers,
+		arg.UserID,
+		arg.GroupID,
+		arg.Status,
+		arg.InvitedBy,
+	)
+	return err
+}
+
 const isGroupMember = `-- name: IsGroupMember :one
 SELECT COUNT(*) FROM group_members
 WHERE user_id = ? AND group_id = ? AND status = 'joined'
@@ -281,4 +335,18 @@ func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (i
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const updateGroupMemberStatus = `-- name: UpdateGroupMemberStatus :exec
+UPDATE group_members SET status = ? WHERE user_id = ?
+`
+
+type UpdateGroupMemberStatusParams struct {
+	Status string
+	UserID []byte
+}
+
+func (q *Queries) UpdateGroupMemberStatus(ctx context.Context, arg UpdateGroupMemberStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateGroupMemberStatus, arg.Status, arg.UserID)
+	return err
 }

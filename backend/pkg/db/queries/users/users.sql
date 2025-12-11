@@ -20,3 +20,6 @@ UPDATE users SET first_name = ?, last_name = ?, nickname = ?, about_me = ?, avat
 
 -- name: UpdateUserPrivacy :one
 UPDATE users SET is_public = ? WHERE user_id = ? RETURNING *;
+
+-- name: ValidateUserIds :one
+SELECT COUNT(*) FROM users WHERE user_id IN (sqlc.slice('user_id'));

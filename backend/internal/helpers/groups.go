@@ -65,10 +65,12 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions) (models.G
 		}
 
 		// Add RSVP if exists
-		if row.RsvpUserID != nil && len(row.RsvpUserID) > 0 {
+		if row.RsvpUserID != nil {
 			rsvpUserUUID, _ := GenerateFromBytes(row.RsvpUserID)
 			rsvp := models.RSVPResponse{
 				UserID:    rsvpUserUUID,
+				FirstName: &row.RsvpFirstName.String,
+				LastName:  &row.RsvpLastName.String,
 				Status:    row.RsvpStatus.String,
 				CreatedAt: row.RsvpCreatedAt.Time.String(),
 			}

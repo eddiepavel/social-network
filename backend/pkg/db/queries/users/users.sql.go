@@ -8,6 +8,7 @@ package db_users
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -194,4 +195,25 @@ func (q *Queries) UpdateUserPrivacy(ctx context.Context, arg UpdateUserPrivacyPa
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const validateUserIds = `-- name: ValidateUserIds :one
+SELECT COUNT(*) FROM users WHERE user_id IN (/*SLICE:user_id*/?)
+`
+
+func (q *Queries) ValidateUserIds(ctx context.Context, userID [][]byte) (int64, error) {
+	query := validateUserIds
+	var queryParams []interface{}
+	if len(userID) > 0 {
+		for _, v := range userID {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:user_id*/?", strings.Repeat(",?", len(userID))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:user_id*/?", "NULL", 1)
+	}
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

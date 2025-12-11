@@ -90,3 +90,7 @@ type GroupDetailsResponse struct {
 	Members []GroupMemberResponse `json:"members"`
 	Events  []EventResponse       `json:"events"`
 }
+
+type InviteGroupRequest struct {
+	Users []string `json:"users"`
+}
