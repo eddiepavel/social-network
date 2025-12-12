@@ -260,27 +260,31 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 		for _, member := range groupMember {
 			id, _ := helpers.GenerateFromBytes(member.UserID)
 			members[id] = db_groups.GroupMember{
-				Status: member.Status,
+				Status:    member.Status,
+				InvitedBy: member.InvitedBy,
 			}
 		}
 
+		//users that have already request to join we instantly accept them
+		//this is wrong in so many levels but im bored to create new solution for already requested users. Please dont judge
+		//better approach is to collect users that are status requested and pass them in UPDATE WHERE IN
 		for _, id := range p.Users {
 			gen, _ := helpers.GenerateFromString(id)
-			//users that have already request to join we instantly accept them
-			//this is wrong in so many levels but im bored to create new solution for already requested users. Please dont judge
-			//better approach is to collect users that are status requested and pass them in UPDATE WHERE IN
-			if _, exists := members[id]; !exists && !bytes.Equal(userId, gen) {
-				if members[id].Status == "requested" {
-					err := db.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
-						Status: "joined",
-						UserID: gen,
-					})
+			member, exists := members[id]
 
-					if err != nil {
-						app.Logger.Error("failed to update status", "user", id)
-					}
-				} else {
-					users = append(users, gen)
+			if !exists && !bytes.Equal(userId, gen) {
+				users = append(users, gen)
+				continue
+			}
+
+			if exists && member.Status == "requested" && len(member.InvitedBy) == 0 {
+				err := db.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
+					Status: "joined",
+					UserID: gen,
+				})
+
+				if err != nil {
+					app.Logger.Error("failed to update status", "user", id)
 				}
 			}
 
