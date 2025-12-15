@@ -1,4 +1,5 @@
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ErrorMessage } from '../common/ErrorMessage';
@@ -75,7 +76,7 @@ export function RegisterForm() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -86,13 +87,24 @@ export function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="auth-form">
-      <h2>Register</h2>
+    <form
+      onSubmit={handleSubmit}
+      className="bg-card/80 border border-white/10 rounded-2xl p-8 shadow-soft backdrop-blur"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <p className="text-sm text-muted uppercase tracking-wide">Create account</p>
+          <h2 className="text-2xl font-semibold mt-1">Register</h2>
+        </div>
+      </div>
 
       {localError && <ErrorMessage message={localError} onDismiss={() => setLocalError('')} />}
 
-      <div className="form-group">
-        <label htmlFor="email">Email *</label>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm text-muted">
+            Email *
+          </label>
         <input
           type="email"
           id="email"
@@ -103,10 +115,12 @@ export function RegisterForm() {
           disabled={isLoading}
           placeholder="Enter your email"
         />
-      </div>
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="password">Password *</label>
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm text-muted">
+            Password *
+          </label>
         <input
           type="password"
           id="password"
@@ -118,11 +132,13 @@ export function RegisterForm() {
           placeholder="At least 6 characters"
           minLength={6}
         />
-      </div>
+        </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="first_name">First Name *</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="first_name" className="text-sm text-muted">
+              First Name *
+            </label>
           <input
             type="text"
             id="first_name"
@@ -133,10 +149,12 @@ export function RegisterForm() {
             disabled={isLoading}
             placeholder="First name"
           />
-        </div>
+          </div>
 
-        <div className="form-group">
-          <label htmlFor="last_name">Last Name *</label>
+          <div className="space-y-2">
+            <label htmlFor="last_name" className="text-sm text-muted">
+              Last Name *
+            </label>
           <input
             type="text"
             id="last_name"
@@ -147,11 +165,13 @@ export function RegisterForm() {
             disabled={isLoading}
             placeholder="Last name"
           />
+          </div>
         </div>
-      </div>
 
-      <div className="form-group">
-        <label htmlFor="dob">Date of Birth *</label>
+        <div className="space-y-2">
+          <label htmlFor="dob" className="text-sm text-muted">
+            Date of Birth *
+          </label>
         <input
           type="date"
           id="dob"
@@ -161,10 +181,12 @@ export function RegisterForm() {
           required
           disabled={isLoading}
         />
-      </div>
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="nickname">Nickname (Optional)</label>
+        <div className="space-y-2">
+          <label htmlFor="nickname" className="text-sm text-muted">
+            Nickname (Optional)
+          </label>
         <input
           type="text"
           id="nickname"
@@ -174,10 +196,12 @@ export function RegisterForm() {
           disabled={isLoading}
           placeholder="Your nickname"
         />
-      </div>
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="about_me">About Me (Optional)</label>
+        <div className="space-y-2">
+          <label htmlFor="about_me" className="text-sm text-muted">
+            About Me (Optional)
+          </label>
         <textarea
           id="about_me"
           name="about_me"
@@ -187,14 +211,22 @@ export function RegisterForm() {
           placeholder="Tell us about yourself"
           rows={3}
         />
+        </div>
       </div>
 
-      <button type="submit" disabled={isLoading} className="submit-btn">
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="mt-8 w-full rounded-xl bg-primary-600 hover:bg-primary-500 transition text-white font-semibold py-3 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-primary-900/40"
+      >
         {isLoading ? 'Creating Account...' : 'Register'}
       </button>
 
-      <p className="form-footer">
-        Already have an account? <a href="/login">Login</a>
+      <p className="mt-4 text-center text-sm text-muted">
+        Already have an account?{' '}
+        <a href="/login" className="font-semibold text-primary-300 hover:text-primary-200">
+          Login
+        </a>
       </p>
     </form>
   );

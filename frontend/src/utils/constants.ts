@@ -11,8 +11,5 @@ export const API_ENDPOINTS = {
   // Groups
   GROUPS: '/api/groups/all',
   GROUP_CREATE: '/api/groups/create',
-  GROUP_DETAILS: (id: string) => `/api/groups/${id}`,
-  GROUP_INVITE: (id: string) => `/api/groups/${id}/invite`,
-  GROUP_REQUEST: (id: string) => `/api/groups/${id}/request`,
-  GROUP_ACCEPT: (groupId: string, userId: string) => `/api/groups/${groupId}/accept/${userId}`,
+  GROUP_DETAILS: (id: string) => `/api/groups/group/${id}`,
 } as const;

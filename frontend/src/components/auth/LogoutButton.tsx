@@ -17,7 +17,11 @@ export function LogoutButton() {
   };
 
   return (
-    <button onClick={handleLogout} disabled={isLoading} className="logout-btn">
+    <button
+      onClick={handleLogout}
+      disabled={isLoading}
+      className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 transition disabled:opacity-60 disabled:cursor-not-allowed"
+    >
       {isLoading ? 'Logging out...' : 'Logout'}
     </button>
   );

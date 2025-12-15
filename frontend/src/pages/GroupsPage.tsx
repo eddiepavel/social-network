@@ -22,7 +22,7 @@ export function GroupsPage() {
       setIsLoading(true);
       setError(null);
       const data = await listGroups();
-      setGroups(data.data);
+      setGroups(data);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -60,20 +60,23 @@ export function GroupsPage() {
 
   if (isLoading) {
     return (
-      <div className="page-container">
+      <div className="min-h-screen bg-surface text-slate-50 px-4 py-10">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="page-container">
-      <div className="groups-page">
-        <div className="page-header">
-          <h1>Groups</h1>
+    <div className="min-h-screen bg-surface text-slate-50 px-4 py-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-muted">Discover</p>
+            <h1 className="text-3xl font-semibold">Groups</h1>
+          </div>
           {!showCreateForm && (
             <button
-              className="create-group-btn"
+              className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500 transition shadow-sm shadow-primary-900/40"
               onClick={() => setShowCreateForm(true)}
             >
               Create Group
@@ -81,12 +84,10 @@ export function GroupsPage() {
           )}
         </div>
 
-        {error && (
-          <ErrorMessage message={error} onClose={() => setError(null)} />
-        )}
+        {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
 
         {showCreateForm && (
-          <div className="create-group-section">
+          <div className="rounded-2xl border border-white/10 bg-card/70 p-6 shadow-soft">
             <GroupForm
               onSubmit={handleCreateGroup}
               onCancel={handleCancelCreate}
@@ -95,13 +96,13 @@ export function GroupsPage() {
           </div>
         )}
 
-        <div className="groups-container">
+        <div>
           {!groups ? (
-            <div className="no-groups">
+            <div className="rounded-2xl border border-white/10 bg-card/70 p-6 text-center text-muted">
               <p>No groups found.</p>
               {!showCreateForm && (
                 <button
-                  className="submit-btn"
+                  className="mt-4 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500 transition"
                   onClick={() => setShowCreateForm(true)}
                 >
                   Create your first group
@@ -109,7 +110,7 @@ export function GroupsPage() {
               )}
             </div>
           ) : (
-            <div className="groups-grid">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {groups.map((group) => (
                 <GroupCard key={group.group_id} group={group} />
               ))}

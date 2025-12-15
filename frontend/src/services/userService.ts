@@ -4,7 +4,7 @@ import type { UpdateProfileRequest, UpdatePrivacyRequest } from '../types/user.t
 
 // Get user profile by ID
 export async function getUserProfile(userId: string): Promise<User> {
-  return apiRequest<User>(`/api/users/${userId}`, {
+  return apiRequest<User>(`/api/users/profile/${userId}`, {
     method: 'GET',
   });
 }

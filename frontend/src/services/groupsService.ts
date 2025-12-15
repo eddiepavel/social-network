@@ -1,12 +1,6 @@
 import { apiRequest } from './api';
 import { API_ENDPOINTS } from '../utils/constants';
-import type {
-  Group,
-  GroupDetails,
-  CreateGroupRequest,
-  InviteUserRequest,
-  HandleJoinRequestRequest,
-} from '../types';
+import type { Group, GroupDetails, CreateGroupRequest } from '../types';
 
 // Get all groups
 export async function listGroups(): Promise<Group[]> {
@@ -33,40 +27,16 @@ export async function getGroupDetails(groupId: string): Promise<GroupDetails> {
   });
 }
 
-// Invite a user to a group
-export async function inviteUser(
-  groupId: string,
-  data: InviteUserRequest
-): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>(API_ENDPOINTS.GROUP_INVITE(groupId), {
-    method: 'POST',
-    body: JSON.stringify(data),
-          credentials: 'include',
-  });
+// The current backend only supports listing, creating, and fetching group details.
+// Invite/join request flows are not implemented server-side yet.
+export async function inviteUser(): Promise<never> {
+  throw new Error('Group invitations are not supported by the backend yet.');
 }
 
-// Request to join a group
-export async function requestToJoin(
-  groupId: string
-): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>(API_ENDPOINTS.GROUP_REQUEST(groupId), {
-    method: 'POST',
-          credentials: 'include',
-  });
+export async function requestToJoin(): Promise<never> {
+  throw new Error('Join requests are not supported by the backend yet.');
 }
 
-// Accept or reject a join request (creator only)
-export async function handleJoinRequest(
-  groupId: string,
-  userId: string,
-  data: HandleJoinRequestRequest
-): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>(
-    API_ENDPOINTS.GROUP_ACCEPT(groupId, userId),
-    {
-      method: 'POST',
-      body: JSON.stringify(data),
-            credentials: 'include',
-    }
-  );
+export async function handleJoinRequest(): Promise<never> {
+  throw new Error('Managing join requests is not supported by the backend yet.');
 }

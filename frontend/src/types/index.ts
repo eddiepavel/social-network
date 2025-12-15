@@ -16,3 +16,13 @@ export type {
   HandleJoinRequestRequest,
   GroupsState,
 } from './groups.types';
+
+export type {
+  Post,
+  FeedPost,
+  PostDetail,
+  PostVisibility,
+  CreatePostRequest,
+  UpdatePostRequest,
+  SharePostRequest,
+} from './posts.types';
