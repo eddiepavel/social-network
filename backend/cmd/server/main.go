@@ -12,6 +12,7 @@ import (
 	"social-network/internal/services"
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/environment"
+	"social-network/pkg/ws"
 )
 
 func main() {
@@ -33,10 +34,16 @@ func main() {
 	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
 	file.StartCleanUp()
 
+	// Initialize WebSocket manager
+	wsManager := ws.NewManager(db.DB, logger)
+	wsManager.Start()
+	defer wsManager.Shutdown()
+
 	app := &app.App{
 		DB:     db.DB,
 		Logger: logger,
 		File:   file,
+		WsManager: wsManager,
 	}
 
 	defer func() {
