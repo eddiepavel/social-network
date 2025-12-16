@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test4@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg5\",\r\n    \"last_name\": \"gg5\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -43,7 +43,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -123,7 +123,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"is_public\": false\r\n}",
+							"raw": "{\r\n    \"is_public\": true\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -169,6 +169,30 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/users/search?name=gg",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"search"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "gg"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -181,13 +205,13 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/follow",
+							"raw": "{{url}}/followers/8e9f65e8-78ff-48af-8159-23290988955a/follow",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
 								"followers",
-								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
+								"8e9f65e8-78ff-48af-8159-23290988955a",
 								"follow"
 							]
 						}
@@ -247,14 +271,14 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}/followers/requests/4/respond",
+							"raw": "{{url}}/followers/requests/2/respond",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
 								"followers",
 								"requests",
-								"4",
+								"2",
 								"respond"
 							]
 						}
@@ -274,6 +298,77 @@
 							"path": [
 								"followers",
 								"requests"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Groups",
+			"item": [
+				{
+					"name": "All Groups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/api/groups/all",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"api",
+								"groups",
+								"all"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Group",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/groups/group/6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"group",
+								"6a8bf775-00d7-4598-881a-2cf85d9d66c5"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invite Group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"users\": [\r\n        \"2e9cfa6a-d179-4fd6-ac15-58ffd9dcfc38\",\r\n        \"24a70329-2b1d-494f-a53c-36ad334f10e4\",\r\n        \"11a2f964-0398-47b9-add0-9ee2ea0fdc1d\"\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"invite",
+								"6a8bf775-00d7-4598-881a-2cf85d9d66c5"
 							]
 						}
 					},
