@@ -23,3 +23,25 @@ UPDATE users SET is_public = ? WHERE user_id = ? RETURNING *;
 
 -- name: ValidateUserIds :one
 SELECT COUNT(*) FROM users WHERE user_id IN (sqlc.slice('user_id'));
+
+-- name: QueryUsers :many
+SELECT
+    u.user_id,
+    u.first_name,
+    u.last_name,
+    u.nickname
+FROM users u
+WHERE (
+    EXISTS (
+        SELECT 1
+        FROM followers f
+        WHERE 
+            (f.follower_id = ?1 AND f.followee_id = u.user_id)
+         OR (f.follower_id = u.user_id AND f.followee_id = ?1)
+    )
+    OR u.is_public = 1
+)
+AND (
+    LOWER(u.first_name || ' ' || u.last_name) LIKE LOWER('%' || ?2 || '%')
+    OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ?2 || '%')
+)

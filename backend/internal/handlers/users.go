@@ -11,6 +11,7 @@ import (
 	"social-network/internal/utils"
 	db_users "social-network/pkg/db/queries/users"
 	"social-network/pkg/db/sqlite"
+	"strings"
 )
 
 // GetUserProfile handles GET /api/users/:id
@@ -159,5 +160,45 @@ func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
 		response := helpers.UserToResponse(user)
 
 		utils.Write(w, http.StatusOK, response)
+	}
+}
+
+func SearchUsers(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "no user id found")
+			return
+		}
+
+		searchParama := strings.TrimSpace(r.URL.Query().Get("name"))
+
+		var users []models.UserResponse
+
+		searchUsers, err := sqlite.NewQuery(app.DB).Users.QueryUsers(r.Context(), db_users.QueryUsersParams{
+			FollowerID: userId,
+			Column2:    sql.NullString{Valid: true, String: searchParama},
+		})
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.OK(w, users)
+				return
+			}
+			utils.Internal(w, errors.New("database error"))
+		}
+
+		for _, user := range searchUsers {
+			make, _ := helpers.GenerateFromBytes(user.UserID)
+			users = append(users, models.UserResponse{
+				UserID:    make,
+				FirstName: user.FirstName,
+				LastName:  user.LastName,
+				Nickname:  user.Nickname.String,
+			})
+		}
+
+		utils.OK(w, users)
 	}
 }

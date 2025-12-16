@@ -130,6 +130,69 @@ func (q *Queries) GetUserByNickname(ctx context.Context, nickname sql.NullString
 	return i, err
 }
 
+const queryUsers = `-- name: QueryUsers :many
+SELECT
+    u.user_id,
+    u.first_name,
+    u.last_name,
+    u.nickname
+FROM users u
+WHERE (
+    EXISTS (
+        SELECT 1
+        FROM followers f
+        WHERE 
+            (f.follower_id = ?1 AND f.followee_id = u.user_id)
+         OR (f.follower_id = u.user_id AND f.followee_id = ?1)
+    )
+    OR u.is_public = 1
+)
+AND (
+    LOWER(u.first_name || ' ' || u.last_name) LIKE LOWER('%' || ?2 || '%')
+    OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ?2 || '%')
+)
+`
+
+type QueryUsersParams struct {
+	FollowerID []byte
+	Column2    sql.NullString
+}
+
+type QueryUsersRow struct {
+	UserID    []byte
+	FirstName string
+	LastName  string
+	Nickname  sql.NullString
+}
+
+func (q *Queries) QueryUsers(ctx context.Context, arg QueryUsersParams) ([]QueryUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, queryUsers, arg.FollowerID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []QueryUsersRow
+	for rows.Next() {
+		var i QueryUsersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Nickname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users SET first_name = ?, last_name = ?, nickname = ?, about_me = ?, avatar = ? WHERE user_id = ? RETURNING user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at
 `

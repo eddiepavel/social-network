@@ -31,6 +31,7 @@ func (h *Handler) userRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /profile/{id}", handlers.GetUserProfile(h.App))
 	mux.HandleFunc("PUT /profile", handlers.UpdateProfile(h.App))
 	mux.HandleFunc("PUT /privacy", handlers.UpdatePrivacy(h.App))
+	mux.HandleFunc("GET /search", handlers.SearchUsers(h.App))
 
 	return mux
 }
