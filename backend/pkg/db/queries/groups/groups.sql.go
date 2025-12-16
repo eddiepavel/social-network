@@ -322,16 +322,17 @@ func (q *Queries) InviteGroupMembers(ctx context.Context, arg InviteGroupMembers
 
 const isGroupMember = `-- name: IsGroupMember :one
 SELECT COUNT(*) FROM group_members
-WHERE user_id = ? AND group_id = ? AND status = 'joined'
+WHERE user_id = ? AND group_id = ? AND status = ?
 `
 
 type IsGroupMemberParams struct {
 	UserID  []byte
 	GroupID []byte
+	Status  string
 }
 
 func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, isGroupMember, arg.UserID, arg.GroupID)
+	row := q.db.QueryRowContext(ctx, isGroupMember, arg.UserID, arg.GroupID, arg.Status)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

@@ -26,7 +26,7 @@ ORDER BY g.created_at DESC;
 
 -- name: IsGroupMember :one
 SELECT COUNT(*) FROM group_members
-WHERE user_id = ? AND group_id = ? AND status = 'joined';
+WHERE user_id = ? AND group_id = ? AND status = ?;
 
 -- name: GetGroupById :one
 SELECT * FROM groups WHERE group_id = ?;

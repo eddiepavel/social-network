@@ -185,6 +185,7 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
 			GroupID: groupIDHex,
 			UserID:  userID,
+			Status:  "joined",
 		})
 
 		if err != nil {
@@ -235,6 +236,7 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 		isMember, _ := db.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
 			UserID:  userId,
 			GroupID: groupID,
+			Status:  "joined",
 		})
 
 		if isMember == 0 {
