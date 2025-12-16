@@ -186,16 +186,19 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
 			GroupID: groupIDHex,
 			UserID:  userID,
-			Status:  "joined",
 		})
 
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.Forbidden(w)
+				return
+			}
 			app.Logger.Error("error checking is member", "err", err)
 			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
 
-		if isMember == 0 {
+		if isMember.Status == "requested" {
 			utils.Forbidden(w)
 			return
 		}
@@ -237,10 +240,9 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 		isMember, _ := db.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
 			UserID:  userId,
 			GroupID: groupID,
-			Status:  "joined",
 		})
 
-		if isMember == 0 {
+		if isMember.Status != "joined" {
 			utils.Forbidden(w)
 			return
 		}
@@ -341,6 +343,105 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 		}
 
 		utils.OK(w, map[string]interface{}{"message": "Invitations sent successfully", "invited": len(users)})
+
+	}
+}
+
+func UpdateGroupMemberShip(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
+
+		if err != nil {
+			utils.BadRequest(w, errors.New("bad request man"))
+			return
+		}
+
+		userId, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "auth user not found")
+			return
+		}
+
+		db := sqlite.NewQuery(app.DB)
+
+		getGroup, err := db.Groups.GetGroupById(r.Context(), groupID)
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			app.Logger.Error("error fetching group details", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if bytes.Equal(userId, getGroup.CreatorID) {
+			utils.Forbidden(w)
+			return
+		}
+
+		var p models.MemberShipRequest
+
+		inputs := helpers.ValidateMemberShip.Build(r, app)
+
+		ok, errValidation := utils.Validate(r, inputs, &p)
+
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		isMember, err := db.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			UserID:  userId,
+			GroupID: groupID,
+		})
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) && p.Action == "request" {
+				err := db.Groups.CreateGroupMember(r.Context(), db_groups.CreateGroupMemberParams{
+					UserID:  userId,
+					GroupID: groupID,
+					Status:  "requested",
+				})
+
+				if err != nil {
+					app.Logger.Error("error creating group member", "err", err)
+					utils.Internal(w, errors.New("internal server error"))
+					return
+				}
+
+				utils.OK(w, map[string]string{"message": "created"})
+				return
+			}
+
+			if errors.Is(err, sql.ErrNoRows) && p.Action == "remove" {
+				utils.Error(w, http.StatusConflict, "409", "invalid action or state", nil)
+				return
+			}
+
+			app.Logger.Error("error fetching group member", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if (isMember.Status == "joined" || isMember.Status == "requested") && p.Action == "remove" {
+			err := db.Groups.RemoveUserFromGroup(r.Context(), db_groups.RemoveUserFromGroupParams{
+				UserID:  userId,
+				GroupID: groupID,
+			})
+
+			if err != nil {
+				app.Logger.Error("error deleting user from group", "err", err)
+				utils.Internal(w, errors.New("internal server error"))
+			}
+			utils.OK(w, map[string]string{"message": "removed"})
+			return
+		}
+
+		utils.Error(w, http.StatusConflict, "409", "invalid action or state", nil)
 
 	}
 }

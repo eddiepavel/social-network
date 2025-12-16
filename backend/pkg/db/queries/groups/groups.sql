@@ -25,8 +25,11 @@ GROUP BY g.group_id
 ORDER BY g.created_at DESC;
 
 -- name: IsGroupMember :one
-SELECT COUNT(*) FROM group_members
-WHERE user_id = ? AND group_id = ? AND status = ?;
+SELECT * FROM group_members
+WHERE user_id = ? AND group_id = ? LIMIT 1;
+
+-- name: RemoveUserFromGroup :exec
+DELETE FROM group_members WHERE user_id = ? AND group_id = ?;
 
 -- name: GetGroupById :one
 SELECT * FROM groups WHERE group_id = ?;

@@ -94,3 +94,7 @@ type GroupDetailsResponse struct {
 type InviteGroupRequest struct {
 	Users []string `json:"users"`
 }
+
+type MemberShipRequest struct {
+	Action string `json:"action"`
+}

@@ -327,21 +327,40 @@ func (q *Queries) InviteGroupMembers(ctx context.Context, arg InviteGroupMembers
 }
 
 const isGroupMember = `-- name: IsGroupMember :one
-SELECT COUNT(*) FROM group_members
-WHERE user_id = ? AND group_id = ? AND status = ?
+SELECT user_id, group_id, status, invited_by, created_at FROM group_members
+WHERE user_id = ? AND group_id = ? LIMIT 1
 `
 
 type IsGroupMemberParams struct {
 	UserID  []byte
 	GroupID []byte
-	Status  string
 }
 
-func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, isGroupMember, arg.UserID, arg.GroupID, arg.Status)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (GroupMember, error) {
+	row := q.db.QueryRowContext(ctx, isGroupMember, arg.UserID, arg.GroupID)
+	var i GroupMember
+	err := row.Scan(
+		&i.UserID,
+		&i.GroupID,
+		&i.Status,
+		&i.InvitedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const removeUserFromGroup = `-- name: RemoveUserFromGroup :exec
+DELETE FROM group_members WHERE user_id = ? AND group_id = ?
+`
+
+type RemoveUserFromGroupParams struct {
+	UserID  []byte
+	GroupID []byte
+}
+
+func (q *Queries) RemoveUserFromGroup(ctx context.Context, arg RemoveUserFromGroupParams) error {
+	_, err := q.db.ExecContext(ctx, removeUserFromGroup, arg.UserID, arg.GroupID)
+	return err
 }
 
 const updateGroupMemberStatus = `-- name: UpdateGroupMemberStatus :exec

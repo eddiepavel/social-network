@@ -100,6 +100,22 @@ func (c CreateGroupValidator) Build(r *http.Request, app *app.App) map[string][]
 	}
 }
 
+type MemberShipGroupValidator struct{}
+
+func (up MemberShipGroupValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"action": {"required", "string", func(v interface{}) error {
+			action := v.(string)
+
+			if action != "request" && action != "remove" {
+				return errors.New("bad payload")
+			}
+
+			return nil
+		}},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister      ValidationRuleBuilder = RegisterValidator{}
@@ -107,4 +123,5 @@ var (
 	ValidateLogin         ValidationRuleBuilder = LoginValidator{}
 	ValidatePrivacy       ValidationRuleBuilder = PrivacyValidator{}
 	ValidateCreateGroup   ValidationRuleBuilder = CreateGroupValidator{}
+	ValidateMemberShip    ValidationRuleBuilder = MemberShipGroupValidator{}
 )
