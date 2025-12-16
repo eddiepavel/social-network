@@ -61,7 +61,7 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 		// Return user response
 		response := helpers.UserToResponse(user)
 
-		utils.Write(w, http.StatusOK, response)
+		utils.OK(w, response)
 	}
 
 }
@@ -117,7 +117,7 @@ func UpdateProfile(app *app.App) http.HandlerFunc {
 		// Return user response
 		response := helpers.UserToResponse(updated)
 
-		utils.Write(w, http.StatusOK, response)
+		utils.OK(w, response)
 	}
 }
 
@@ -159,7 +159,7 @@ func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
 		// Return updated user
 		response := helpers.UserToResponse(user)
 
-		utils.Write(w, http.StatusOK, response)
+		utils.OK(w, response)
 	}
 }
 

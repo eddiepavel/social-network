@@ -83,7 +83,7 @@ func Register(app *app.App) http.HandlerFunc {
 		// return user response
 		response := helpers.UserToResponse(transaction)
 
-		utils.Write(w, http.StatusOK, response)
+		utils.OK(w, response)
 	}
 
 }
@@ -153,7 +153,7 @@ func Login(app *app.App) http.HandlerFunc {
 
 		// Return user response
 		response := helpers.UserToResponse(transaction)
-		utils.Write(w, http.StatusOK, response)
+		utils.OK(w, response)
 	}
 }
 
@@ -176,7 +176,7 @@ func GetSession(app *app.App) http.HandlerFunc {
 
 		// Return user response
 		response := helpers.UserToResponse(user)
-		utils.Write(w, http.StatusOK, response)
+		utils.OK(w, response)
 	}
 
 }
