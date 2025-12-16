@@ -187,6 +187,7 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 				return
 			}
 			utils.Internal(w, errors.New("database error"))
+			return
 		}
 
 		for _, user := range searchUsers {
