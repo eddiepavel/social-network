@@ -85,6 +85,7 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 		err = sqlite.NewQuery(app.DB).Groups.WithTx(tx).CreateGroupMember(r.Context(), db_groups.CreateGroupMemberParams{
 			UserID:  userID,
 			GroupID: group.GroupID,
+			Status:  "joined",
 		})
 
 		// Commit transaction

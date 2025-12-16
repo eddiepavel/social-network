@@ -49,17 +49,23 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 
 const createGroupMember = `-- name: CreateGroupMember :exec
 INSERT INTO group_members (user_id, group_id, status, invited_by, created_at)
-VALUES (?, ?, 'joined', NULL, ?)
+VALUES (?, ?, ?, NULL, ?)
 `
 
 type CreateGroupMemberParams struct {
 	UserID    []byte
 	GroupID   []byte
+	Status    string
 	CreatedAt sql.NullTime
 }
 
 func (q *Queries) CreateGroupMember(ctx context.Context, arg CreateGroupMemberParams) error {
-	_, err := q.db.ExecContext(ctx, createGroupMember, arg.UserID, arg.GroupID, arg.CreatedAt)
+	_, err := q.db.ExecContext(ctx, createGroupMember,
+		arg.UserID,
+		arg.GroupID,
+		arg.Status,
+		arg.CreatedAt,
+	)
 	return err
 }
 
