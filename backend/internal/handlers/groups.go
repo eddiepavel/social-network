@@ -206,7 +206,7 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		// Fetch group details
 		init := sqlite.NewQuery(app.DB)
 
-		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init)
+		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID)
 
 		if err != nil {
 			app.Logger.Error("error fetching group details", "err", err)

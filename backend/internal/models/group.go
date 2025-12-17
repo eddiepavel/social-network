@@ -39,6 +39,7 @@ type GroupResponse struct {
 	CreatorID   string  `json:"creator_id"`
 	CreatedAt   string  `json:"created_at"`
 	MemberCount int64   `json:"member_count,omitempty"`
+	IsOwner     bool    `json:"is_owner,omitempty"`
 }
 
 // GroupMemberResponse represents a group member returned to the client

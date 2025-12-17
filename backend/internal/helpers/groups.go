@@ -1,12 +1,13 @@
 package helpers
 
 import (
+	"bytes"
 	"context"
 	"social-network/internal/models"
 	"social-network/pkg/db/sqlite"
 )
 
-func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions) (models.GroupDetailsResponse, error) {
+func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte) (models.GroupDetailsResponse, error) {
 
 	var group models.GroupDetailsResponse
 	ctx := context.Background()
@@ -18,11 +19,14 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions) (models.G
 	}
 	groupUUID, _ := GenerateFromBytes(getGroup.GroupID)
 
+	isOwner := bytes.Equal(getGroup.CreatorID, user)
+
 	group.Group = models.GroupResponse{
 		GroupID:     groupUUID,
 		GroupName:   getGroup.GroupName,
 		Description: getGroup.Description,
 		CreatedAt:   getGroup.CreatedAt.Local().String(),
+		IsOwner:     isOwner,
 	}
 	if getGroup.Image.Valid {
 		group.Group.Image = &getGroup.Image.String
