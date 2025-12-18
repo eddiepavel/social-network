@@ -74,3 +74,11 @@ func (h *Handler) groupsRoutes() *http.ServeMux {
 
 	return mux
 }
+
+func (h *Handler) storageRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /upload", handlers.Upload(h.App))
+
+	return mux
+}
