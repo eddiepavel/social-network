@@ -5,9 +5,11 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"social-network/app"
 	"social-network/internal/routes"
+	"social-network/internal/services"
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/environment"
 )
@@ -28,12 +30,19 @@ func main() {
 
 	logger.Info("database success")
 
+	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
+	file.StartCleanUp()
+
 	app := &app.App{
 		DB:     db.DB,
 		Logger: logger,
+		File:   file,
 	}
 
-	defer db.Close()
+	defer func() {
+		db.Close()
+		file.StopCleanUp()
+	}()
 
 	// Set up routes
 	mux := routes.Setup(app)
