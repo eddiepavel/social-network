@@ -3,7 +3,6 @@ package routes
 import (
 	"net/http"
 	"social-network/internal/handlers"
-	"social-network/internal/middleware"
 )
 
 // Authentication endpoints
@@ -119,31 +118,8 @@ func (h *Handler) notificationsRoutes() *http.ServeMux {
 func (h *Handler) wsRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Test endpoint to verify auth middleware is working
-	mux.HandleFunc("GET /test", func(w http.ResponseWriter, r *http.Request) {
-		userID, ok := middleware.GetUserIDFromContext(r.Context())
-		if !ok {
-			http.Error(w, "No user in context", 401)
-			return
-		}
-		w.Write([]byte("Auth middleware works! User ID: " + string(userID)))
-	})
-
-	// WebSocket connection
-	mux.Handle("GET /connect", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get user ID from context
-		userID, ok := middleware.GetUserIDFromContext(r.Context())
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		if h.App.WsManager != nil {
-			h.App.WsManager.ServeWs(w, r, userID)
-		} else {
-			http.Error(w, "WebSocket service unavailable", http.StatusServiceUnavailable)
-		}
-	}))
+	// WebSocket connection endpoint
+	mux.HandleFunc("GET /connect", handlers.ConnectWebSocket(h.App))
 
 	return mux
 }

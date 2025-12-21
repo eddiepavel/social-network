@@ -10,9 +10,9 @@ import (
 	"social-network/app"
 	"social-network/internal/routes"
 	"social-network/internal/services"
+	"social-network/internal/websocket"
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/environment"
-	"social-network/pkg/ws"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 	file.StartCleanUp()
 
 	// Initialize WebSocket manager
-	wsManager := ws.NewManager(db.DB, logger)
+	wsManager := websocket.NewManager(db.DB, logger)
 	wsManager.Start()
 	defer wsManager.Shutdown()
 
@@ -54,7 +54,7 @@ func main() {
 	// Set up routes
 	mux := routes.Setup(app)
 
-	//start server
+	// Start server
 	port := os.Getenv("PORT")
 
 	log.Printf("Server starting on port %s...", port)

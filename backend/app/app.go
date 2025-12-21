@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"social-network/internal/services"
 	"social-network/pkg/ws"
+	"social-network/internal/websocket"
 )
 
 type App struct {

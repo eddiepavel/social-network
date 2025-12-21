@@ -1,4 +1,4 @@
-package ws
+package websocket
 
 import (
 	"database/sql"
@@ -19,12 +19,9 @@ const (
 	EventNotification = "notification"
 	EventError        = "error"
 
-	// Client -> Server events (incoming) - Add your custom events here
+	// Client -> Server events (incoming)
 	EventPrivateMessage  = "private_message"
 	EventTypingIndicator = "typing_indicator"
-	// Add more event types as needed:
-	// EventGroupMessage = "group_message"
-	// EventReadReceipt = "read_receipt"
 )
 
 // NotificationEvent represents a notification pushed to the client

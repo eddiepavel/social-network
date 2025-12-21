@@ -1,4 +1,4 @@
-package ws
+package websocket
 
 import (
 	"context"
@@ -15,12 +15,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Note: This must match the context key used in middleware/auth.go
-// We use the raw string type to avoid type mismatch issues
-type contextKey string
-
-const UserIDKey contextKey = "user_id"
-
 var (
 	websocketUpgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -30,9 +24,9 @@ var (
 )
 
 type Manager struct {
-	DB              *sql.DB
-	Logger          *slog.Logger
-	clients         ClientsConnected
+	DB      *sql.DB
+	Logger  *slog.Logger
+	clients ClientsConnected
 	sync.RWMutex
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -61,10 +55,6 @@ func NewManager(db *sql.DB, l *slog.Logger) *Manager {
 func (m *Manager) setupEventHandlers() {
 	m.handlers[EventPrivateMessage] = PrivateMessageHandler
 	m.handlers[EventTypingIndicator] = TypingIndicatorHandler
-
-	// Add more handlers as needed:
-	// m.handlers[EventGroupMessage] = GroupMessageHandler
-	// m.handlers[EventReadReceipt] = ReadReceiptHandler
 }
 
 // routeEvent routes incoming events to the appropriate handler

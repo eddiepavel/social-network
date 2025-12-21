@@ -1,4 +1,4 @@
-package ws
+package websocket
 
 import (
 	"database/sql"
@@ -8,7 +8,7 @@ import (
 )
 
 // PrivateMessageHandler handles private messages between users
-// Example handler - you can implement your own message storage logic
+// TODO implement message storage logic
 func PrivateMessageHandler(event Event, c *Client, db *sql.DB) error {
 	var msg PrivateMessageEvent
 	if err := json.Unmarshal(event.Payload, &msg); err != nil {
@@ -30,7 +30,6 @@ func PrivateMessageHandler(event Event, c *Client, db *sql.DB) error {
 	c.manager.RUnlock()
 
 	if !ok {
-		// TODO: Store message in database if recipient is offline
 		c.manager.Logger.Warn("Recipient not online", "from", msg.From, "to", msg.To)
 		return fmt.Errorf("recipient not online")
 	}
@@ -88,10 +87,3 @@ func TypingIndicatorHandler(event Event, c *Client, db *sql.DB) error {
 
 	return nil
 }
-
-// Add your custom event handlers below:
-// Example:
-// func GroupMessageHandler(event Event, c *Client, db *sql.DB) error {
-//     // Your implementation
-//     return nil
-// }
