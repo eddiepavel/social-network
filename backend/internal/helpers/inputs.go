@@ -116,12 +116,63 @@ func (up MemberShipGroupValidator) Build(r *http.Request, app *app.App) map[stri
 	}
 }
 
+type PostValidator struct{}
+
+func (pv PostValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"content": {"required", "string", "min:10", "max:255"},
+		"visibility": {"required", "string", func(v interface{}) error {
+			visibility := v.(string)
+			if visibility != "public" && visibility != "private" && visibility != "semi-private" {
+				return errors.New("invalid post visibility")
+			}
+			return nil
+		}},
+		"image_id": {"sometimes", "string"},
+	}
+}
+
+type UpdatePostValidator struct{}
+
+func (upv UpdatePostValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"content":  {"required", "string", "min:10", "max:255"},
+		"image_id": {"sometimes", "string"},
+	}
+}
+
+type UpdatePostVisibilityValidator struct{}
+
+func (upvv UpdatePostVisibilityValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"visibility": {"required", "string", func(v interface{}) error {
+			visibility := v.(string)
+			if visibility != "public" && visibility != "private" && visibility != "semi-private" {
+				return errors.New("invalid post visibility")
+			}
+			return nil
+		}},
+	}
+}
+
+type AddUserToPrivatePostValidator struct{}
+
+func (aupv AddUserToPrivatePostValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"user_id": {"required", "string"},
+	}
+}
+
 // Exported instances
 var (
-	ValidateRegister      ValidationRuleBuilder = RegisterValidator{}
-	ValidateUpdateProfile ValidationRuleBuilder = UpdateProfileValidator{}
-	ValidateLogin         ValidationRuleBuilder = LoginValidator{}
-	ValidatePrivacy       ValidationRuleBuilder = PrivacyValidator{}
-	ValidateCreateGroup   ValidationRuleBuilder = CreateGroupValidator{}
-	ValidateMemberShip    ValidationRuleBuilder = MemberShipGroupValidator{}
+	ValidateRegister             ValidationRuleBuilder = RegisterValidator{}
+	ValidateUpdateProfile        ValidationRuleBuilder = UpdateProfileValidator{}
+	ValidateLogin                ValidationRuleBuilder = LoginValidator{}
+	ValidatePrivacy              ValidationRuleBuilder = PrivacyValidator{}
+	ValidateCreateGroup          ValidationRuleBuilder = CreateGroupValidator{}
+	ValidateMemberShip           ValidationRuleBuilder = MemberShipGroupValidator{}
+	ValidatePost                 ValidationRuleBuilder = PostValidator{}
+	ValidateUpdatePost           ValidationRuleBuilder = UpdatePostValidator{}
+	ValidateUpdatePostVisibility ValidationRuleBuilder = UpdatePostVisibilityValidator{}
+	ValidateAddUserToPrivatePost ValidationRuleBuilder = AddUserToPrivatePostValidator{}
 )

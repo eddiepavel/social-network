@@ -1,6 +1,6 @@
 -- 000005_create_posts_table.up.sql
 CREATE TABLE IF NOT EXISTS posts (
-    post_id TEXT PRIMARY KEY,
+    post_id BLOB PRIMARY KEY,
     author_id BLOB NOT NULL,
     content TEXT NOT NULL,
     image_id TEXT,

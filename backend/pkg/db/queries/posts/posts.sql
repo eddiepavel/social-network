@@ -28,6 +28,9 @@ WHERE p.post_id = ?;
 -- name: GetPostVisibility :one
 SELECT visibility FROM posts WHERE post_id = ?;
 
+-- name: GetPostBasicInfo :one
+SELECT post_id, author_id, visibility FROM posts WHERE post_id = ?;
+
 -- name: CheckPrivatePostUserPermit :one
 SELECT * FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 
@@ -61,7 +64,7 @@ ORDER BY p.created_at DESC LIMIT ?
 OFFSET ?;
 
 -- name: CreatePost :one
-INSERT INTO posts (author_id, content, visibility, image_id) VALUES (?, ?, ?, ?) RETURNING *;
+INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING *;
 
 -- name: UpdatePost :exec
 UPDATE posts SET content = ? AND image_id = ? WHERE post_id = ? and author_id = ?;

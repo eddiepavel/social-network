@@ -26,7 +26,7 @@ type Follower struct {
 }
 
 type Post struct {
-	PostID     string
+	PostID     []byte
 	AuthorID   []byte
 	Content    string
 	ImageID    sql.NullString

@@ -28,7 +28,7 @@ SELECT ?, ?
 type AddPrivatePostViewingPermissionParams struct {
 	UserID     []byte
 	PostID     string
-	PostID_2   string
+	PostID_2   []byte
 	FollowerID []byte
 }
 
@@ -90,7 +90,7 @@ type CreateCommentParams struct {
 	Content         string
 	ParentCommentID sql.NullString
 	ImageID         sql.NullString
-	PostID_2        string
+	PostID_2        []byte
 	FollowerID      []byte
 	UserID_2        []byte
 }
@@ -114,10 +114,11 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (i
 }
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (author_id, content, visibility, image_id) VALUES (?, ?, ?, ?) RETURNING post_id, author_id, content, image_id, visibility, created_at
+INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING post_id, author_id, content, image_id, visibility, created_at
 `
 
 type CreatePostParams struct {
+	PostID     []byte
 	AuthorID   []byte
 	Content    string
 	Visibility string
@@ -126,6 +127,7 @@ type CreatePostParams struct {
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
 	row := q.db.QueryRowContext(ctx, createPost,
+		arg.PostID,
 		arg.AuthorID,
 		arg.Content,
 		arg.Visibility,
@@ -177,7 +179,7 @@ type CreateReactionParams struct {
 	UserID       []byte
 	ReactionType string
 	Column6      interface{}
-	PostID       string
+	PostID       []byte
 	Column8      interface{}
 	CommentID    string
 	FollowerID   []byte
@@ -223,7 +225,7 @@ DELETE FROM posts WHERE post_id = ? and author_id = ?
 `
 
 type DeletePostParams struct {
-	PostID   string
+	PostID   []byte
 	AuthorID []byte
 }
 
@@ -267,7 +269,7 @@ UPDATE posts SET visibility = ? WHERE post_id = ? and author_id = ?
 
 type EditPostVisibilityParams struct {
 	Visibility string
-	PostID     string
+	PostID     []byte
 	AuthorID   []byte
 }
 
@@ -308,6 +310,23 @@ func (q *Queries) GetCommentReactions(ctx context.Context, targetID string) ([]R
 		return nil, err
 	}
 	return items, nil
+}
+
+const getPostBasicInfo = `-- name: GetPostBasicInfo :one
+SELECT post_id, author_id, visibility FROM posts WHERE post_id = ?
+`
+
+type GetPostBasicInfoRow struct {
+	PostID     []byte
+	AuthorID   []byte
+	Visibility string
+}
+
+func (q *Queries) GetPostBasicInfo(ctx context.Context, postID []byte) (GetPostBasicInfoRow, error) {
+	row := q.db.QueryRowContext(ctx, getPostBasicInfo, postID)
+	var i GetPostBasicInfoRow
+	err := row.Scan(&i.PostID, &i.AuthorID, &i.Visibility)
+	return i, err
 }
 
 const getPostComments = `-- name: GetPostComments :many
@@ -383,7 +402,7 @@ const getPostVisibility = `-- name: GetPostVisibility :one
 SELECT visibility FROM posts WHERE post_id = ?
 `
 
-func (q *Queries) GetPostVisibility(ctx context.Context, postID string) (string, error) {
+func (q *Queries) GetPostVisibility(ctx context.Context, postID []byte) (string, error) {
 	row := q.db.QueryRowContext(ctx, getPostVisibility, postID)
 	var visibility string
 	err := row.Scan(&visibility)
@@ -419,7 +438,7 @@ WHERE p.post_id = ?
 `
 
 type GetPostWithReactionsAndCommentsRow struct {
-	PostID     string
+	PostID     []byte
 	AuthorID   []byte
 	Content    string
 	ImageID    sql.NullString
@@ -429,7 +448,7 @@ type GetPostWithReactionsAndCommentsRow struct {
 	Comments   interface{}
 }
 
-func (q *Queries) GetPostWithReactionsAndComments(ctx context.Context, postID string) (GetPostWithReactionsAndCommentsRow, error) {
+func (q *Queries) GetPostWithReactionsAndComments(ctx context.Context, postID []byte) (GetPostWithReactionsAndCommentsRow, error) {
 	row := q.db.QueryRowContext(ctx, getPostWithReactionsAndComments, postID)
 	var i GetPostWithReactionsAndCommentsRow
 	err := row.Scan(
@@ -483,7 +502,7 @@ type GetPostsForFeedParams struct {
 }
 
 type GetPostsForFeedRow struct {
-	PostID        string
+	PostID        []byte
 	AuthorID      []byte
 	Content       string
 	ImageID       sql.NullString
@@ -551,7 +570,7 @@ UPDATE posts SET content = ? AND image_id = ? WHERE post_id = ? and author_id = 
 type UpdatePostParams struct {
 	Content  string
 	ImageID  sql.NullString
-	PostID   string
+	PostID   []byte
 	AuthorID []byte
 }
 
