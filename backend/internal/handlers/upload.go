@@ -47,6 +47,7 @@ func Upload(app *app.App) http.HandlerFunc {
 
 		response := models.FileResponse{
 			UUId:      image.UUId,
+			Filename:  image.Filename,
 			ExpiresAt: image.ExpiresAt,
 			Url:       url,
 		}
