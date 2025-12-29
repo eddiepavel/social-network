@@ -54,6 +54,23 @@ func (q *Queries) DeleteImages(ctx context.Context, imageID []string) error {
 	return err
 }
 
+const getImageById = `-- name: GetImageById :one
+SELECT image_id, poster_id, image_path, created_at, expires_at FROM images WHERE image_id = ? LIMIT 1
+`
+
+func (q *Queries) GetImageById(ctx context.Context, imageID string) (Image, error) {
+	row := q.db.QueryRowContext(ctx, getImageById, imageID)
+	var i Image
+	err := row.Scan(
+		&i.ImageID,
+		&i.PosterID,
+		&i.ImagePath,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
 const getNotSetImages = `-- name: GetNotSetImages :many
 SELECT image_id, poster_id, image_path, created_at, expires_at FROM images WHERE expires_at IS NOT NULL
 `

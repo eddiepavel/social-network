@@ -43,11 +43,48 @@ func Upload(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		url := app.File.GenerateSignImage(image.Filename, user, image.ExpiresAt)
+
 		response := models.FileResponse{
 			UUId:      image.UUId,
 			ExpiresAt: image.ExpiresAt,
+			Url:       url,
 		}
 
 		utils.OK(w, response)
+	}
+}
+
+func GetImage(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		value := r.PathValue("image")
+
+		if value == "" {
+			utils.BadRequest(w, errors.New("bad request: missing image"))
+			return
+		}
+
+		user, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "missing user")
+			return
+		}
+
+		validate, err := app.File.ValidateImageSign(r, user)
+
+		if err != nil {
+			utils.BadRequest(w, err)
+			return
+		}
+
+		if validate {
+			path := app.File.BasePath + "/" + value
+			http.ServeFile(w, r, path)
+			return
+		}
+
+		utils.BadRequest(w, errors.New("wrong sign"))
 	}
 }

@@ -79,6 +79,7 @@ func (h *Handler) storageRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /upload", handlers.Upload(h.App))
+	mux.HandleFunc("GET /image/{image}", handlers.GetImage(h.App))
 
 	return mux
 }

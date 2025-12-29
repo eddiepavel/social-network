@@ -2,8 +2,12 @@ package services
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime/multipart"
@@ -13,11 +17,14 @@ import (
 	"slices"
 	db_image "social-network/pkg/db/queries/image"
 	"social-network/pkg/db/sqlite"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var secretKey = []byte(os.Getenv("SERCRET_KEY"))
 
 type FileService struct {
 	BasePath string
@@ -30,6 +37,7 @@ type FileService struct {
 type File struct {
 	UUId      string
 	User      []byte
+	Filename  string
 	ImagePath string
 	CreatedAt time.Time
 	ExpiresAt time.Time
@@ -175,6 +183,7 @@ func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, er
 	databaseFile := File{
 		UUId:      uuid,
 		User:      user,
+		Filename:  filename,
 		ImagePath: s.BasePath + "/" + filename,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(5 * time.Minute),
@@ -214,6 +223,49 @@ func (s *FileService) RemoveImage(imageUUId string) error {
 	}
 
 	return nil
+}
+
+func (s *FileService) GenerateSignImage(filename string, userID []byte, expires time.Time) string {
+
+	signMessage := fmt.Sprintf("%s:%d", userID, expires.Unix())
+
+	mac := hmac.New(sha256.New, secretKey)
+
+	mac.Write([]byte(signMessage))
+
+	signature := base64.URLEncoding.EncodeToString(mac.Sum(nil))
+
+	url := os.Getenv("APP_URL")
+
+	return fmt.Sprintf("%s/api/storage/image/%s?expires=%d&signature=%s", url, filename, expires.Unix(), signature)
+}
+
+func (s *FileService) ValidateImageSign(r *http.Request, userId []byte) (bool, error) {
+
+	queries := r.URL.Query()
+	expires := queries.Get("expires")
+	signature := queries.Get("signature")
+
+	if expires == "" && signature == "" {
+		return false, errors.New("missing paramters")
+	}
+
+	convert, err := strconv.ParseInt(expires, 10, 64)
+
+	if err != nil {
+		return false, errors.New("failed to convert duration")
+	}
+
+	if time.Now().Unix() > convert {
+		return false, errors.New("expired")
+	}
+
+	message := fmt.Sprintf("%s:%d", userId, convert)
+	mac := hmac.New(sha256.New, secretKey)
+	mac.Write([]byte(message))
+	expectedSig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
+
+	return hmac.Equal([]byte(signature), []byte(expectedSig)), nil
 }
 
 func (s *FileService) saveFileToDatabase(file File) error {

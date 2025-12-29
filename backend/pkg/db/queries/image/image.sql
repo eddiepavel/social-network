@@ -10,3 +10,6 @@ SELECT * FROM images WHERE expires_at IS NOT NULL;
 
 -- name: DeleteImages :exec
 DELETE FROM images WHERE image_id IN (sqlc.slice('image_id'));
+
+-- name: GetImageById :one
+SELECT * FROM images WHERE image_id = ? LIMIT 1;
