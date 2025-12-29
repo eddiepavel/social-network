@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test4@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg5\",\r\n    \"last_name\": \"gg5\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test5@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -92,16 +92,9 @@
 			"item": [
 				{
 					"name": "Profile",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
 					"request": {
 						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}"
-						},
 						"url": {
 							"raw": "{{url}}/users/profile/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
 							"host": [
@@ -314,12 +307,11 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{url}}/api/groups/all",
+							"raw": "{{url}}/groups/all",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
-								"api",
 								"groups",
 								"all"
 							]
@@ -333,14 +325,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{url}}/groups/group/6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+							"raw": "{{url}}/groups/group/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
 								"groups",
 								"group",
-								"6a8bf775-00d7-4598-881a-2cf85d9d66c5"
+								"3f9c8db8-45a2-4a43-aba1-b057bb6bcf89"
 							]
 						}
 					},
@@ -353,7 +345,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"users\": [\r\n        \"2e9cfa6a-d179-4fd6-ac15-58ffd9dcfc38\",\r\n        \"24a70329-2b1d-494f-a53c-36ad334f10e4\",\r\n        \"11a2f964-0398-47b9-add0-9ee2ea0fdc1d\"\r\n    ]\r\n}",
+							"raw": "{\r\n    \"users\": [\r\n        \"2e9cfa6a-d179-4fd6-ac15-58ffd9dcfc38\",\r\n        \"24a70329-2b1d-494f-a53c-36ad334f10e4\",\r\n        \"11a2f964-0398-47b9-add0-9ee2ea0fdc1d\",\r\n        \"a985486f-5783-4a6e-9c02-66e617475db3\",\r\n        \"e1c71d25-1445-4979-a955-5aca13a391ca\"\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -369,6 +361,137 @@
 								"groups",
 								"invite",
 								"6a8bf775-00d7-4598-881a-2cf85d9d66c5"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Handle Group Membership",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"action\" : \"request\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/membership/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89/update",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"membership",
+								"3f9c8db8-45a2-4a43-aba1-b057bb6bcf89",
+								"update"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"group_name\" : \"papakia2\",\r\n    \"description\" : \"stin seira\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/create",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"create"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Files",
+			"item": [
+				{
+					"name": "Upload",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/giannisgeo/Desktop/Logo Hellenic Folder/logo round.png"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url}}/storage/upload",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"storage",
+								"upload"
+							],
+							"query": [
+								{
+									"key": "skata",
+									"value": null,
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Image",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/storage/image/e97df30b-105b-47c3-9a6d-33bb579feb18.png?expires=1767012778&signature=19lSGD0yi5VyE4047X1IQvHW6nkpUoa8Q_MYZrA_pcY=",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"storage",
+								"image",
+								"e97df30b-105b-47c3-9a6d-33bb579feb18.png"
+							],
+							"query": [
+								{
+									"key": "expires",
+									"value": "1767012778"
+								},
+								{
+									"key": "signature",
+									"value": "19lSGD0yi5VyE4047X1IQvHW6nkpUoa8Q_MYZrA_pcY="
+								}
 							]
 						}
 					},
