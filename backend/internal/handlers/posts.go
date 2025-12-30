@@ -12,6 +12,7 @@ import (
 	"social-network/internal/utils"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,6 +72,8 @@ func CreatePost(app *app.App) http.HandlerFunc {
 
 		postTime := post.CreatedAt.Time
 
+		app.File.AssignImage(post.ImageID.String)
+
 		postResponse := models.PostResponse{
 			PostID:     post.PostID,
 			Content:    post.Content,
@@ -112,13 +115,25 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 
 		var feedPosts []models.FeedPostResponse
 		for _, post := range posts {
+			postUuid, _ := helpers.GenerateFromBytes(post.PostID)
+			authorUuid, _ := helpers.GenerateFromBytes(post.AuthorID)
+
 			feedPosts = append(feedPosts, models.FeedPostResponse{
-				PostID:   post.PostID,
-				AuthorID: post.AuthorID,
+				PostID:   postUuid,
+				AuthorID: authorUuid,
 				Content:  post.Content,
 				ImageID: func() string {
 					if post.ImageID.Valid {
 						return post.ImageID.String
+					}
+					return ""
+				}(),
+				ImageUrl: func() string {
+					if post.ImagePath.Valid {
+						filename := strings.Split(post.ImagePath.String, "/")
+
+						path := app.File.GenerateSignImage(filename[len(filename)-1], currentUserID, time.Now().Add(15*time.Minute))
+						return path
 					}
 					return ""
 				}(),

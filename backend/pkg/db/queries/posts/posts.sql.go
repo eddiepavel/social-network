@@ -466,6 +466,8 @@ func (q *Queries) GetPostWithReactionsAndComments(ctx context.Context, postID []
 
 const getPostsForFeed = `-- name: GetPostsForFeed :many
 SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at,
+       i.image_id,
+       i.image_path,
        (SELECT COUNT(*)
         FROM reactions
         WHERE target_type = 'post'
@@ -475,6 +477,7 @@ SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at
         WHERE post_id = p.post_id)   as comment_count
 FROM posts p
 INNER JOIN users u ON p.author_id = u.user_id
+LEFT JOIN images i ON p.image_id = i.image_id
 WHERE
    -- Public posts from any user
     (p.visibility = 'public')
@@ -508,6 +511,8 @@ type GetPostsForFeedRow struct {
 	ImageID       sql.NullString
 	Visibility    string
 	CreatedAt     sql.NullTime
+	ImageID_2     sql.NullString
+	ImagePath     sql.NullString
 	ReactionCount int64
 	CommentCount  int64
 }
@@ -533,6 +538,8 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 			&i.ImageID,
 			&i.Visibility,
 			&i.CreatedAt,
+			&i.ImageID_2,
+			&i.ImagePath,
 			&i.ReactionCount,
 			&i.CommentCount,
 		); err != nil {

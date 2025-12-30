@@ -36,6 +36,8 @@ SELECT * FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 
 -- name: GetPostsForFeed :many
 SELECT p.*,
+       i.image_id,
+       i.image_path,
        (SELECT COUNT(*)
         FROM reactions
         WHERE target_type = 'post'
@@ -45,6 +47,7 @@ SELECT p.*,
         WHERE post_id = p.post_id)   as comment_count
 FROM posts p
 INNER JOIN users u ON p.author_id = u.user_id
+LEFT JOIN images i ON p.image_id = i.image_id
 WHERE
    -- Public posts from any user
     (p.visibility = 'public')

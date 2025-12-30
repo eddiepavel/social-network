@@ -52,11 +52,12 @@ type RemoveUserFromPrivatePostRequest struct {
 }
 
 type FeedPostResponse struct {
-	PostID        []byte    `json:"post_id"`
+	PostID        string    `json:"post_id"`
 	Content       string    `json:"content"`
 	ImageID       string    `json:"image_id"`
+	ImageUrl      string    `json:"image_url"`
 	Visibility    string    `json:"visibility"`
-	AuthorID      []byte    `json:"author_id"`
+	AuthorID      string    `json:"author_id"`
 	CreatedAt     time.Time `json:"created_at"`
 	ReactionCount int64     `json:"reaction_count"`
 	CommentCount  int64     `json:"comment_count"`

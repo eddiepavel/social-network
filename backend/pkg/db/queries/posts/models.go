@@ -25,6 +25,14 @@ type Follower struct {
 	CreatedAt  sql.NullTime
 }
 
+type Image struct {
+	ImageID   string
+	PosterID  []byte
+	ImagePath string
+	CreatedAt sql.NullTime
+	ExpiresAt sql.NullTime
+}
+
 type Post struct {
 	PostID     []byte
 	AuthorID   []byte

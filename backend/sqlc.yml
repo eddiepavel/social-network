@@ -32,7 +32,9 @@ sql:
              "/pkg/db/migrations/sqlite/up/000008_create_reactions_table.sql",
              "/pkg/db/migrations/sqlite/up/000006_create_viewing_permissions_table.sql",
              "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql",
-             "/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql"]
+             "/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql",
+             "/pkg/db/migrations/sqlite/up/000004_create_images_table.sql"
+            ]
     gen:
       go:
         package: "db_posts"

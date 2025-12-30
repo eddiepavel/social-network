@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	contextkeys "social-network/internal/contextKeys"
 	"social-network/internal/helpers"
 	"social-network/internal/utils"
 	db_sessions "social-network/pkg/db/queries/sessions"
@@ -17,12 +18,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-type contextKey string
-
-const UserIDKey contextKey = "user_id"
-const SessionCookieName = "session_id"
-const SessionDuration = 7 * 24 * time.Hour // 7 days
 
 // AuthMiddleware is middleware that requires a valid session
 func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -48,14 +43,14 @@ func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc
 		}
 
 		// Attach user_id to request context
-		ctx := context.WithValue(r.Context(), UserIDKey, userID)
+		ctx := context.WithValue(r.Context(), contextkeys.UserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
 
 // GetUserIDFromContext retrieves the user_id from the request context
 func GetUserIDFromContext(ctx context.Context) ([]byte, bool) {
-	userID, ok := ctx.Value(UserIDKey).([]byte)
+	userID, ok := ctx.Value(contextkeys.UserIDKey).([]byte)
 	return userID, ok
 }
 
@@ -78,10 +73,10 @@ func SetSessionCookie(w http.ResponseWriter, sessionID []byte) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
+		Name:     contextkeys.SessionCookieName,
 		Value:    setUuid,
 		Path:     "/",
-		MaxAge:   int(SessionDuration.Seconds()),
+		MaxAge:   int(contextkeys.SessionDuration.Seconds()),
 		HttpOnly: true,
 		Secure:   secure,
 		SameSite: samesite, // Lax for localhost without HTTPS
@@ -91,7 +86,7 @@ func SetSessionCookie(w http.ResponseWriter, sessionID []byte) {
 
 // GetSessionCookie retrieves the session cookie from the request
 func GetSessionCookie(r *http.Request) ([]byte, error) {
-	cookie, err := r.Cookie(SessionCookieName)
+	cookie, err := r.Cookie(contextkeys.SessionCookieName)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -108,7 +103,7 @@ func GetSessionCookie(r *http.Request) ([]byte, error) {
 // ClearSessionCookie clears the session cookie (for logout)
 func ClearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
+		Name:     contextkeys.SessionCookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -121,7 +116,7 @@ func ClearSessionCookie(w http.ResponseWriter) {
 // CreateSession creates a new session for a user
 func CreateSession(db *sql.DB, userID []byte) (db_sessions.Session, error) {
 	sessionID, _ := uuid.New().MarshalBinary()
-	expiresAt := time.Now().Add(SessionDuration)
+	expiresAt := time.Now().Add(contextkeys.SessionDuration)
 
 	session, err := sqlite.NewQuery(db).Sessions.CreateSession(context.Background(),
 		db_sessions.CreateSessionParams{

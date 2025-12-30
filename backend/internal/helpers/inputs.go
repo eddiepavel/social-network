@@ -1,10 +1,12 @@
 package helpers
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"net/http"
 	"social-network/app"
+	contextkeys "social-network/internal/contextKeys"
 	"social-network/pkg/db/sqlite"
 )
 
@@ -128,7 +130,30 @@ func (pv PostValidator) Build(r *http.Request, app *app.App) map[string][]interf
 			}
 			return nil
 		}},
-		"image_id": {"sometimes", "string"},
+		"image_id": {"sometimes", "string", func(v interface{}) error {
+			uuId := v.(string)
+
+			getImage, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), uuId)
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("image not found")
+				}
+				return errors.New("something went wrong")
+			}
+
+			if !bytes.Equal(getImage.PosterID, user) {
+				return errors.New("image does not belong to you")
+			}
+
+			if getImage.ExpiresAt.Valid == false {
+				return errors.New("image already assigned")
+			}
+
+			return nil
+		}},
 	}
 }
 
