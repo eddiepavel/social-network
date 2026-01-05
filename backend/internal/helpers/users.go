@@ -113,7 +113,7 @@ func UserToResponse(user db_users.User) models.UserResponse {
 			}
 			return ""
 		}(),
-		IsPublic:  user.IsPublic,
+		IsPublic:  &user.IsPublic,
 		CreatedAt: user.CreatedAt.Time.String(),
 	}
 }
