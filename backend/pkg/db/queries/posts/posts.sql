@@ -80,6 +80,22 @@ DELETE FROM posts WHERE post_id = ? and author_id = ?;
 -- name: EditPostVisibility :exec
 UPDATE posts SET visibility = ? WHERE post_id = ? and author_id = ?;
 
+-- name: PostVisibilitySemiPrivateBatch :exec
+UPDATE posts SET visibility = 'semi-private' WHERE author_id = ? and visibility = 'public';
+
+-- name: PostVisibilityPublicBatch :exec
+UPDATE posts SET visibility = 'public' WHERE author_id = ? and visibility = 'semi-private';
+
+-- name: RemoveViewingPermissionPostIDBatch :exec
+DELETE FROM viewing_permissions WHERE post_id = ?;
+
+-- name: RemoveViewingPermissionUserIDBatch :exec
+DELETE FROM viewing_permissions
+WHERE user_id = ?
+  AND post_id IN (
+    SELECT post_id FROM posts WHERE author_id = ?
+);
+
 -- name: AddPrivatePostViewingPermission :execrows
 INSERT INTO viewing_permissions (user_id, post_id)
 SELECT ?, ?

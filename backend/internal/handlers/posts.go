@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/helpers"
@@ -38,6 +37,16 @@ func CreatePost(app *app.App) http.HandlerFunc {
 
 		if !ok {
 			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		user := helpers.FetchUser(app, currentUserID, r.Context(), w)
+
+		if !user.IsPublic && req.Visibility == "public" {
+			utils.BadRequest(w, errors.New("cannot post publicly while having a private profile"))
+			return
+		} else if user.IsPublic && req.Visibility == "semi-private" {
+			utils.BadRequest(w, errors.New("cannot post semi-privately while having a public profile"))
 			return
 		}
 
@@ -277,7 +286,6 @@ func EditPost(app *app.App) http.HandlerFunc {
 		} else {
 			image = sql.NullString{String: "", Valid: false}
 		}
-		log.Println(req.Content)
 
 		err = sqlite.NewQuery(app.DB).Posts.UpdatePost(r.Context(), db_posts.UpdatePostParams{
 			Content:  req.Content,
@@ -316,6 +324,8 @@ func DeletePost(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		post := helpers.FetchPostBasicInfo(app, postID, r.Context(), w)
+
 		err = sqlite.NewQuery(app.DB).Posts.DeletePost(r.Context(), db_posts.DeletePostParams{
 			PostID:   postID,
 			AuthorID: currentUserID,
@@ -325,6 +335,15 @@ func DeletePost(app *app.App) http.HandlerFunc {
 			app.Logger.Error("failed to delete post", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
+		}
+
+		// remove viewing permissions if post visibility was private
+		if post.Visibility == "private" {
+			err := sqlite.NewQuery(app.DB).Posts.RemoveViewingPermissionPostIDBatch(r.Context(), postID)
+			if err != nil {
+				app.Logger.Error("failed to remove viewing permissions", "error", err.Error())
+				utils.Internal(w, errors.New("internal server error"))
+			}
 		}
 
 		utils.OK(w, "Post deleted successfully")
@@ -364,13 +383,37 @@ func UpdatePostVisibility(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		// Fetch post basic info to check if viewing permissions need to be deleted
+		post := helpers.FetchPostBasicInfo(app, postID, r.Context(), w)
+		user := helpers.FetchUser(app, currentUserID, r.Context(), w)
+
+		if post.Visibility == req.Visibility {
+			utils.BadRequest(w, errors.New("visibility already set to "+req.Visibility+""))
+			return
+		}
+
+		if user.IsPublic && req.Visibility == "semi-private" {
+			utils.BadRequest(w, errors.New("cannot set semi-private visibility on public profile"))
+			return
+		} else if !user.IsPublic && req.Visibility == "public" {
+			utils.BadRequest(w, errors.New("cannot set public visibility on private profile"))
+			return
+		}
+
+		if post.Visibility == "private" {
+			err := sqlite.NewQuery(app.DB).Posts.RemoveViewingPermissionPostIDBatch(r.Context(), postID)
+			if err != nil {
+				app.Logger.Error("failed to remove viewing permissions", "error", err.Error())
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+		}
+
 		err = sqlite.NewQuery(app.DB).Posts.EditPostVisibility(r.Context(), db_posts.EditPostVisibilityParams{
 			Visibility: req.Visibility,
 			PostID:     postID,
 			AuthorID:   currentUserID,
 		})
-
-		//TODO: check if visibility: private->anything else and remove from private post viewing list
 
 		if err != nil {
 			app.Logger.Error("failed to update post visibility", "error", err.Error())

@@ -12,6 +12,7 @@ import (
 	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_followers "social-network/pkg/db/queries/followers"
+	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
 	"strconv"
 	"time"
@@ -84,6 +85,12 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
+				// in case of unfollowing, remove viewing permissions from posts
+				err = sqlite.NewQuery(app.DB).Posts.RemoveViewingPermissionUserIDBatch(r.Context(),
+					db_posts.RemoveViewingPermissionUserIDBatchParams{
+						UserID:   currentUserID,
+						AuthorID: user.UserID,
+					})
 				utils.OK(w, "Unfollowed successfully")
 				return
 			}
@@ -139,6 +146,12 @@ func FollowUser(app *app.App) http.HandlerFunc {
 				utils.Internal(w, err)
 				return
 			}
+			// in case of unfollowing, remove viewing permissions from posts
+			err = sqlite.NewQuery(app.DB).Posts.RemoveViewingPermissionUserIDBatch(r.Context(),
+				db_posts.RemoveViewingPermissionUserIDBatchParams{
+					UserID:   currentUserID,
+					AuthorID: user.UserID,
+				})
 			utils.OK(w, "Unfollowed successfully")
 			return
 		}

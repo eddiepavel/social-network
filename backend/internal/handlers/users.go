@@ -150,10 +150,26 @@ func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
 			utils.NotFound(w)
 			return
 		}
+
 		if err != nil {
 			app.Logger.Error("Failed to fetch user", "error", err.Error())
 			utils.Internal(w, err)
 			return
+		}
+
+		// Batch update posts visibility when the profile privacy changes, except for "private" posts
+		if !req.IsPublic {
+			err = sqlite.NewQuery(app.DB).Posts.PostVisibilitySemiPrivateBatch(r.Context(), userID)
+			if err != nil {
+				app.Logger.Error("Failed to update posts visibility", "error", err.Error())
+				utils.Internal(w, err)
+			}
+		} else {
+			err = sqlite.NewQuery(app.DB).Posts.PostVisibilityPublicBatch(r.Context(), userID)
+			if err != nil {
+				app.Logger.Error("Failed to update posts visibility", "error", err.Error())
+				utils.Internal(w, err)
+			}
 		}
 
 		// Return updated user
@@ -172,13 +188,13 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		searchParama := strings.TrimSpace(r.URL.Query().Get("name"))
+		searchParams := strings.TrimSpace(r.URL.Query().Get("name"))
 
 		var users []models.UserResponse
 
 		searchUsers, err := sqlite.NewQuery(app.DB).Users.QueryUsers(r.Context(), db_users.QueryUsersParams{
 			FollowerID: userId,
-			Column2:    sql.NullString{Valid: true, String: searchParama},
+			Column2:    sql.NullString{Valid: true, String: searchParams},
 		})
 
 		if err != nil {
@@ -191,9 +207,9 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 		}
 
 		for _, user := range searchUsers {
-			make, _ := helpers.GenerateFromBytes(user.UserID)
+			userID, _ := helpers.GenerateFromBytes(user.UserID)
 			users = append(users, models.UserResponse{
-				UserID:    make,
+				UserID:    userID,
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
 				Nickname:  user.Nickname.String,

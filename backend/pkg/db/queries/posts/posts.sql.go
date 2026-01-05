@@ -560,6 +560,24 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 	return items, nil
 }
 
+const postVisibilityPublicBatch = `-- name: PostVisibilityPublicBatch :exec
+UPDATE posts SET visibility = 'public' WHERE author_id = ? and visibility = 'semi-private'
+`
+
+func (q *Queries) PostVisibilityPublicBatch(ctx context.Context, authorID []byte) error {
+	_, err := q.db.ExecContext(ctx, postVisibilityPublicBatch, authorID)
+	return err
+}
+
+const postVisibilitySemiPrivateBatch = `-- name: PostVisibilitySemiPrivateBatch :exec
+UPDATE posts SET visibility = 'semi-private' WHERE author_id = ? and visibility = 'public'
+`
+
+func (q *Queries) PostVisibilitySemiPrivateBatch(ctx context.Context, authorID []byte) error {
+	_, err := q.db.ExecContext(ctx, postVisibilitySemiPrivateBatch, authorID)
+	return err
+}
+
 const removePrivatePostViewingPermission = `-- name: RemovePrivatePostViewingPermission :exec
 DELETE FROM viewing_permissions WHERE user_id = ? AND post_id = ?
 `
@@ -571,6 +589,33 @@ type RemovePrivatePostViewingPermissionParams struct {
 
 func (q *Queries) RemovePrivatePostViewingPermission(ctx context.Context, arg RemovePrivatePostViewingPermissionParams) error {
 	_, err := q.db.ExecContext(ctx, removePrivatePostViewingPermission, arg.UserID, arg.PostID)
+	return err
+}
+
+const removeViewingPermissionPostIDBatch = `-- name: RemoveViewingPermissionPostIDBatch :exec
+DELETE FROM viewing_permissions WHERE post_id = ?
+`
+
+func (q *Queries) RemoveViewingPermissionPostIDBatch(ctx context.Context, postID []byte) error {
+	_, err := q.db.ExecContext(ctx, removeViewingPermissionPostIDBatch, postID)
+	return err
+}
+
+const removeViewingPermissionUserIDBatch = `-- name: RemoveViewingPermissionUserIDBatch :exec
+DELETE FROM viewing_permissions
+WHERE user_id = ?
+  AND post_id IN (
+    SELECT post_id FROM posts WHERE author_id = ?
+)
+`
+
+type RemoveViewingPermissionUserIDBatchParams struct {
+	UserID   []byte
+	AuthorID []byte
+}
+
+func (q *Queries) RemoveViewingPermissionUserIDBatch(ctx context.Context, arg RemoveViewingPermissionUserIDBatchParams) error {
+	_, err := q.db.ExecContext(ctx, removeViewingPermissionUserIDBatch, arg.UserID, arg.AuthorID)
 	return err
 }
 
