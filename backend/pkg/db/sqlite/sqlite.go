@@ -200,3 +200,7 @@ func (db *DB) applyMigration(version, migrationSQL string) error {
 func (db *DB) Close() error {
 	return db.DB.Close()
 }
+
+func CheckUniqueConstraint(err error) bool {
+	return strings.Contains(err.Error(), "UNIQUE constraint")
+}

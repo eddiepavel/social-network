@@ -26,7 +26,7 @@ type EditPostRequest struct {
 }
 
 type PostResponse struct {
-	PostID     []byte    `json:"post_id"`
+	PostID     string    `json:"post_id"`
 	Content    string    `json:"content"`
 	ImageID    string    `json:"image_id"`
 	Visibility string    `json:"visibility"`
@@ -80,7 +80,7 @@ type Comment struct {
 }
 
 type PostWithCommentsReactionsResponse struct {
-	PostID     []byte     `json:"post_id"`
+	PostID     string     `json:"post_id"`
 	Content    string     `json:"content"`
 	ImageID    string     `json:"image_id"`
 	Visibility string     `json:"visibility"`
@@ -88,10 +88,4 @@ type PostWithCommentsReactionsResponse struct {
 	CreatedAt  time.Time  `json:"created_at"`
 	Reactions  []Reaction `json:"reactions"`
 	Comments   []Comment  `json:"comments"`
-}
-
-type PostBasicInfo struct {
-	PostID     []byte `json:"post_id"`
-	AuthorID   []byte `json:"author_id"`
-	Visibility string `json:"visibility"`
 }

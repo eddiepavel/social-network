@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/helpers"
@@ -74,8 +75,10 @@ func CreatePost(app *app.App) http.HandlerFunc {
 
 		app.File.AssignImage(post.ImageID.String)
 
+		postIDString, _ := helpers.GenerateFromBytes(postID)
+
 		postResponse := models.PostResponse{
-			PostID:     post.PostID,
+			PostID:     postIDString,
 			Content:    post.Content,
 			AuthorID:   post.AuthorID,
 			Visibility: post.Visibility,
@@ -101,6 +104,7 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 		offset := int64(0)
 
 		posts, err := sqlite.NewQuery(app.DB).Posts.GetPostsForFeed(r.Context(), db_posts.GetPostsForFeedParams{
+			AuthorID:   currentUserID,
 			FollowerID: currentUserID,
 			UserID:     currentUserID,
 			Limit:      limit,
@@ -212,7 +216,7 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 		}
 
 		response := models.PostWithCommentsReactionsResponse{
-			PostID:   post.PostID,
+			PostID:   postIDHex,
 			AuthorID: post.AuthorID,
 			Content:  post.Content,
 			ImageID: func() string {
@@ -273,6 +277,7 @@ func EditPost(app *app.App) http.HandlerFunc {
 		} else {
 			image = sql.NullString{String: "", Valid: false}
 		}
+		log.Println(req.Content)
 
 		err = sqlite.NewQuery(app.DB).Posts.UpdatePost(r.Context(), db_posts.UpdatePostParams{
 			Content:  req.Content,
@@ -365,6 +370,8 @@ func UpdatePostVisibility(app *app.App) http.HandlerFunc {
 			AuthorID:   currentUserID,
 		})
 
+		//TODO: check if visibility: private->anything else and remove from private post viewing list
+
 		if err != nil {
 			app.Logger.Error("failed to update post visibility", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -430,16 +437,23 @@ func AddUserToPrivatePostList(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		postIDString, _ := helpers.GenerateFromBytes(postID)
+		if string(targetUserID) == string(post.AuthorID) {
+			utils.BadRequest(w, errors.New("cannot add yourself to private post viewing list"))
+			return
+		}
 
 		rowsAffected, err := sqlite.NewQuery(app.DB).Posts.AddPrivatePostViewingPermission(r.Context(), db_posts.AddPrivatePostViewingPermissionParams{
 			UserID:     targetUserID,
-			PostID:     postIDString,
+			PostID:     postID,
 			PostID_2:   postID,
 			FollowerID: targetUserID,
 		})
 
 		if err != nil {
+			if sqlite.CheckUniqueConstraint(err) {
+				utils.BadRequest(w, errors.New("user already added to private post viewing list"))
+				return
+			}
 			app.Logger.Error("failed to add viewing permission", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
@@ -503,11 +517,9 @@ func RemoveUserFromPrivatePostList(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		postIDString, _ := helpers.GenerateFromBytes(postID)
-
 		err = sqlite.NewQuery(app.DB).Posts.RemovePrivatePostViewingPermission(r.Context(), db_posts.RemovePrivatePostViewingPermissionParams{
 			UserID: targetUserID,
-			PostID: postIDString,
+			PostID: postID,
 		})
 
 		if err != nil {

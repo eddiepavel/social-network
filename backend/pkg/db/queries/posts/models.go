@@ -66,7 +66,7 @@ type User struct {
 }
 
 type ViewingPermission struct {
-	PostID    string
+	PostID    []byte
 	UserID    []byte
 	CreatedAt sql.NullTime
 }

@@ -1,9 +1,10 @@
 {
 	"info": {
-		"_postman_id": "585ad2bd-df1e-41ee-aedf-b08c07b9074c",
+		"_postman_id": "364abc95-bd52-41f8-986b-e191a0e8b616",
 		"name": "Social Network",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "28927006"
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "44054371",
+		"_collection_link": "https://edouardospavel.postman.co/workspace/Edouardos-Pavel's-Workspace~ae203417-a07f-4206-8ccc-7879e57a4078/collection/44054371-364abc95-bd52-41f8-986b-e191a0e8b616?action=share&source=collection_link&creator=44054371"
 	},
 	"item": [
 		{
@@ -16,23 +17,14 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test5@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg1\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/public/register",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"public",
-								"register"
-							]
-						}
+						"url": "{{url}}/public/register"
 					},
 					"response": []
 				},
@@ -50,16 +42,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/public/login",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"public",
-								"login"
-							]
-						}
+						"url": "{{url}}/public/login"
 					},
 					"response": []
 				},
@@ -72,16 +55,7 @@
 							"mode": "raw",
 							"raw": ""
 						},
-						"url": {
-							"raw": "{{url}}/auth/logout",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"auth",
-								"logout"
-							]
-						}
+						"url": "{{url}}/auth/logout"
 					},
 					"response": []
 				}
@@ -95,17 +69,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/users/profile/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"users",
-								"profile",
-								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957"
-							]
-						}
+						"url": "{{url}}/users/profile/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957"
 					},
 					"response": []
 				},
@@ -123,16 +87,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/users/privacy",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"users",
-								"privacy"
-							]
-						}
+						"url": "{{url}}/users/privacy"
 					},
 					"response": []
 				},
@@ -150,16 +105,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/users/profile",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"users",
-								"profile"
-							]
-						}
+						"url": "{{url}}/users/profile"
 					},
 					"response": []
 				},
@@ -197,17 +143,7 @@
 					"request": {
 						"method": "POST",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/followers/8e9f65e8-78ff-48af-8159-23290988955a/follow",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"followers",
-								"8e9f65e8-78ff-48af-8159-23290988955a",
-								"follow"
-							]
-						}
+						"url": "{{url}}/followers/8e9f65e8-78ff-48af-8159-23290988955a/follow"
 					},
 					"response": []
 				},
@@ -216,17 +152,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/following",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"followers",
-								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
-								"following"
-							]
-						}
+						"url": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/following"
 					},
 					"response": []
 				},
@@ -235,17 +161,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/followers",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"followers",
-								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
-								"followers"
-							]
-						}
+						"url": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/followers"
 					},
 					"response": []
 				},
@@ -263,18 +179,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/followers/requests/2/respond",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"followers",
-								"requests",
-								"2",
-								"respond"
-							]
-						}
+						"url": "{{url}}/followers/requests/2/respond"
 					},
 					"response": []
 				},
@@ -283,16 +188,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/followers/requests",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"followers",
-								"requests"
-							]
-						}
+						"url": "{{url}}/followers/requests"
 					},
 					"response": []
 				}
@@ -306,16 +202,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/groups/all",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"groups",
-								"all"
-							]
-						}
+						"url": "{{url}}/groups/all"
 					},
 					"response": []
 				},
@@ -324,17 +211,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{url}}/groups/group/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"groups",
-								"group",
-								"3f9c8db8-45a2-4a43-aba1-b057bb6bcf89"
-							]
-						}
+						"url": "{{url}}/groups/group/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89"
 					},
 					"response": []
 				},
@@ -352,17 +229,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"groups",
-								"invite",
-								"6a8bf775-00d7-4598-881a-2cf85d9d66c5"
-							]
-						}
+						"url": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5"
 					},
 					"response": []
 				},
@@ -380,18 +247,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/groups/membership/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89/update",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"groups",
-								"membership",
-								"3f9c8db8-45a2-4a43-aba1-b057bb6bcf89",
-								"update"
-							]
-						}
+						"url": "{{url}}/groups/membership/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89/update"
 					},
 					"response": []
 				},
@@ -409,16 +265,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "{{url}}/groups/create",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"groups",
-								"create"
-							]
-						}
+						"url": "{{url}}/groups/create"
 					},
 					"response": []
 				}
@@ -494,6 +341,107 @@
 								}
 							]
 						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Posts",
+			"item": [
+				{
+					"name": "Create Post",
+					"request": {
+						"method": "POST",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Get Posts Feed",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Get Post Profile",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Add User To Private Post List",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328/privacy"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove User To Private Post List",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Post Visibility",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy"
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Post",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": "{{url}}/posts/id/"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Post",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328"
 					},
 					"response": []
 				}

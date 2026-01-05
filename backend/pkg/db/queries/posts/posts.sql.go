@@ -27,7 +27,7 @@ SELECT ?, ?
 
 type AddPrivatePostViewingPermissionParams struct {
 	UserID     []byte
-	PostID     string
+	PostID     []byte
 	PostID_2   []byte
 	FollowerID []byte
 }
@@ -51,7 +51,7 @@ SELECT post_id, user_id, created_at FROM viewing_permissions WHERE user_id = ? A
 
 type CheckPrivatePostUserPermitParams struct {
 	UserID []byte
-	PostID string
+	PostID []byte
 }
 
 func (q *Queries) CheckPrivatePostUserPermit(ctx context.Context, arg CheckPrivatePostUserPermitParams) (ViewingPermission, error) {
@@ -479,11 +479,13 @@ FROM posts p
 INNER JOIN users u ON p.author_id = u.user_id
 LEFT JOIN images i ON p.image_id = i.image_id
 WHERE
+    (p.author_id = ?)
+    OR
    -- Public posts from any user
     (p.visibility = 'public')
    OR
    -- Private posts where current user follows the author
-    (p.visibility = 'private' AND EXISTS (SELECT 1
+    (p.visibility = 'semi-private' AND EXISTS (SELECT 1
                                           FROM followers f
                                           WHERE f.follower_id = ?
                                             AND f.followee_id = p.author_id))
@@ -498,6 +500,7 @@ OFFSET ?
 `
 
 type GetPostsForFeedParams struct {
+	AuthorID   []byte
 	FollowerID []byte
 	UserID     []byte
 	Limit      int64
@@ -519,6 +522,7 @@ type GetPostsForFeedRow struct {
 
 func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams) ([]GetPostsForFeedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getPostsForFeed,
+		arg.AuthorID,
 		arg.FollowerID,
 		arg.UserID,
 		arg.Limit,
@@ -562,7 +566,7 @@ DELETE FROM viewing_permissions WHERE user_id = ? AND post_id = ?
 
 type RemovePrivatePostViewingPermissionParams struct {
 	UserID []byte
-	PostID string
+	PostID []byte
 }
 
 func (q *Queries) RemovePrivatePostViewingPermission(ctx context.Context, arg RemovePrivatePostViewingPermissionParams) error {
@@ -571,7 +575,7 @@ func (q *Queries) RemovePrivatePostViewingPermission(ctx context.Context, arg Re
 }
 
 const updatePost = `-- name: UpdatePost :exec
-UPDATE posts SET content = ? AND image_id = ? WHERE post_id = ? and author_id = ?
+UPDATE posts SET content = ?, image_id = ? WHERE post_id = ? and author_id = ?
 `
 
 type UpdatePostParams struct {

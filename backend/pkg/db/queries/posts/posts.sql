@@ -49,11 +49,13 @@ FROM posts p
 INNER JOIN users u ON p.author_id = u.user_id
 LEFT JOIN images i ON p.image_id = i.image_id
 WHERE
+    (p.author_id = ?)
+    OR
    -- Public posts from any user
     (p.visibility = 'public')
    OR
    -- Private posts where current user follows the author
-    (p.visibility = 'private' AND EXISTS (SELECT 1
+    (p.visibility = 'semi-private' AND EXISTS (SELECT 1
                                           FROM followers f
                                           WHERE f.follower_id = ?
                                             AND f.followee_id = p.author_id))
@@ -70,7 +72,7 @@ OFFSET ?;
 INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING *;
 
 -- name: UpdatePost :exec
-UPDATE posts SET content = ? AND image_id = ? WHERE post_id = ? and author_id = ?;
+UPDATE posts SET content = ?, image_id = ? WHERE post_id = ? and author_id = ?;
 
 -- name: DeletePost :exec
 DELETE FROM posts WHERE post_id = ? and author_id = ?;

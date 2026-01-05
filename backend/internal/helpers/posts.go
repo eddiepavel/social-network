@@ -49,6 +49,11 @@ func FetchPost(app *app.App, postID []byte, ctx context.Context, w http.Response
 // - Can view private posts if following the author
 // - Can view private posts if explicit viewing permission granted
 func CanViewPost(currentUserID []byte, postID []byte, authorID []byte, visibility string, app *app.App, r *http.Request) (bool, error) {
+	// Can always view own posts
+	if string(currentUserID) == string(authorID) {
+		return true, nil
+	}
+
 	// Public posts are visible to everyone
 	if visibility == "public" {
 		return true, nil
@@ -61,20 +66,19 @@ func CanViewPost(currentUserID []byte, postID []byte, authorID []byte, visibilit
 	})
 
 	// If following, can view
-	if err == nil {
+	if err == nil && visibility == "semi-private" {
 		return true, nil
 	}
 
 	// If not following and error is not "not found", return the error
-	if err != sql.ErrNoRows {
+	if err != sql.ErrNoRows && err != nil {
 		return false, err
 	}
 
 	// Check for explicit viewing permission
-	postIDString, _ := GenerateFromBytes(postID)
 	_, err = sqlite.NewQuery(app.DB).Posts.CheckPrivatePostUserPermit(r.Context(), db_posts.CheckPrivatePostUserPermitParams{
 		UserID: currentUserID,
-		PostID: postIDString,
+		PostID: postID,
 	})
 
 	if err == nil {
