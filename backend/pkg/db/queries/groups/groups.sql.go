@@ -167,6 +167,39 @@ func (q *Queries) GetGroupEventsWithRSVPs(ctx context.Context, groupID []byte) (
 	return items, nil
 }
 
+const getGroupJoinRequests = `-- name: GetGroupJoinRequests :many
+SELECT user_id, group_id, status, invited_by, created_at FROM group_members WHERE group_id = ? AND status = 'requested'
+`
+
+func (q *Queries) GetGroupJoinRequests(ctx context.Context, groupID []byte) ([]GroupMember, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupJoinRequests, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupMember
+	for rows.Next() {
+		var i GroupMember
+		if err := rows.Scan(
+			&i.UserID,
+			&i.GroupID,
+			&i.Status,
+			&i.InvitedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupMembers = `-- name: GetGroupMembers :many
 SELECT 
     gm.user_id,

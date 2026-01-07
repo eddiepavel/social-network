@@ -458,6 +458,66 @@ func UpdateGroupMemberShip(app *app.App) http.HandlerFunc {
 	}
 }
 
+func GetGroupRequests(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		groupId, err := helpers.GenerateFromString(r.PathValue("groupId"))
+
+		if err != nil {
+			utils.BadRequest(w, errors.New("group id missings"))
+			return
+		}
+
+		user, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "user not found")
+			return
+		}
+
+		getGroup, err := sqlite.NewQuery(app.DB).Groups.GetGroupById(r.Context(), groupId)
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			utils.BadRequest(w, errors.New("something is wrong"))
+			return
+		}
+
+		if !bytes.Equal(user, getGroup.CreatorID) {
+			utils.Unauthorized(w, "you are not owner")
+			return
+		}
+
+		groupMemberRequests, err := sqlite.NewQuery(app.DB).Groups.GetGroupJoinRequests(r.Context(), groupId)
+
+		if err != nil {
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if len(groupMemberRequests) <= 0 {
+			utils.OK(w, map[string]string{"message": "no requests yet"})
+			return
+		}
+
+		var pendingMembers []models.GroupMemberResponse
+
+		for _, member := range groupMemberRequests {
+			uuid, _ := helpers.GenerateFromBytes(member.UserID)
+
+			pendingMembers = append(pendingMembers, models.GroupMemberResponse{
+				UserID: uuid,
+				Status: member.Status,
+			})
+		}
+
+		utils.OK(w, pendingMembers)
+	}
+}
+
 // // InviteUser handles POST /api/groups/:id/invite
 // // Invites a user to join the group (requester must be a member)
 // func (h *GroupsHandler) InviteUser(w http.ResponseWriter, r *http.Request) {

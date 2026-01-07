@@ -73,3 +73,6 @@ LEFT JOIN users u ON gr.user_id = u.user_id
 WHERE ge.group_id = ?
 ORDER BY ge.event_timestamp DESC;
 
+-- name: GetGroupJoinRequests :many
+SELECT * FROM group_members WHERE group_id = ? AND status = 'requested';
+
