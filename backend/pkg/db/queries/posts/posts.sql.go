@@ -45,6 +45,17 @@ func (q *Queries) AddPrivatePostViewingPermission(ctx context.Context, arg AddPr
 	return result.RowsAffected()
 }
 
+const checkCommentExists = `-- name: CheckCommentExists :one
+SELECT EXISTS(SELECT 1 FROM comments WHERE comment_id = ?)
+`
+
+func (q *Queries) CheckCommentExists(ctx context.Context, commentID []byte) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkCommentExists, commentID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const checkPrivatePostUserPermit = `-- name: CheckPrivatePostUserPermit :one
 SELECT post_id, user_id, created_at FROM viewing_permissions WHERE user_id = ? AND post_id = ?
 `
@@ -150,12 +161,7 @@ INSERT INTO reactions (reaction_id, target_type, target_id, author_id)
 SELECT ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
-    WHERE p.post_id = (
-        CASE
-            WHEN ? = 'post' THEN ?
-            WHEN ? = 'comment' THEN (SELECT post_id FROM comments WHERE comment_id = ?)
-        END
-    )
+    WHERE p.post_id = ?
     AND (
         p.visibility = 'public'
         OR EXISTS (
@@ -177,10 +183,7 @@ type CreateReactionParams struct {
 	TargetType string
 	TargetID   []byte
 	AuthorID   []byte
-	Column5    interface{}
 	PostID     []byte
-	Column7    interface{}
-	CommentID  []byte
 	FollowerID []byte
 	UserID     []byte
 }
@@ -191,10 +194,7 @@ func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) 
 		arg.TargetType,
 		arg.TargetID,
 		arg.AuthorID,
-		arg.Column5,
 		arg.PostID,
-		arg.Column7,
-		arg.CommentID,
 		arg.FollowerID,
 		arg.UserID,
 	)
@@ -233,23 +233,17 @@ func (q *Queries) DeletePost(ctx context.Context, arg DeletePostParams) error {
 }
 
 const deleteReaction = `-- name: DeleteReaction :exec
-DELETE FROM reactions WHERE reaction_id = ? AND author_id = ? AND target_type = ? AND target_id = ?
+DELETE FROM reactions WHERE author_id = ? AND target_type = ? AND target_id = ?
 `
 
 type DeleteReactionParams struct {
-	ReactionID []byte
 	AuthorID   []byte
 	TargetType string
 	TargetID   []byte
 }
 
 func (q *Queries) DeleteReaction(ctx context.Context, arg DeleteReactionParams) error {
-	_, err := q.db.ExecContext(ctx, deleteReaction,
-		arg.ReactionID,
-		arg.AuthorID,
-		arg.TargetType,
-		arg.TargetID,
-	)
+	_, err := q.db.ExecContext(ctx, deleteReaction, arg.AuthorID, arg.TargetType, arg.TargetID)
 	return err
 }
 
@@ -281,6 +275,59 @@ type EditPostVisibilityParams struct {
 func (q *Queries) EditPostVisibility(ctx context.Context, arg EditPostVisibilityParams) error {
 	_, err := q.db.ExecContext(ctx, editPostVisibility, arg.Visibility, arg.PostID, arg.AuthorID)
 	return err
+}
+
+const findUserReaction = `-- name: FindUserReaction :one
+SELECT reaction_id FROM reactions WHERE author_id = ? AND target_type = ? AND target_id = ?
+`
+
+type FindUserReactionParams struct {
+	AuthorID   []byte
+	TargetType string
+	TargetID   []byte
+}
+
+func (q *Queries) FindUserReaction(ctx context.Context, arg FindUserReactionParams) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, findUserReaction, arg.AuthorID, arg.TargetType, arg.TargetID)
+	var reaction_id []byte
+	err := row.Scan(&reaction_id)
+	return reaction_id, err
+}
+
+const getFeedPostsCount = `-- name: GetFeedPostsCount :one
+SELECT COUNT(*)
+FROM posts p
+         INNER JOIN users u ON p.author_id = u.user_id
+WHERE
+    (p.author_id = ?)
+   OR
+   -- Public posts from any user
+    (p.visibility = 'public')
+   OR
+   -- Private posts where current user follows the author
+    (p.visibility = 'semi-private' AND EXISTS (SELECT 1
+                                               FROM followers f
+                                               WHERE f.follower_id = ?
+                                                 AND f.followee_id = p.author_id))
+   OR
+   -- Private posts where current user has explicit viewing permission
+    (p.visibility = 'private' AND EXISTS (SELECT 1
+                                          FROM viewing_permissions vp
+                                          WHERE vp.user_id = ?
+                                            AND vp.post_id = p.post_id))
+`
+
+type GetFeedPostsCountParams struct {
+	AuthorID   []byte
+	FollowerID []byte
+	UserID     []byte
+}
+
+func (q *Queries) GetFeedPostsCount(ctx context.Context, arg GetFeedPostsCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFeedPostsCount, arg.AuthorID, arg.FollowerID, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getPostBasicInfo = `-- name: GetPostBasicInfo :one
@@ -321,12 +368,23 @@ func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (Post, error) 
 const getPostComments = `-- name: GetPostComments :many
 SELECT
     c.comment_id, c.post_id, c.author_id, c.parent_comment_id, c.content, c.image_id, c.created_at,
-    COUNT(r.reaction_id) as reaction_count
+    COUNT(r.reaction_id) as reaction_count,
+    EXISTS(
+        SELECT 1 FROM reactions r
+        WHERE target_type = 'comment'
+          AND r.target_id = c.comment_id
+          AND r.author_id = ?
+    ) as user_reacted
 FROM comments c
-         LEFT JOIN reactions r ON r.target_type = 'comment' AND r. target_id = c.comment_id
+         LEFT JOIN reactions r ON r.target_type = 'comment' AND r.target_id = c.comment_id
 WHERE c.post_id = ?
 GROUP BY c.comment_id
 `
+
+type GetPostCommentsParams struct {
+	AuthorID []byte
+	PostID   []byte
+}
 
 type GetPostCommentsRow struct {
 	CommentID       []byte
@@ -337,10 +395,11 @@ type GetPostCommentsRow struct {
 	ImageID         sql.NullString
 	CreatedAt       sql.NullTime
 	ReactionCount   int64
+	UserReacted     int64
 }
 
-func (q *Queries) GetPostComments(ctx context.Context, postID []byte) ([]GetPostCommentsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPostComments, postID)
+func (q *Queries) GetPostComments(ctx context.Context, arg GetPostCommentsParams) ([]GetPostCommentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostComments, arg.AuthorID, arg.PostID)
 	if err != nil {
 		return nil, err
 	}
@@ -357,6 +416,7 @@ func (q *Queries) GetPostComments(ctx context.Context, postID []byte) ([]GetPost
 			&i.ImageID,
 			&i.CreatedAt,
 			&i.ReactionCount,
+			&i.UserReacted,
 		); err != nil {
 			return nil, err
 		}
@@ -403,7 +463,12 @@ SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at
           AND target_id = p.post_id) as reaction_count,
        (SELECT COUNT(*)
         FROM comments
-        WHERE post_id = p.post_id)   as comment_count
+        WHERE post_id = p.post_id)   as comment_count,
+       EXISTS(SELECT 1
+              FROM reactions r
+              WHERE r.target_type = 'post'
+                AND r.target_id = p.post_id
+                AND r.author_id = ?) as user_reacted
 FROM posts p
 INNER JOIN users u ON p.author_id = u.user_id
 LEFT JOIN images i ON p.image_id = i.image_id
@@ -430,6 +495,7 @@ OFFSET ?
 
 type GetPostsForFeedParams struct {
 	AuthorID   []byte
+	AuthorID_2 []byte
 	FollowerID []byte
 	UserID     []byte
 	Limit      int64
@@ -447,11 +513,13 @@ type GetPostsForFeedRow struct {
 	ImagePath     sql.NullString
 	ReactionCount int64
 	CommentCount  int64
+	UserReacted   int64
 }
 
 func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams) ([]GetPostsForFeedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getPostsForFeed,
 		arg.AuthorID,
+		arg.AuthorID_2,
 		arg.FollowerID,
 		arg.UserID,
 		arg.Limit,
@@ -475,6 +543,7 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 			&i.ImagePath,
 			&i.ReactionCount,
 			&i.CommentCount,
+			&i.UserReacted,
 		); err != nil {
 			return nil, err
 		}
@@ -490,23 +559,17 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 }
 
 const hasUserReacted = `-- name: HasUserReacted :one
-SELECT COUNT(*) FROM reactions WHERE reaction_id = ? AND author_id = ? AND target_type = ? AND target_id = ?
+SELECT COUNT(*) FROM reactions WHERE author_id = ? AND target_type = ? AND target_id = ? LIMIT 1
 `
 
 type HasUserReactedParams struct {
-	ReactionID []byte
 	AuthorID   []byte
 	TargetType string
 	TargetID   []byte
 }
 
 func (q *Queries) HasUserReacted(ctx context.Context, arg HasUserReactedParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, hasUserReacted,
-		arg.ReactionID,
-		arg.AuthorID,
-		arg.TargetType,
-		arg.TargetID,
-	)
+	row := q.db.QueryRowContext(ctx, hasUserReacted, arg.AuthorID, arg.TargetType, arg.TargetID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

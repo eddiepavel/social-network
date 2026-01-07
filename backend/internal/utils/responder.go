@@ -8,7 +8,7 @@ import (
 type Envelope[T any] struct {
 	Data       *T          `json:"data,omitempty"`
 	Error      *ErrBody    `json:"error,omitempty"`
-	Pagination *Pagination `json:"paginate,omitempty"`
+	Pagination *Pagination `json:"pagination,omitempty"`
 }
 
 type ErrBody struct {
@@ -18,10 +18,11 @@ type ErrBody struct {
 }
 
 type Pagination struct {
-	Page    int `json:"page"`
-	Size    int `json:"size"`
-	Current int `json:"current"`
-	Total   int `json:"total"`
+	Page       int `json:"page"`
+	Size       int `json:"size"`
+	Current    int `json:"current"`
+	TotalItems int `json:"total_items"`
+	TotalPages int `json:"total_pages"`
 }
 
 func Write(w http.ResponseWriter, status int, v any) {

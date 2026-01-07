@@ -54,18 +54,14 @@ type RemoveUserFromPrivatePostRequest struct {
 type FeedPostResponse struct {
 	PostID        string    `json:"post_id"`
 	Content       string    `json:"content"`
-	ImageID       string    `json:"image_id"`
+	ImageID       *string   `json:"image_id"`
 	ImageUrl      string    `json:"image_url"`
 	Visibility    string    `json:"visibility"`
 	AuthorID      string    `json:"author_id"`
 	CreatedAt     time.Time `json:"created_at"`
 	ReactionCount int64     `json:"reaction_count"`
+	UserReacted   bool      `json:"user_reacted"`
 	CommentCount  int64     `json:"comment_count"`
-}
-
-type Reaction struct {
-	ReactionID string `json:"reaction_id"`
-	AuthorID   string `json:"author_id"`
 }
 
 type Comment struct {
@@ -76,17 +72,19 @@ type Comment struct {
 	ImageID         *string   `json:"image_id"`
 	CreatedAt       time.Time `json:"created_at"`
 	Reactions       int       `json:"reactions"`
+	UserReacted     bool      `json:"user_reacted"`
 }
 
 type PostWithCommentsReactionsResponse struct {
-	PostID     string    `json:"post_id"`
-	Content    string    `json:"content"`
-	ImageID    *string   `json:"image_id"`
-	Visibility string    `json:"visibility"`
-	AuthorID   string    `json:"author_id"`
-	CreatedAt  time.Time `json:"created_at"`
-	Reactions  int       `json:"reactions"`
-	Comments   []Comment `json:"comments"`
+	PostID      string    `json:"post_id"`
+	Content     string    `json:"content"`
+	ImageID     *string   `json:"image_id"`
+	Visibility  string    `json:"visibility"`
+	AuthorID    string    `json:"author_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	Reactions   int       `json:"reactions"`
+	UserReacted bool      `json:"user_reacted"`
+	Comments    []Comment `json:"comments"`
 }
 
 type CreateCommentRequest struct {

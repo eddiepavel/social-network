@@ -11,6 +11,7 @@ import (
 	"social-network/internal/utils"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
+	"strconv"
 	"strings"
 	"time"
 
@@ -106,13 +107,47 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		// TODO: Add query parameters for limit and offset with default values
-		// For now using hardcoded values
-		limit := int64(50)
-		offset := int64(0)
+		// Parse query parameters for pagination
+		page := 1
+		size := 10
 
+		if pageParam := r.URL.Query().Get("page"); pageParam != "" {
+			if parsedPage, err := strconv.Atoi(pageParam); err == nil && parsedPage > 0 {
+				page = parsedPage
+			}
+		}
+
+		if sizeParam := r.URL.Query().Get("size"); sizeParam != "" {
+			if parsedSize, err := strconv.Atoi(sizeParam); err == nil && parsedSize > 0 {
+				size = parsedSize
+			}
+		}
+
+		// Calculate offset
+		offset := int64((page - 1) * size)
+		limit := int64(size)
+
+		totalCount, err := sqlite.NewQuery(app.DB).Posts.GetFeedPostsCount(r.Context(), db_posts.GetFeedPostsCountParams{
+			AuthorID:   currentUserID,
+			FollowerID: currentUserID,
+			UserID:     currentUserID,
+		})
+
+		if err != nil {
+			app.Logger.Error("failed to get feed posts count", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if totalCount == 0 {
+			utils.OK(w, []models.FeedPostResponse{})
+			return
+		}
+
+		// Get posts for current page
 		posts, err := sqlite.NewQuery(app.DB).Posts.GetPostsForFeed(r.Context(), db_posts.GetPostsForFeedParams{
 			AuthorID:   currentUserID,
+			AuthorID_2: currentUserID,
 			FollowerID: currentUserID,
 			UserID:     currentUserID,
 			Limit:      limit,
@@ -134,12 +169,7 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 				PostID:   postUuid,
 				AuthorID: authorUuid,
 				Content:  post.Content,
-				ImageID: func() string {
-					if post.ImageID.Valid {
-						return post.ImageID.String
-					}
-					return ""
-				}(),
+				ImageID:  &post.ImageID.String,
 				ImageUrl: func() string {
 					if post.ImagePath.Valid {
 						filename := strings.Split(post.ImagePath.String, "/")
@@ -156,12 +186,26 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 					}
 					return time.Time{}
 				}(),
+				UserReacted:   post.UserReacted != 0,
 				ReactionCount: post.ReactionCount,
 				CommentCount:  post.CommentCount,
 			})
 		}
 
-		utils.OK(w, feedPosts)
+		// Calculate total pages
+		totalPages := int(totalCount) / size
+		if int(totalCount)%size != 0 {
+			totalPages++
+		}
+
+		// Send response with pagination metadata
+		utils.OK(w, utils.WithPagination(feedPosts, utils.Pagination{
+			Page:       page,
+			Size:       size,
+			Current:    len(feedPosts),
+			TotalItems: int(totalCount),
+			TotalPages: totalPages,
+		}))
 	}
 }
 
@@ -216,12 +260,21 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		postComments, err := sqlite.NewQuery(app.DB).Posts.GetPostComments(r.Context(), postID)
+		postComments, err := sqlite.NewQuery(app.DB).Posts.GetPostComments(r.Context(), db_posts.GetPostCommentsParams{
+			PostID:   postID,
+			AuthorID: currentUserID,
+		})
 		if err != nil {
 			app.Logger.Error("failed to get post comments", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
+
+		hasUserReacted, err := sqlite.NewQuery(app.DB).Posts.HasUserReacted(r.Context(), db_posts.HasUserReactedParams{
+			AuthorID:   currentUserID,
+			TargetType: "post",
+			TargetID:   postID,
+		})
 
 		var comments []models.Comment
 		for _, comment := range postComments {
@@ -243,7 +296,8 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 					}
 					return time.Time{}
 				}(),
-				Reactions: int(comment.ReactionCount),
+				Reactions:   int(comment.ReactionCount),
+				UserReacted: comment.UserReacted != 0,
 			})
 		}
 
@@ -260,8 +314,9 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 				}
 				return time.Time{}
 			}(),
-			Reactions: int(reactions),
-			Comments:  comments,
+			Reactions:   int(reactions),
+			UserReacted: hasUserReacted != 0,
+			Comments:    comments,
 		}
 
 		utils.OK(w, response)
@@ -636,7 +691,10 @@ func GetComments(app *app.App) http.HandlerFunc {
 		}
 
 		// Get comments for the post
-		comments, err := sqlite.NewQuery(app.DB).Posts.GetPostComments(r.Context(), postID)
+		comments, err := sqlite.NewQuery(app.DB).Posts.GetPostComments(r.Context(), db_posts.GetPostCommentsParams{
+			PostID:   postID,
+			AuthorID: currentUserID,
+		})
 		if err != nil {
 			app.Logger.Error("failed to get comments", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -650,11 +708,12 @@ func GetComments(app *app.App) http.HandlerFunc {
 			authorUUID, _ := helpers.GenerateFromBytes(comment.AuthorID)
 
 			commentData := models.Comment{
-				CommentID: commentUUID,
-				AuthorID:  authorUUID,
-				Content:   comment.Content,
-				CreatedAt: comment.CreatedAt.Time,
-				Reactions: int(comment.ReactionCount),
+				CommentID:   commentUUID,
+				AuthorID:    authorUUID,
+				Content:     comment.Content,
+				CreatedAt:   comment.CreatedAt.Time,
+				Reactions:   int(comment.ReactionCount),
+				UserReacted: comment.UserReacted != 0,
 			}
 
 			if comment.ParentCommentID != nil {
@@ -726,14 +785,6 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		// Generate new comment ID
-		commentID, err := uuid.New().MarshalBinary()
-		if err != nil {
-			app.Logger.Error("failed to generate comment UUID", "error", err.Error())
-			utils.Internal(w, errors.New("internal server error"))
-			return
-		}
-
 		// Handle parent comment ID
 		var parentCommentID []byte
 		if req.ParentID != nil && *req.ParentID != "" {
@@ -742,6 +793,26 @@ func CreateComment(app *app.App) http.HandlerFunc {
 				utils.BadRequest(w, errors.New("invalid parent comment ID format"))
 				return
 			}
+		}
+
+		parentComment, err := sqlite.NewQuery(app.DB).Posts.CheckCommentExists(r.Context(), parentCommentID)
+		if err != nil {
+			app.Logger.Error("failed to check parent comment", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if parentComment == 0 {
+			utils.BadRequest(w, errors.New("parent comment does not exist"))
+			return
+		}
+
+		// Generate new comment ID
+		commentID, err := uuid.New().MarshalBinary()
+		if err != nil {
+			app.Logger.Error("failed to generate comment UUID", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
 		}
 
 		// TODO: Handle image ID when image service is ready
@@ -887,10 +958,186 @@ func DeleteComment(app *app.App) http.HandlerFunc {
 
 func GetReactions(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
 
+		postIDHex := r.PathValue("postId")
+		if postIDHex == "" {
+			utils.BadRequest(w, errors.New("post ID required"))
+			return
+		}
+
+		postID, err := helpers.GenerateFromString(postIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid post ID format"))
+			return
+		}
+
+		// Fetch post basic info and check visibility permissions
+		postBasicInfo := helpers.FetchPostBasicInfo(app, postID, r.Context(), w)
+		if postBasicInfo.PostID == nil {
+			return
+		}
+
+		// Check if user can view this post's reactions
+		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		if err != nil {
+			app.Logger.Error("failed to check post permissions", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !canView {
+			utils.Forbidden(w)
+			return
+		}
+
+		// Get reaction count for the post
+		count, err := sqlite.NewQuery(app.DB).Posts.GetPostReactions(r.Context(), postID)
+		if err != nil {
+			app.Logger.Error("failed to get post reactions", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		// Check if current user has reacted
+		hasReacted, err := sqlite.NewQuery(app.DB).Posts.HasUserReacted(r.Context(), db_posts.HasUserReactedParams{
+			AuthorID:   currentUserID,
+			TargetType: "post",
+			TargetID:   postID,
+		})
+		if err != nil {
+			app.Logger.Error("failed to check user reaction", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		utils.OK(w, map[string]interface{}{
+			"count":        count,
+			"user_reacted": hasReacted > 0,
+		})
 	}
 }
 
 func ToggleReaction(app *app.App) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {}
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		postIDHex := r.PathValue("postId")
+		if postIDHex == "" {
+			utils.BadRequest(w, errors.New("post ID required"))
+			return
+		}
+
+		postID, err := helpers.GenerateFromString(postIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid post ID format"))
+			return
+		}
+
+		// Fetch post basic info and check visibility permissions
+		postBasicInfo := helpers.FetchPostBasicInfo(app, postID, r.Context(), w)
+		if postBasicInfo.PostID == nil {
+			return
+		}
+
+		// Check if user can react to this post (same rules as viewing)
+		canReact, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		if err != nil {
+			app.Logger.Error("failed to check post permissions", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !canReact {
+			utils.Forbidden(w)
+			return
+		}
+
+		commentIDHex := r.PathValue("commentId")
+
+		targetType := "post"
+		targetID := postID
+
+		if commentIDHex != "" {
+			targetType = "comment"
+			targetID, err = helpers.GenerateFromString(commentIDHex)
+			if err != nil {
+				utils.BadRequest(w, errors.New("invalid comment ID format"))
+				return
+			}
+		}
+
+		// Check if user has already reacted
+		hasReacted, err := sqlite.NewQuery(app.DB).Posts.HasUserReacted(r.Context(), db_posts.HasUserReactedParams{
+			AuthorID:   currentUserID,
+			TargetType: targetType,
+			TargetID:   targetID,
+		})
+		if err != nil {
+			app.Logger.Error("failed to check user reaction", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if hasReacted > 0 {
+			// User has reacted, so remove the reaction
+			err = sqlite.NewQuery(app.DB).Posts.DeleteReaction(r.Context(), db_posts.DeleteReactionParams{
+				AuthorID:   currentUserID,
+				TargetType: targetType,
+				TargetID:   targetID,
+			})
+			if err != nil {
+				app.Logger.Error("failed to delete reaction", "error", err.Error())
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+
+			utils.OK(w, map[string]interface{}{
+				"message":      "Reaction removed",
+				"user_reacted": false,
+			})
+		} else {
+			// User has not reacted, so add a reaction
+			reactionID, err := uuid.New().MarshalBinary()
+			if err != nil {
+				app.Logger.Error("failed to generate reaction UUID", "error", err.Error())
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+
+			rowsAffected, err := sqlite.NewQuery(app.DB).Posts.CreateReaction(r.Context(), db_posts.CreateReactionParams{
+				ReactionID: reactionID,
+				TargetType: targetType,
+				TargetID:   targetID,
+				AuthorID:   currentUserID,
+				PostID:     postID,
+				FollowerID: currentUserID,
+				UserID:     currentUserID,
+			})
+
+			if err != nil {
+				app.Logger.Error("failed to create reaction", "error", err.Error())
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+
+			if rowsAffected == 0 {
+				utils.Forbidden(w)
+				return
+			}
+
+			utils.OK(w, map[string]interface{}{
+				"message":      "Reaction added",
+				"user_reacted": true,
+			})
+		}
+	}
 }

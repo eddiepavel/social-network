@@ -35,7 +35,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test2@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -380,7 +380,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"content\": \"this is the first comment reply\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
+									"raw": "{\n    \"content\": \"this is the second comment reply from another user\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -439,13 +439,45 @@
 					]
 				},
 				{
+					"name": "Reactions",
+					"item": [
+						{
+							"name": "Get Post Reactions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction"
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Post Reaction",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction"
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Comment Reaction",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c09973d8-9e5c-44ce-904c-f5fc1a77f24f/reaction"
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "Create Post",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"content\": \"start testing comments and reactions\",\n    \"visibility\": \"public\"\n}",
+							"raw": "{\n    \"content\": \"testing pagination\",\n    \"visibility\": \"semi-private\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
