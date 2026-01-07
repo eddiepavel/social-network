@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"social-network/internal/models"
+	"social-network/internal/services"
 	"social-network/pkg/db/sqlite"
+	"time"
 )
 
-func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte) (models.GroupDetailsResponse, error) {
+func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte, f *services.FileService) (models.GroupDetailsResponse, error) {
 
 	var group models.GroupDetailsResponse
 	ctx := context.Background()
@@ -29,7 +31,7 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 		IsOwner:     isOwner,
 	}
 	if getGroup.Image.Valid {
-		group.Group.Image = &getGroup.Image.String
+		group.Group.Image = f.GenerateSignImage(getGroup.Image.String, user, time.Now().Add(15*time.Minute))
 	}
 
 	// Get members

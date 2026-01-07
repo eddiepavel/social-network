@@ -98,7 +98,31 @@ func (c CreateGroupValidator) Build(r *http.Request, app *app.App) map[string][]
 			return nil
 		}},
 		"description": {"required", "string", "min:10", "max:50"},
-		"image":       {"sometimes"},
+		"image": {"sometimes", "string", func(v interface{}) error {
+			value := v.(string)
+
+			image, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), value)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("wrong id")
+				}
+
+				return errors.New("something went wrong")
+			}
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if !bytes.Equal(user, image.PosterID) {
+				return errors.New("wrong id")
+			}
+
+			if !image.ExpiresAt.Valid {
+				return errors.New("wrong id")
+			}
+
+			return nil
+		}},
 	}
 }
 

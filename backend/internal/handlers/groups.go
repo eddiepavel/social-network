@@ -13,6 +13,8 @@ import (
 	"social-network/internal/utils"
 	db_groups "social-network/pkg/db/queries/groups"
 	"social-network/pkg/db/sqlite"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -95,19 +97,29 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		err = app.File.AssignImage(req.Image)
+
+		if err != nil {
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
 		setUUid, _ := helpers.GenerateFromBytes(groupUUID)
 		setUserUuid, _ := helpers.GenerateFromBytes(group.CreatorID)
+
 		// Return created group
 		response := models.GroupResponse{
 			GroupID:     setUUid,
 			GroupName:   req.GroupName,
 			Description: req.Description,
-			Image: func() *string {
+			Image: func() string {
 				if group.Image.Valid {
-					return &group.Image.String
-				}
+					filename := strings.Split(group.Image.String, "/")
 
-				return nil
+					path := app.File.GenerateSignImage(filename[len(filename)-1], userID, time.Now().Add(15*time.Minute))
+					return path
+				}
+				return ""
 			}(),
 			CreatorID: setUserUuid,
 			CreatedAt: group.CreatedAt.String(),
@@ -146,12 +158,12 @@ func GetGroups(app *app.App) http.HandlerFunc {
 				GroupID:     setGroupUUid,
 				GroupName:   group.GroupName,
 				Description: group.GroupName,
-				Image: func() *string {
+				Image: func() string {
 					if group.Image.Valid {
-						return &group.Image.String
+						return group.Image.String
 					}
 
-					return nil
+					return ""
 				}(),
 				CreatorID:   setCreatorId,
 				CreatedAt:   group.CreatedAt.String(),
@@ -206,7 +218,7 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		// Fetch group details
 		init := sqlite.NewQuery(app.DB)
 
-		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID)
+		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File)
 
 		if err != nil {
 			app.Logger.Error("error fetching group details", "err", err)
