@@ -53,13 +53,19 @@ func (h *Handler) postsRoutes() *http.ServeMux {
 
 	mux.HandleFunc("POST /create", handlers.CreatePost(h.App))
 	mux.HandleFunc("GET /feed", handlers.GetFeedPosts(h.App))
+
 	mux.HandleFunc("GET /id/{postId}", handlers.GetPostWithCommentsReactions(h.App))
 	mux.HandleFunc("PUT /id/{postId}", handlers.EditPost(h.App))
 	mux.HandleFunc("DELETE /id/{postId}", handlers.DeletePost(h.App))
+
 	mux.HandleFunc("PUT /id/{postId}/privacy", handlers.UpdatePostVisibility(h.App))
 	mux.HandleFunc("POST /id/{postId}/privacy", handlers.AddUserToPrivatePostList(h.App))
 	mux.HandleFunc("DELETE /id/{postId}/privacy", handlers.RemoveUserFromPrivatePostList(h.App))
 
+	mux.HandleFunc("GET /id/{postId}/comment", handlers.GetComments(h.App))
+	mux.HandleFunc("POST /id/{postId}/comment", handlers.CreateComment(h.App))
+	mux.HandleFunc("PUT /id/{postId}/comment/{commentId}", handlers.EditComment(h.App))
+	mux.HandleFunc("DELETE /id/{postId}/comment/{commentId}", handlers.DeleteComment(h.App))
 	return mux
 }
 

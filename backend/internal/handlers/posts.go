@@ -213,20 +213,47 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 		// Parse reactions JSON
 		var reactions []models.Reaction
 		if post.Reactions != nil {
-			reactionsJSON, _ := post.Reactions.([]byte)
+			reactionsJSON := []byte(post.Reactions.(string))
 			json.Unmarshal(reactionsJSON, &reactions)
 		}
 
 		// Parse comments JSON
 		var comments []models.Comment
 		if post.Comments != nil {
-			commentsJSON, _ := post.Comments.([]byte)
+			commentsJSON := []byte(post.Comments.(string))
 			json.Unmarshal(commentsJSON, &comments)
 		}
 
+		for i := range comments {
+			commentID, err := uuid.Parse(comments[i].CommentID)
+			if err != nil {
+				app.Logger.Error("failed to parse comment ID", "error", err.Error())
+				continue
+			}
+			comments[i].CommentID = commentID.String()
+
+			authorID, err := uuid.Parse(comments[i].AuthorID)
+			if err != nil {
+				app.Logger.Error("failed to parse comment ID", "error", err.Error())
+				continue
+			}
+			comments[i].AuthorID = authorID.String()
+
+			if *comments[i].ParentCommentID != "" {
+				parentID, err := uuid.Parse(*comments[i].ParentCommentID)
+				if err != nil {
+					app.Logger.Error("failed to parse comment ID", "error", err.Error())
+					continue
+				}
+				parentIDstr := parentID.String()
+				comments[i].ParentCommentID = &parentIDstr
+			}
+		}
+
+		authorUuid, _ := helpers.GenerateFromBytes(post.AuthorID)
 		response := models.PostWithCommentsReactionsResponse{
 			PostID:   postIDHex,
-			AuthorID: post.AuthorID,
+			AuthorID: authorUuid,
 			Content:  post.Content,
 			ImageID: func() string {
 				if post.ImageID.Valid {
@@ -572,5 +599,294 @@ func RemoveUserFromPrivatePostList(app *app.App) http.HandlerFunc {
 		}
 
 		utils.OK(w, "User removed from private post viewing list")
+	}
+}
+
+// -------------------- POSTS COMMENTS HANDLERS ---------------------
+
+func GetComments(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		postIDHex := r.PathValue("postId")
+		if postIDHex == "" {
+			utils.BadRequest(w, errors.New("post ID required"))
+			return
+		}
+
+		postID, err := helpers.GenerateFromString(postIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid post ID format"))
+			return
+		}
+
+		// Fetch post basic info and check visibility permissions
+		postBasicInfo := helpers.FetchPostBasicInfo(app, postID, r.Context(), w)
+		if postBasicInfo.PostID == nil {
+			return
+		}
+
+		// Check if user can view this post's comments
+		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		if err != nil {
+			app.Logger.Error("failed to check post permissions", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !canView {
+			utils.Forbidden(w)
+			return
+		}
+
+		// Get comments for the post
+		comments, err := sqlite.NewQuery(app.DB).Posts.GetPostComments(r.Context(), postID)
+		if err != nil {
+			app.Logger.Error("failed to get comments", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		// Build response
+		var commentsList []models.Comment
+		for _, comment := range comments {
+			commentUUID, _ := helpers.GenerateFromBytes(comment.CommentID)
+			authorUUID, _ := helpers.GenerateFromBytes(comment.AuthorID)
+
+			commentData := models.Comment{
+				CommentID: commentUUID,
+				AuthorID:  authorUUID,
+				Content:   comment.Content,
+				CreatedAt: comment.CreatedAt.Time,
+				Reactions: []models.Reaction{}, // TODO: Add reactions when implemented
+			}
+
+			if comment.ParentCommentID != nil {
+				parentUUID, err := helpers.GenerateFromBytes(comment.ParentCommentID)
+				if err == nil {
+					commentData.ParentCommentID = &parentUUID
+				}
+			}
+
+			// TODO: Add image support
+			// if comment.ImageID.Valid {
+			// 	commentData.ImageID = &comment.ImageID.String
+			// }
+
+			commentsList = append(commentsList, commentData)
+		}
+
+		utils.OK(w, commentsList)
+	}
+}
+
+func CreateComment(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		postIDHex := r.PathValue("postId")
+		if postIDHex == "" {
+			utils.BadRequest(w, errors.New("post ID required"))
+			return
+		}
+
+		postID, err := helpers.GenerateFromString(postIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid post ID format"))
+			return
+		}
+
+		var req models.CreateCommentRequest
+
+		inputs := helpers.ValidateCreateComment.Build(r, app)
+
+		ok, errValidation := utils.Validate(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		// Fetch post basic info and check visibility permissions
+		postBasicInfo := helpers.FetchPostBasicInfo(app, postID, r.Context(), w)
+		if postBasicInfo.PostID == nil {
+			return
+		}
+
+		// Check if user can comment on this post (same rules as viewing)
+		canComment, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		if err != nil {
+			app.Logger.Error("failed to check post permissions", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !canComment {
+			utils.Forbidden(w)
+			return
+		}
+
+		// Generate new comment ID
+		commentID, err := uuid.New().MarshalBinary()
+		if err != nil {
+			app.Logger.Error("failed to generate comment UUID", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		// Handle parent comment ID
+		var parentCommentID []byte
+		if req.ParentID != nil && *req.ParentID != "" {
+			parentCommentID, err = helpers.GenerateFromString(*req.ParentID)
+			if err != nil {
+				utils.BadRequest(w, errors.New("invalid parent comment ID format"))
+				return
+			}
+		}
+
+		// TODO: Handle image ID when image service is ready
+		var imageID sql.NullString
+		// if req.ImageID != nil && *req.ImageID != "" {
+		// 	imageID = sql.NullString{String: *req.ImageID, Valid: true}
+		// }
+
+		// Create comment with visibility check
+		rowsAffected, err := sqlite.NewQuery(app.DB).Posts.CreateComment(r.Context(), db_posts.CreateCommentParams{
+			CommentID:       commentID,
+			PostID:          postID,
+			UserID:          currentUserID,
+			Content:         req.Content,
+			ParentCommentID: parentCommentID,
+			ImageID:         imageID,
+			PostID_2:        postID,
+			FollowerID:      currentUserID,
+			AuthorID:        currentUserID,
+		})
+
+		if err != nil {
+			app.Logger.Error("failed to create comment", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if rowsAffected == 0 {
+			utils.Forbidden(w)
+			return
+		}
+
+		commentUUID, _ := helpers.GenerateFromBytes(commentID)
+		authorID, _ := helpers.GenerateFromBytes(currentUserID)
+
+		response := models.Comment{
+			CommentID: commentUUID,
+			AuthorID:  authorID,
+			Content:   req.Content,
+			CreatedAt: time.Now(),
+			Reactions: []models.Reaction{},
+		}
+
+		if req.ParentID != nil && *req.ParentID != "" {
+			response.ParentCommentID = req.ParentID
+		}
+
+		utils.OK(w, response)
+	}
+}
+
+func EditComment(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		commentIDHex := r.PathValue("commentId")
+		if commentIDHex == "" {
+			utils.BadRequest(w, errors.New("comment ID required"))
+			return
+		}
+
+		commentID, err := helpers.GenerateFromString(commentIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid comment ID format"))
+			return
+		}
+
+		var req models.UpdateCommentRequest
+
+		inputs := helpers.ValidateUpdateComment.Build(r, app)
+
+		ok, errValidation := utils.Validate(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		// Update comment (only owner can edit)
+		err = sqlite.NewQuery(app.DB).Posts.EditComment(r.Context(), db_posts.EditCommentParams{
+			Content:   req.Content,
+			CommentID: commentID,
+			AuthorID:  currentUserID,
+		})
+
+		if err != nil {
+			app.Logger.Error("failed to edit comment", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		utils.OK(w, map[string]string{
+			"message":    "Comment updated successfully",
+			"comment_id": commentIDHex,
+		})
+	}
+}
+
+func DeleteComment(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		commentIDHex := r.PathValue("commentId")
+		if commentIDHex == "" {
+			utils.BadRequest(w, errors.New("comment ID required"))
+			return
+		}
+
+		commentID, err := helpers.GenerateFromString(commentIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid comment ID format"))
+			return
+		}
+
+		// Delete comment (only owner can delete)
+		err = sqlite.NewQuery(app.DB).Posts.DeleteComment(r.Context(), db_posts.DeleteCommentParams{
+			CommentID: commentID,
+			AuthorID:  currentUserID,
+		})
+
+		if err != nil {
+			app.Logger.Error("failed to delete comment", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		utils.OK(w, map[string]string{
+			"message":    "Comment deleted successfully",
+			"comment_id": commentIDHex,
+		})
 	}
 }

@@ -17,7 +17,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg1\",\r\n    \"last_name\": \"gg2\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg7\",\r\n    \"last_name\": \"gg8\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -69,7 +69,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/users/profile/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957"
+						"url": "{{url}}/users/profile/9130f7d9-11ec-420a-892d-d2cf27aa3508"
 					},
 					"response": []
 				},
@@ -80,7 +80,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"is_public\": true\r\n}",
+							"raw": "{\r\n    \"is_public\": false\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -143,7 +143,7 @@
 					"request": {
 						"method": "POST",
 						"header": [],
-						"url": "{{url}}/followers/8e9f65e8-78ff-48af-8159-23290988955a/follow"
+						"url": "{{url}}/followers/9130f7d9-11ec-420a-892d-d2cf27aa3508/follow"
 					},
 					"response": []
 				},
@@ -152,7 +152,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/following"
+						"url": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/following"
 					},
 					"response": []
 				},
@@ -179,7 +179,7 @@
 								}
 							}
 						},
-						"url": "{{url}}/followers/requests/2/respond"
+						"url": "{{url}}/followers/requests/3/respond"
 					},
 					"response": []
 				},
@@ -350,10 +350,109 @@
 			"name": "Posts",
 			"item": [
 				{
+					"name": "Comments",
+					"item": [
+						{
+							"name": "Get Post Comments",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Comment with Parent",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"content\": \"this is the first comment reply\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Comment",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"content\": \"this is the first comment\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
+							},
+							"response": []
+						},
+						{
+							"name": "Edit Comment",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"content\": \"first edited comment\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Comment",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6"
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "Create Post",
 					"request": {
 						"method": "POST",
-						"header": []
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"content\": \"start testing comments and reactions\",\n    \"visibility\": \"public\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/posts/create"
 					},
 					"response": []
 				},
@@ -361,7 +460,8 @@
 					"name": "Get Posts Feed",
 					"request": {
 						"method": "GET",
-						"header": []
+						"header": [],
+						"url": "{{url}}/posts/feed"
 					},
 					"response": []
 				},
@@ -369,7 +469,8 @@
 					"name": "Get Post Profile",
 					"request": {
 						"method": "GET",
-						"header": []
+						"header": [],
+						"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157"
 					},
 					"response": []
 				},
@@ -380,7 +481,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
+							"raw": "{\n    \"user_id\": \"1ac03f92-7c5f-4d38-8aa6-9604ed4c3a49\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -416,14 +517,14 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
+							"raw": "{\n    \"visibility\": \"semi-private\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy"
+						"url": "{{url}}/posts/id/bb0e9498-ef24-4fa3-ba30-76797fbeaf3e/privacy"
 					},
 					"response": []
 				},
@@ -432,7 +533,16 @@
 					"request": {
 						"method": "PUT",
 						"header": [],
-						"url": "{{url}}/posts/id/"
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"content\": \"edited to test\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328"
 					},
 					"response": []
 				},

@@ -9,10 +9,10 @@ import (
 )
 
 type Comment struct {
-	CommentID       string
-	PostID          string
-	UserID          []byte
-	ParentCommentID sql.NullString
+	CommentID       []byte
+	PostID          []byte
+	AuthorID        []byte
+	ParentCommentID []byte
 	Content         string
 	ImageID         sql.NullString
 	CreatedAt       sql.NullTime
@@ -43,10 +43,10 @@ type Post struct {
 }
 
 type Reaction struct {
-	ReactionID   string
-	UserID       []byte
+	ReactionID   []byte
+	AuthorID     []byte
 	TargetType   string
-	TargetID     string
+	TargetID     []byte
 	ReactionType string
 	ReactedAt    sql.NullTime
 }

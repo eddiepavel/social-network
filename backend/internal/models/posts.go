@@ -65,13 +65,13 @@ type FeedPostResponse struct {
 
 type Reaction struct {
 	ReactionID   string `json:"reaction_id"`
-	UserID       []byte `json:"user_id"`
+	AuthorID     string `json:"author_id"`
 	ReactionType string `json:"reaction_type"`
 }
 
 type Comment struct {
 	CommentID       string     `json:"comment_id"`
-	UserID          []byte     `json:"user_id"`
+	AuthorID        string     `json:"author_id"`
 	Content         string     `json:"content"`
 	ParentCommentID *string    `json:"parent_comment_id"`
 	ImageID         *string    `json:"image_id"`
@@ -84,8 +84,22 @@ type PostWithCommentsReactionsResponse struct {
 	Content    string     `json:"content"`
 	ImageID    string     `json:"image_id"`
 	Visibility string     `json:"visibility"`
-	AuthorID   []byte     `json:"author_id"`
+	AuthorID   string     `json:"author_id"`
 	CreatedAt  time.Time  `json:"created_at"`
 	Reactions  []Reaction `json:"reactions"`
 	Comments   []Comment  `json:"comments"`
+}
+
+type CreateCommentRequest struct {
+	Content  string  `json:"content"`
+	ParentID *string `json:"parent_id"`
+	// TODO: Add image support when image service is ready
+	ImageID *string `json:"image_id"`
+}
+
+type UpdateCommentRequest struct {
+	Content string `json:"content"`
+}
+
+type DeleteCommentRequest struct {
 }

@@ -188,6 +188,25 @@ func (aupv AddUserToPrivatePostValidator) Build(r *http.Request, app *app.App) m
 	}
 }
 
+type CreateCommentValidator struct{}
+
+func (ccv CreateCommentValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"content":   {"required", "string", "min:1", "max:500"},
+		"parent_id": {"sometimes", "string"},
+		// TODO: Add image validation when image service is ready
+		"image_id": {"sometimes", "string"},
+	}
+}
+
+type UpdateCommentValidator struct{}
+
+func (ucv UpdateCommentValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"content": {"required", "string", "min:1", "max:500"},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister             ValidationRuleBuilder = RegisterValidator{}
@@ -200,4 +219,6 @@ var (
 	ValidateUpdatePost           ValidationRuleBuilder = UpdatePostValidator{}
 	ValidateUpdatePostVisibility ValidationRuleBuilder = UpdatePostVisibilityValidator{}
 	ValidateAddUserToPrivatePost ValidationRuleBuilder = AddUserToPrivatePostValidator{}
+	ValidateCreateComment        ValidationRuleBuilder = CreateCommentValidator{}
+	ValidateUpdateComment        ValidationRuleBuilder = UpdateCommentValidator{}
 )

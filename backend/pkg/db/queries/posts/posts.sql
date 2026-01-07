@@ -2,26 +2,29 @@
 SELECT
     p.*,
     (SELECT COALESCE(json_group_array(json_object(
-        'reaction_id', r.reaction_id,
-        'user_id', r.user_id,
-        'reaction_type', r.reaction_type
-                                  )), '[]')
-    FROM reactions r WHERE r.target_type = 'post' AND r.target_id = p.post_id) as reactions,
+            'reaction_id', hex(r.reaction_id),
+            'author_id', hex(r.author_id),
+            'reaction_type', r.reaction_type
+                                      )), '[]')
+     FROM reactions r WHERE r.target_type = 'post' AND r.target_id = p.post_id) as reactions,
     (SELECT COALESCE(json_group_array(json_object(
-        'comment_id', c.comment_id,
-        'user_id', c.user_id,
-        'content', c.content,
-        'reactions', (
-            SELECT COALESCE(json_group_array(json_object(
-                'reaction_id', cr.reaction_id,
-                'user_id', cr.user_id,
-                'reaction_type', cr.reaction_type
-            )), '[]')
-            FROM reactions cr
-            WHERE cr.target_type = 'comment' AND cr.target_id = c.comment_id
-        )
-    )), '[]')
-    FROM comments c WHERE c.post_id = p.post_id) as comments
+            'comment_id', hex(c.comment_id),
+            'author_id', hex(c.author_id),
+            'content', c.content,
+            'created_at', strftime('%Y-%m-%dT%H:%M:%SZ', c.created_at),
+            'parent_comment_id', hex(c.parent_comment_id),
+            'image_id', c.image_id,
+            'reactions', (
+                SELECT COALESCE(json_group_array(json_object(
+                        'reaction_id', hex(cr.reaction_id),
+                        'author_id', hex(cr.author_id),
+                        'reaction_type', cr.reaction_type
+                                                 )), '[]')
+                FROM reactions cr
+                WHERE cr.target_type = 'comment' AND cr.target_id = c.comment_id
+            )
+                                      )), '[]')
+     FROM comments c WHERE c.post_id = p.post_id) as comments
 FROM posts p
 WHERE p.post_id = ?;
 
@@ -120,10 +123,10 @@ SELECT * FROM comments WHERE post_id = ?;
 SELECT * FROM reactions WHERE target_type = 'post' AND target_id = ?;
 
 -- name: GetCommentReactions :many
-SELECT * FROM reactions WHERE target_type = 'comment' AND target_id = ?;
+SELECT * FROM reactions WHERE target_type = 'comment' AND target_id IN (SELECT comment_id FROM comments WHERE post_id = ?);
 
 -- name: CreateComment :execrows
-INSERT INTO comments (comment_id, post_id, user_id, content, parent_comment_id, image_id)
+INSERT INTO comments (comment_id, post_id, author_id, content, parent_comment_id, image_id)
 SELECT ?, ?, ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
@@ -144,13 +147,13 @@ SELECT ?, ?, ?, ?, ?, ?
 );
 
 -- name: DeleteComment :exec
-DELETE FROM comments WHERE comment_id = ? AND user_id = ?;
+DELETE FROM comments WHERE comment_id = ? AND author_id = ?;
 
 -- name: EditComment :exec
-UPDATE comments SET content = ? WHERE comment_id = ? AND user_id = ?;
+UPDATE comments SET content = ? WHERE comment_id = ? AND author_id = ?;
 
 -- name: CreateReaction :execrows
-INSERT INTO reactions (reaction_id, target_type, target_id, user_id, reaction_type)
+INSERT INTO reactions (reaction_id, target_type, target_id, author_id, reaction_type)
 SELECT ?, ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
@@ -176,4 +179,4 @@ SELECT ?, ?, ?, ?, ?
 );
 
 -- name: DeleteReaction :exec
-DELETE FROM reactions WHERE reaction_id = ? AND user_id = ?;
+DELETE FROM reactions WHERE reaction_id = ? AND author_id = ?;

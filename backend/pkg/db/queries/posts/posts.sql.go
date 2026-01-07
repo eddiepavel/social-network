@@ -62,7 +62,7 @@ func (q *Queries) CheckPrivatePostUserPermit(ctx context.Context, arg CheckPriva
 }
 
 const createComment = `-- name: CreateComment :execrows
-INSERT INTO comments (comment_id, post_id, user_id, content, parent_comment_id, image_id)
+INSERT INTO comments (comment_id, post_id, author_id, content, parent_comment_id, image_id)
 SELECT ?, ?, ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
@@ -84,28 +84,28 @@ SELECT ?, ?, ?, ?, ?, ?
 `
 
 type CreateCommentParams struct {
-	CommentID       string
-	PostID          string
-	UserID          []byte
+	CommentID       []byte
+	PostID          []byte
+	AuthorID        []byte
 	Content         string
-	ParentCommentID sql.NullString
+	ParentCommentID []byte
 	ImageID         sql.NullString
 	PostID_2        []byte
 	FollowerID      []byte
-	UserID_2        []byte
+	UserID          []byte
 }
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, createComment,
 		arg.CommentID,
 		arg.PostID,
-		arg.UserID,
+		arg.AuthorID,
 		arg.Content,
 		arg.ParentCommentID,
 		arg.ImageID,
 		arg.PostID_2,
 		arg.FollowerID,
-		arg.UserID_2,
+		arg.UserID,
 	)
 	if err != nil {
 		return 0, err
@@ -146,7 +146,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 }
 
 const createReaction = `-- name: CreateReaction :execrows
-INSERT INTO reactions (reaction_id, target_type, target_id, user_id, reaction_type)
+INSERT INTO reactions (reaction_id, target_type, target_id, author_id, reaction_type)
 SELECT ?, ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
@@ -173,17 +173,17 @@ SELECT ?, ?, ?, ?, ?
 `
 
 type CreateReactionParams struct {
-	ReactionID   string
+	ReactionID   []byte
 	TargetType   string
-	TargetID     string
-	UserID       []byte
+	TargetID     []byte
+	AuthorID     []byte
 	ReactionType string
 	Column6      interface{}
 	PostID       []byte
 	Column8      interface{}
-	CommentID    string
+	CommentID    []byte
 	FollowerID   []byte
-	UserID_2     []byte
+	UserID       []byte
 }
 
 func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) (int64, error) {
@@ -191,14 +191,14 @@ func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) 
 		arg.ReactionID,
 		arg.TargetType,
 		arg.TargetID,
-		arg.UserID,
+		arg.AuthorID,
 		arg.ReactionType,
 		arg.Column6,
 		arg.PostID,
 		arg.Column8,
 		arg.CommentID,
 		arg.FollowerID,
-		arg.UserID_2,
+		arg.UserID,
 	)
 	if err != nil {
 		return 0, err
@@ -207,16 +207,16 @@ func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) 
 }
 
 const deleteComment = `-- name: DeleteComment :exec
-DELETE FROM comments WHERE comment_id = ? AND user_id = ?
+DELETE FROM comments WHERE comment_id = ? AND author_id = ?
 `
 
 type DeleteCommentParams struct {
-	CommentID string
-	UserID    []byte
+	CommentID []byte
+	AuthorID  []byte
 }
 
 func (q *Queries) DeleteComment(ctx context.Context, arg DeleteCommentParams) error {
-	_, err := q.db.ExecContext(ctx, deleteComment, arg.CommentID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, deleteComment, arg.CommentID, arg.AuthorID)
 	return err
 }
 
@@ -235,31 +235,31 @@ func (q *Queries) DeletePost(ctx context.Context, arg DeletePostParams) error {
 }
 
 const deleteReaction = `-- name: DeleteReaction :exec
-DELETE FROM reactions WHERE reaction_id = ? AND user_id = ?
+DELETE FROM reactions WHERE reaction_id = ? AND author_id = ?
 `
 
 type DeleteReactionParams struct {
-	ReactionID string
-	UserID     []byte
+	ReactionID []byte
+	AuthorID   []byte
 }
 
 func (q *Queries) DeleteReaction(ctx context.Context, arg DeleteReactionParams) error {
-	_, err := q.db.ExecContext(ctx, deleteReaction, arg.ReactionID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, deleteReaction, arg.ReactionID, arg.AuthorID)
 	return err
 }
 
 const editComment = `-- name: EditComment :exec
-UPDATE comments SET content = ? WHERE comment_id = ? AND user_id = ?
+UPDATE comments SET content = ? WHERE comment_id = ? AND author_id = ?
 `
 
 type EditCommentParams struct {
 	Content   string
-	CommentID string
-	UserID    []byte
+	CommentID []byte
+	AuthorID  []byte
 }
 
 func (q *Queries) EditComment(ctx context.Context, arg EditCommentParams) error {
-	_, err := q.db.ExecContext(ctx, editComment, arg.Content, arg.CommentID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, editComment, arg.Content, arg.CommentID, arg.AuthorID)
 	return err
 }
 
@@ -279,11 +279,11 @@ func (q *Queries) EditPostVisibility(ctx context.Context, arg EditPostVisibility
 }
 
 const getCommentReactions = `-- name: GetCommentReactions :many
-SELECT reaction_id, user_id, target_type, target_id, reaction_type, reacted_at FROM reactions WHERE target_type = 'comment' AND target_id = ?
+SELECT reaction_id, author_id, target_type, target_id, reaction_type, reacted_at FROM reactions WHERE target_type = 'comment' AND target_id IN (SELECT comment_id FROM comments WHERE post_id = ?)
 `
 
-func (q *Queries) GetCommentReactions(ctx context.Context, targetID string) ([]Reaction, error) {
-	rows, err := q.db.QueryContext(ctx, getCommentReactions, targetID)
+func (q *Queries) GetCommentReactions(ctx context.Context, postID []byte) ([]Reaction, error) {
+	rows, err := q.db.QueryContext(ctx, getCommentReactions, postID)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (q *Queries) GetCommentReactions(ctx context.Context, targetID string) ([]R
 		var i Reaction
 		if err := rows.Scan(
 			&i.ReactionID,
-			&i.UserID,
+			&i.AuthorID,
 			&i.TargetType,
 			&i.TargetID,
 			&i.ReactionType,
@@ -330,10 +330,10 @@ func (q *Queries) GetPostBasicInfo(ctx context.Context, postID []byte) (GetPostB
 }
 
 const getPostComments = `-- name: GetPostComments :many
-SELECT comment_id, post_id, user_id, parent_comment_id, content, image_id, created_at FROM comments WHERE post_id = ?
+SELECT comment_id, post_id, author_id, parent_comment_id, content, image_id, created_at FROM comments WHERE post_id = ?
 `
 
-func (q *Queries) GetPostComments(ctx context.Context, postID string) ([]Comment, error) {
+func (q *Queries) GetPostComments(ctx context.Context, postID []byte) ([]Comment, error) {
 	rows, err := q.db.QueryContext(ctx, getPostComments, postID)
 	if err != nil {
 		return nil, err
@@ -345,7 +345,7 @@ func (q *Queries) GetPostComments(ctx context.Context, postID string) ([]Comment
 		if err := rows.Scan(
 			&i.CommentID,
 			&i.PostID,
-			&i.UserID,
+			&i.AuthorID,
 			&i.ParentCommentID,
 			&i.Content,
 			&i.ImageID,
@@ -365,10 +365,10 @@ func (q *Queries) GetPostComments(ctx context.Context, postID string) ([]Comment
 }
 
 const getPostReactions = `-- name: GetPostReactions :many
-SELECT reaction_id, user_id, target_type, target_id, reaction_type, reacted_at FROM reactions WHERE target_type = 'post' AND target_id = ?
+SELECT reaction_id, author_id, target_type, target_id, reaction_type, reacted_at FROM reactions WHERE target_type = 'post' AND target_id = ?
 `
 
-func (q *Queries) GetPostReactions(ctx context.Context, targetID string) ([]Reaction, error) {
+func (q *Queries) GetPostReactions(ctx context.Context, targetID []byte) ([]Reaction, error) {
 	rows, err := q.db.QueryContext(ctx, getPostReactions, targetID)
 	if err != nil {
 		return nil, err
@@ -379,7 +379,7 @@ func (q *Queries) GetPostReactions(ctx context.Context, targetID string) ([]Reac
 		var i Reaction
 		if err := rows.Scan(
 			&i.ReactionID,
-			&i.UserID,
+			&i.AuthorID,
 			&i.TargetType,
 			&i.TargetID,
 			&i.ReactionType,
@@ -413,26 +413,29 @@ const getPostWithReactionsAndComments = `-- name: GetPostWithReactionsAndComment
 SELECT
     p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at,
     (SELECT COALESCE(json_group_array(json_object(
-        'reaction_id', r.reaction_id,
-        'user_id', r.user_id,
-        'reaction_type', r.reaction_type
-                                  )), '[]')
-    FROM reactions r WHERE r.target_type = 'post' AND r.target_id = p.post_id) as reactions,
+            'reaction_id', hex(r.reaction_id),
+            'author_id', hex(r.author_id),
+            'reaction_type', r.reaction_type
+                                      )), '[]')
+     FROM reactions r WHERE r.target_type = 'post' AND r.target_id = p.post_id) as reactions,
     (SELECT COALESCE(json_group_array(json_object(
-        'comment_id', c.comment_id,
-        'user_id', c.user_id,
-        'content', c.content,
-        'reactions', (
-            SELECT COALESCE(json_group_array(json_object(
-                'reaction_id', cr.reaction_id,
-                'user_id', cr.user_id,
-                'reaction_type', cr.reaction_type
-            )), '[]')
-            FROM reactions cr
-            WHERE cr.target_type = 'comment' AND cr.target_id = c.comment_id
-        )
-    )), '[]')
-    FROM comments c WHERE c.post_id = p.post_id) as comments
+            'comment_id', hex(c.comment_id),
+            'author_id', hex(c.author_id),
+            'content', c.content,
+            'created_at', strftime('%Y-%m-%dT%H:%M:%SZ', c.created_at),
+            'parent_comment_id', hex(c.parent_comment_id),
+            'image_id', c.image_id,
+            'reactions', (
+                SELECT COALESCE(json_group_array(json_object(
+                        'reaction_id', hex(cr.reaction_id),
+                        'author_id', hex(cr.author_id),
+                        'reaction_type', cr.reaction_type
+                                                 )), '[]')
+                FROM reactions cr
+                WHERE cr.target_type = 'comment' AND cr.target_id = c.comment_id
+            )
+                                      )), '[]')
+     FROM comments c WHERE c.post_id = p.post_id) as comments
 FROM posts p
 WHERE p.post_id = ?
 `
