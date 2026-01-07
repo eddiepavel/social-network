@@ -43,12 +43,11 @@ type Post struct {
 }
 
 type Reaction struct {
-	ReactionID   []byte
-	AuthorID     []byte
-	TargetType   string
-	TargetID     []byte
-	ReactionType string
-	ReactedAt    sql.NullTime
+	ReactionID []byte
+	AuthorID   []byte
+	TargetType string
+	TargetID   []byte
+	ReactedAt  sql.NullTime
 }
 
 type User struct {

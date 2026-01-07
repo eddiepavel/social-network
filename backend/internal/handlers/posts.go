@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"social-network/app"
@@ -210,57 +209,50 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		// Parse reactions JSON
-		var reactions []models.Reaction
-		if post.Reactions != nil {
-			reactionsJSON := []byte(post.Reactions.(string))
-			json.Unmarshal(reactionsJSON, &reactions)
+		reactions, err := sqlite.NewQuery(app.DB).Posts.GetPostReactions(r.Context(), postID)
+		if err != nil {
+			app.Logger.Error("failed to get post reactions", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
 		}
 
-		// Parse comments JSON
+		postComments, err := sqlite.NewQuery(app.DB).Posts.GetPostComments(r.Context(), postID)
+		if err != nil {
+			app.Logger.Error("failed to get post comments", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
 		var comments []models.Comment
-		if post.Comments != nil {
-			commentsJSON := []byte(post.Comments.(string))
-			json.Unmarshal(commentsJSON, &comments)
-		}
-
-		for i := range comments {
-			commentID, err := uuid.Parse(comments[i].CommentID)
-			if err != nil {
-				app.Logger.Error("failed to parse comment ID", "error", err.Error())
-				continue
+		for _, comment := range postComments {
+			commentAuthorID, _ := helpers.GenerateFromBytes(comment.AuthorID)
+			commentID, _ := helpers.GenerateFromBytes(comment.CommentID)
+			var parentID string
+			if comment.ParentCommentID != nil {
+				parentID, _ = helpers.GenerateFromBytes(comment.ParentCommentID)
 			}
-			comments[i].CommentID = commentID.String()
-
-			authorID, err := uuid.Parse(comments[i].AuthorID)
-			if err != nil {
-				app.Logger.Error("failed to parse comment ID", "error", err.Error())
-				continue
-			}
-			comments[i].AuthorID = authorID.String()
-
-			if *comments[i].ParentCommentID != "" {
-				parentID, err := uuid.Parse(*comments[i].ParentCommentID)
-				if err != nil {
-					app.Logger.Error("failed to parse comment ID", "error", err.Error())
-					continue
-				}
-				parentIDstr := parentID.String()
-				comments[i].ParentCommentID = &parentIDstr
-			}
+			comments = append(comments, models.Comment{
+				CommentID:       commentID,
+				AuthorID:        commentAuthorID,
+				Content:         comment.Content,
+				ParentCommentID: &parentID,
+				ImageID:         &comment.ImageID.String,
+				CreatedAt: func() time.Time {
+					if comment.CreatedAt.Valid {
+						return comment.CreatedAt.Time
+					}
+					return time.Time{}
+				}(),
+				Reactions: int(comment.ReactionCount),
+			})
 		}
 
 		authorUuid, _ := helpers.GenerateFromBytes(post.AuthorID)
 		response := models.PostWithCommentsReactionsResponse{
-			PostID:   postIDHex,
-			AuthorID: authorUuid,
-			Content:  post.Content,
-			ImageID: func() string {
-				if post.ImageID.Valid {
-					return post.ImageID.String
-				}
-				return ""
-			}(),
+			PostID:     postIDHex,
+			AuthorID:   authorUuid,
+			Content:    post.Content,
+			ImageID:    &post.ImageID.String,
 			Visibility: post.Visibility,
 			CreatedAt: func() time.Time {
 				if post.CreatedAt.Valid {
@@ -268,7 +260,7 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 				}
 				return time.Time{}
 			}(),
-			Reactions: reactions,
+			Reactions: int(reactions),
 			Comments:  comments,
 		}
 
@@ -662,7 +654,7 @@ func GetComments(app *app.App) http.HandlerFunc {
 				AuthorID:  authorUUID,
 				Content:   comment.Content,
 				CreatedAt: comment.CreatedAt.Time,
-				Reactions: []models.Reaction{}, // TODO: Add reactions when implemented
+				Reactions: int(comment.ReactionCount),
 			}
 
 			if comment.ParentCommentID != nil {
@@ -790,7 +782,7 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			AuthorID:  authorID,
 			Content:   req.Content,
 			CreatedAt: time.Now(),
-			Reactions: []models.Reaction{},
+			Reactions: 0,
 		}
 
 		if req.ParentID != nil && *req.ParentID != "" {
@@ -889,4 +881,16 @@ func DeleteComment(app *app.App) http.HandlerFunc {
 			"comment_id": commentIDHex,
 		})
 	}
+}
+
+// -------------------- POSTS REACTIONS HANDLERS ---------------------
+
+func GetReactions(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+	}
+}
+
+func ToggleReaction(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {}
 }

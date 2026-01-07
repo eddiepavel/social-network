@@ -66,6 +66,10 @@ func (h *Handler) postsRoutes() *http.ServeMux {
 	mux.HandleFunc("POST /id/{postId}/comment", handlers.CreateComment(h.App))
 	mux.HandleFunc("PUT /id/{postId}/comment/{commentId}", handlers.EditComment(h.App))
 	mux.HandleFunc("DELETE /id/{postId}/comment/{commentId}", handlers.DeleteComment(h.App))
+
+	mux.HandleFunc("GET /id/{postId}/reaction", handlers.GetReactions(h.App))
+	mux.HandleFunc("POST /id/{postId}/reaction", handlers.ToggleReaction(h.App))
+
 	return mux
 }
 

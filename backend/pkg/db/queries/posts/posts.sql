@@ -1,32 +1,5 @@
--- name: GetPostWithReactionsAndComments :one
-SELECT
-    p.*,
-    (SELECT COALESCE(json_group_array(json_object(
-            'reaction_id', hex(r.reaction_id),
-            'author_id', hex(r.author_id),
-            'reaction_type', r.reaction_type
-                                      )), '[]')
-     FROM reactions r WHERE r.target_type = 'post' AND r.target_id = p.post_id) as reactions,
-    (SELECT COALESCE(json_group_array(json_object(
-            'comment_id', hex(c.comment_id),
-            'author_id', hex(c.author_id),
-            'content', c.content,
-            'created_at', strftime('%Y-%m-%dT%H:%M:%SZ', c.created_at),
-            'parent_comment_id', hex(c.parent_comment_id),
-            'image_id', c.image_id,
-            'reactions', (
-                SELECT COALESCE(json_group_array(json_object(
-                        'reaction_id', hex(cr.reaction_id),
-                        'author_id', hex(cr.author_id),
-                        'reaction_type', cr.reaction_type
-                                                 )), '[]')
-                FROM reactions cr
-                WHERE cr.target_type = 'comment' AND cr.target_id = c.comment_id
-            )
-                                      )), '[]')
-     FROM comments c WHERE c.post_id = p.post_id) as comments
-FROM posts p
-WHERE p.post_id = ?;
+-- name: GetPostByID :one
+SELECT * FROM posts WHERE post_id = ?;
 
 -- name: GetPostVisibility :one
 SELECT visibility FROM posts WHERE post_id = ?;
@@ -117,13 +90,16 @@ SELECT ?, ?
 DELETE FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 
 -- name: GetPostComments :many
-SELECT * FROM comments WHERE post_id = ?;
+SELECT
+    c.*,
+    COUNT(r.reaction_id) as reaction_count
+FROM comments c
+         LEFT JOIN reactions r ON r.target_type = 'comment' AND r. target_id = c.comment_id
+WHERE c.post_id = ?
+GROUP BY c.comment_id;
 
--- name: GetPostReactions :many
-SELECT * FROM reactions WHERE target_type = 'post' AND target_id = ?;
-
--- name: GetCommentReactions :many
-SELECT * FROM reactions WHERE target_type = 'comment' AND target_id IN (SELECT comment_id FROM comments WHERE post_id = ?);
+-- name: GetPostReactions :one
+SELECT COUNT(*) FROM reactions WHERE target_type = 'post' AND target_id = ?;
 
 -- name: CreateComment :execrows
 INSERT INTO comments (comment_id, post_id, author_id, content, parent_comment_id, image_id)
@@ -153,8 +129,8 @@ DELETE FROM comments WHERE comment_id = ? AND author_id = ?;
 UPDATE comments SET content = ? WHERE comment_id = ? AND author_id = ?;
 
 -- name: CreateReaction :execrows
-INSERT INTO reactions (reaction_id, target_type, target_id, author_id, reaction_type)
-SELECT ?, ?, ?, ?, ?
+INSERT INTO reactions (reaction_id, target_type, target_id, author_id)
+SELECT ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
     WHERE p.post_id = (
@@ -178,5 +154,8 @@ SELECT ?, ?, ?, ?, ?
     )
 );
 
+-- name: HasUserReacted :one
+SELECT COUNT(*) FROM reactions WHERE reaction_id = ? AND author_id = ? AND target_type = ? AND target_id = ?;
+
 -- name: DeleteReaction :exec
-DELETE FROM reactions WHERE reaction_id = ? AND author_id = ?;
+DELETE FROM reactions WHERE reaction_id = ? AND author_id = ? AND target_type = ? AND target_id = ?;

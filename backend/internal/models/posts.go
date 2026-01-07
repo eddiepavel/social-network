@@ -64,30 +64,29 @@ type FeedPostResponse struct {
 }
 
 type Reaction struct {
-	ReactionID   string `json:"reaction_id"`
-	AuthorID     string `json:"author_id"`
-	ReactionType string `json:"reaction_type"`
+	ReactionID string `json:"reaction_id"`
+	AuthorID   string `json:"author_id"`
 }
 
 type Comment struct {
-	CommentID       string     `json:"comment_id"`
-	AuthorID        string     `json:"author_id"`
-	Content         string     `json:"content"`
-	ParentCommentID *string    `json:"parent_comment_id"`
-	ImageID         *string    `json:"image_id"`
-	CreatedAt       time.Time  `json:"created_at"`
-	Reactions       []Reaction `json:"reactions"`
+	CommentID       string    `json:"comment_id"`
+	AuthorID        string    `json:"author_id"`
+	Content         string    `json:"content"`
+	ParentCommentID *string   `json:"parent_comment_id"`
+	ImageID         *string   `json:"image_id"`
+	CreatedAt       time.Time `json:"created_at"`
+	Reactions       int       `json:"reactions"`
 }
 
 type PostWithCommentsReactionsResponse struct {
-	PostID     string     `json:"post_id"`
-	Content    string     `json:"content"`
-	ImageID    string     `json:"image_id"`
-	Visibility string     `json:"visibility"`
-	AuthorID   string     `json:"author_id"`
-	CreatedAt  time.Time  `json:"created_at"`
-	Reactions  []Reaction `json:"reactions"`
-	Comments   []Comment  `json:"comments"`
+	PostID     string    `json:"post_id"`
+	Content    string    `json:"content"`
+	ImageID    *string   `json:"image_id"`
+	Visibility string    `json:"visibility"`
+	AuthorID   string    `json:"author_id"`
+	CreatedAt  time.Time `json:"created_at"`
+	Reactions  int       `json:"reactions"`
+	Comments   []Comment `json:"comments"`
 }
 
 type CreateCommentRequest struct {
