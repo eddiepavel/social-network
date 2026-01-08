@@ -518,6 +518,123 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 	}
 }
 
+func RespondRequest(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		groupId, err := helpers.GenerateFromString(r.PathValue("groupId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid group id"))
+			return
+		}
+
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "no user found")
+			return
+		}
+
+		query := sqlite.NewQuery(app.DB)
+
+
+		group, err := query.Groups.GetGroupById(r.Context(), groupId)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			app.Logger.Error("failed to fetch group", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !bytes.Equal(group.CreatorID, currentUser) {
+			utils.Unauthorized(w, "you are not owner of this group")
+			return
+		}
+
+
+		var req struct {
+			UserID   string `json:"user_id"`
+			Response string `json:"response"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.BadRequest(w, errors.New("invalid request body"))
+			return
+		}
+		defer r.Body.Close()
+
+
+		if req.UserID == "" {
+			utils.BadRequest(w, errors.New("user_id is required"))
+			return
+		}
+
+		if req.Response != "approve" && req.Response != "reject" {
+			utils.BadRequest(w, errors.New("response must be 'approve' or 'reject'"))
+			return
+		}
+
+
+		userID, err := helpers.GenerateFromString(req.UserID)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid user_id format"))
+			return
+		}
+
+
+		groupMem, err := query.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			UserID:  userID,
+			GroupID: groupId,
+		})
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.BadRequest(w, errors.New("no join request found for this user"))
+				return
+			}
+			app.Logger.Error("failed to fetch group member", "err", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+
+		if groupMem.Status != "requested" {
+			if groupMem.Status == "joined" {
+				utils.BadRequest(w, errors.New("user is already a member"))
+				return
+			}
+			utils.BadRequest(w, errors.New("no pending request found for this user"))
+			return
+		}
+
+
+		switch req.Response {
+		case "reject":
+			if err := query.Groups.RemoveUserFromGroup(r.Context(), db_groups.RemoveUserFromGroupParams{
+				UserID:  groupMem.UserID,
+				GroupID: groupMem.GroupID,
+			}); err != nil {
+				app.Logger.Error("failed to remove user from group", "err", err)
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+
+		case "approve":
+			if err := query.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
+				Status: "joined",
+				UserID: groupMem.UserID,
+			}); err != nil {
+				app.Logger.Error("failed to update group member status", "err", err)
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+		}
+
+		utils.OK(w, map[string]string{"message": "request processed successfully"})
+	}
+}
+
 // // InviteUser handles POST /api/groups/:id/invite
 // // Invites a user to join the group (requester must be a member)
 // func (h *GroupsHandler) InviteUser(w http.ResponseWriter, r *http.Request) {
