@@ -37,12 +37,22 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 	// Get members
 	getMembers, _ := t.Groups.GetGroupMembers(ctx, groupId)
 	for _, member := range getMembers {
+
+		canRemove := func() bool {
+			if bytes.Equal(member.UserID, user) && isOwner {
+				return false
+			}
+
+			return isOwner || bytes.Equal(member.UserID, user)
+		}()
+
 		memberUUID, _ := GenerateFromBytes(member.UserID)
 		memberResp := models.GroupMemberResponse{
 			UserID:    memberUUID,
 			Status:    member.Status,
 			FirstName: &member.FirstName,
 			LastName:  &member.LastName,
+			CanRemove: canRemove,
 		}
 		if member.Avatar.Valid {
 			memberResp.Avatar = &member.Avatar.String

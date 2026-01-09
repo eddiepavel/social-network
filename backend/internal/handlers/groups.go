@@ -359,7 +359,8 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 	}
 }
 
-func UpdateGroupMemberShip(app *app.App) http.HandlerFunc {
+// here you can either request to join  or remove request to join only.
+func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
@@ -439,7 +440,7 @@ func UpdateGroupMemberShip(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if (isMember.Status == "joined" || isMember.Status == "requested") && p.Action == "remove" {
+		if isMember.Status == "requested" && p.Action == "remove" {
 			err := db.Groups.RemoveUserFromGroup(r.Context(), db_groups.RemoveUserFromGroupParams{
 				UserID:  userId,
 				GroupID: groupID,
@@ -535,7 +536,6 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 
 		query := sqlite.NewQuery(app.DB)
 
-
 		group, err := query.Groups.GetGroupById(r.Context(), groupId)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -552,7 +552,6 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 			return
 		}
 
-
 		var req struct {
 			UserID   string `json:"user_id"`
 			Response string `json:"response"`
@@ -564,7 +563,6 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-
 		if req.UserID == "" {
 			utils.BadRequest(w, errors.New("user_id is required"))
 			return
@@ -575,13 +573,11 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 			return
 		}
 
-
 		userID, err := helpers.GenerateFromString(req.UserID)
 		if err != nil {
 			utils.BadRequest(w, errors.New("invalid user_id format"))
 			return
 		}
-
 
 		groupMem, err := query.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
 			UserID:  userID,
@@ -598,7 +594,6 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 			return
 		}
 
-
 		if groupMem.Status != "requested" {
 			if groupMem.Status == "joined" {
 				utils.BadRequest(w, errors.New("user is already a member"))
@@ -607,7 +602,6 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 			utils.BadRequest(w, errors.New("no pending request found for this user"))
 			return
 		}
-
 
 		switch req.Response {
 		case "reject":
@@ -635,321 +629,87 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 	}
 }
 
-// // InviteUser handles POST /api/groups/:id/invite
-// // Invites a user to join the group (requester must be a member)
-// func (h *GroupsHandler) InviteUser(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
+// remove only if you are current logged in member with status joined or you are admin want to remove one of you members
+func RemoveMember(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-// 	// Get current user from context
-// 	inviterID, ok := middleware.GetUserIDFromContext(r.Context())
-// 	if !ok {
-// 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-// 		return
-// 	}
+		groupId, err := helpers.GenerateFromString(r.PathValue("groupId"))
 
-// 	// Extract group ID from URL
-// 	pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/groups/"), "/")
-// 	if len(pathParts) < 2 || pathParts[0] == "" {
-// 		http.Error(w, "Group ID required", http.StatusBadRequest)
-// 		return
-// 	}
+		if err != nil {
+			utils.BadRequest(w, errors.New("incorrect group id"))
+			return
+		}
 
-// 	groupIDHex := pathParts[0]
-// 	groupID, err := hex.DecodeString(groupIDHex)
-// 	if err != nil {
-// 		http.Error(w, "Invalid group ID format", http.StatusBadRequest)
-// 		return
-// 	}
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
 
-// 	// Parse request body
-// 	var req models.InviteUserRequest
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-// 		return
-// 	}
+		if !ok {
+			utils.Unauthorized(w, "user id not found")
+			return
+		}
 
-// 	// Validate user_id
-// 	if req.UserID == "" {
-// 		http.Error(w, "user_id is required", http.StatusBadRequest)
-// 		return
-// 	}
+		query := sqlite.NewQuery(app.DB)
 
-// 	inviteeID, err := hex.DecodeString(req.UserID)
-// 	if err != nil {
-// 		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
-// 		return
-// 	}
+		group, err := query.Groups.GetGroupById(r.Context(), groupId)
 
-// 	// Check if inviter is a member with status 'joined'
-// 	isMember, err := h.isGroupMember(inviterID, groupID)
-// 	if err != nil {
-// 		log.Printf("Error checking membership: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
 
-// 	if !isMember {
-// 		http.Error(w, "Only members can invite users", http.StatusForbidden)
-// 		return
-// 	}
+			utils.Internal(w, errors.New("something went wrong"))
+			return
+		}
 
-// 	// Check if invitee exists
-// 	var exists bool
-// 	err = h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE user_id = ?)", inviteeID).Scan(&exists)
-// 	if err != nil {
-// 		log.Printf("Error checking user existence: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	if !exists {
-// 		http.Error(w, "User not found", http.StatusNotFound)
-// 		return
-// 	}
+		var req struct {
+			User string `json:"user_uuid"`
+		}
 
-// 	// Check if invitee is already a member or has pending request
-// 	var existingStatus *string
-// 	err = h.db.QueryRow(
-// 		"SELECT status FROM group_members WHERE user_id = ? AND group_id = ?",
-// 		inviteeID, groupID,
-// 	).Scan(&existingStatus)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.BadRequest(w, errors.New("wrong payload"))
+			return
+		}
 
-// 	if err != nil && err != sql.ErrNoRows {
-// 		log.Printf("Error checking existing membership: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
+		userToMutate, err := helpers.GenerateFromString(req.User)
 
-// 	if existingStatus != nil {
-// 		if *existingStatus == "joined" {
-// 			http.Error(w, "User is already a member", http.StatusConflict)
-// 			return
-// 		}
-// 		http.Error(w, "User already has a pending invitation or request", http.StatusConflict)
-// 		return
-// 	}
+		if err != nil {
+			utils.BadRequest(w, errors.New("wrong uuid format"))
+			return
+		}
 
-// 	// Insert invitation with status 'requested'
-// 	insertQuery := `
-// 		INSERT INTO group_members (user_id, group_id, status, invited_by, created_at)
-// 		VALUES (?, ?, 'requested', ?, ?)
-// 	`
-// 	now := time.Now()
-// 	_, err = h.db.Exec(insertQuery, inviteeID, groupID, inviterID, now)
-// 	if err != nil {
-// 		log.Printf("Failed to create invitation: %v", err)
-// 		http.Error(w, "Failed to send invitation", http.StatusInternalServerError)
-// 		return
-// 	}
+		getMember, err := query.Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			UserID:  userToMutate,
+			GroupID: groupId,
+		})
 
-// 	// TODO: Create notification for invitee
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.Error(w, 404, "404", "user not found", "the user id you send can not be found")
+				return
+			}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]string{
-// 		"message": "Invitation sent successfully",
-// 	})
-// }
+			utils.Internal(w, errors.New("something went wrong"))
+			return
+		}
 
-// // RequestToJoin handles POST /api/groups/:id/request
-// // User requests to join a group
-// func (h *GroupsHandler) RequestToJoin(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
+		isOnwer := bytes.Equal(currentUser, group.CreatorID)
 
-// 	// Get current user from context
-// 	userID, ok := middleware.GetUserIDFromContext(r.Context())
-// 	if !ok {
-// 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-// 		return
-// 	}
+		isCurrentMember := bytes.Equal(getMember.UserID, currentUser)
 
-// 	// Extract group ID from URL
-// 	pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/groups/"), "/")
-// 	if len(pathParts) < 2 || pathParts[0] == "" {
-// 		http.Error(w, "Group ID required", http.StatusBadRequest)
-// 		return
-// 	}
+		if (isCurrentMember || isOnwer) && isOnwer != isCurrentMember && getMember.Status == "joined" {
 
-// 	groupIDHex := pathParts[0]
-// 	groupID, err := hex.DecodeString(groupIDHex)
-// 	if err != nil {
-// 		http.Error(w, "Invalid group ID format", http.StatusBadRequest)
-// 		return
-// 	}
+			if err := query.Groups.RemoveUserFromGroup(r.Context(), db_groups.RemoveUserFromGroupParams{
+				UserID:  getMember.UserID,
+				GroupID: getMember.GroupID,
+			}); err != nil {
+				utils.Internal(w, errors.New("something went wrong"))
+				return
+			}
+			utils.OK(w, map[string]string{"message": "member removed successfully"})
+			return
+		}
 
-// 	// Check if group exists
-// 	var exists bool
-// 	err = h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM groups WHERE group_id = ?)", groupID).Scan(&exists)
-// 	if err != nil {
-// 		log.Printf("Error checking group existence: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	if !exists {
-// 		http.Error(w, "Group not found", http.StatusNotFound)
-// 		return
-// 	}
+		utils.Unauthorized(w, "you are not allowed to perform this action")
 
-// 	// Check if user already has a membership or pending request
-// 	var existingStatus *string
-// 	err = h.db.QueryRow(
-// 		"SELECT status FROM group_members WHERE user_id = ? AND group_id = ?",
-// 		userID, groupID,
-// 	).Scan(&existingStatus)
-
-// 	if err != nil && err != sql.ErrNoRows {
-// 		log.Printf("Error checking existing membership: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	if existingStatus != nil {
-// 		if *existingStatus == "joined" {
-// 			http.Error(w, "You are already a member", http.StatusConflict)
-// 			return
-// 		}
-// 		http.Error(w, "You already have a pending request or invitation", http.StatusConflict)
-// 		return
-// 	}
-
-// 	// Insert join request with status 'requested'
-// 	insertQuery := `
-// 		INSERT INTO group_members (user_id, group_id, status, invited_by, created_at)
-// 		VALUES (?, ?, 'requested', NULL, ?)
-// 	`
-// 	now := time.Now()
-// 	_, err = h.db.Exec(insertQuery, userID, groupID, now)
-// 	if err != nil {
-// 		log.Printf("Failed to create join request: %v", err)
-// 		http.Error(w, "Failed to send join request", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// TODO: Create notification for group creator
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]string{
-// 		"message": "Join request sent successfully",
-// 	})
-// }
-
-// // HandleJoinRequest handles POST /api/groups/:groupId/accept/:userId
-// // Creator accepts or rejects join requests
-// func (h *GroupsHandler) HandleJoinRequest(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
-
-// 	// Get current user from context
-// 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
-// 	if !ok {
-// 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-// 		return
-// 	}
-
-// 	// Extract group ID and user ID from URL
-// 	// URL format: /api/groups/:groupId/accept/:userId
-// 	pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/groups/"), "/")
-// 	if len(pathParts) < 3 || pathParts[0] == "" || pathParts[2] == "" {
-// 		http.Error(w, "Group ID and User ID required", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	groupIDHex := pathParts[0]
-// 	targetUserIDHex := pathParts[2]
-
-// 	groupID, err := hex.DecodeString(groupIDHex)
-// 	if err != nil {
-// 		http.Error(w, "Invalid group ID format", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	targetUserID, err := hex.DecodeString(targetUserIDHex)
-// 	if err != nil {
-// 		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Parse request body to determine action (accept or reject)
-// 	var req models.HandleJoinRequestRequest
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Validate action
-// 	if req.Action != "accept" && req.Action != "reject" {
-// 		http.Error(w, "action must be 'accept' or 'reject'", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Check if current user is the group creator
-// 	isCreator, err := h.isGroupCreator(currentUserID, groupID)
-// 	if err != nil {
-// 		log.Printf("Error checking creator status: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	if !isCreator {
-// 		http.Error(w, "Only the group creator can accept or reject join requests", http.StatusForbidden)
-// 		return
-// 	}
-
-// 	// Check if there's a pending request for this user
-// 	var currentStatus string
-// 	err = h.db.QueryRow(
-// 		"SELECT status FROM group_members WHERE user_id = ? AND group_id = ?",
-// 		targetUserID, groupID,
-// 	).Scan(&currentStatus)
-
-// 	if err == sql.ErrNoRows {
-// 		http.Error(w, "No join request found for this user", http.StatusNotFound)
-// 		return
-// 	}
-// 	if err != nil {
-// 		log.Printf("Error checking join request: %v", err)
-// 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	if currentStatus != "requested" {
-// 		http.Error(w, "No pending join request for this user", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Update status based on action
-// 	newStatus := "joined"
-// 	if req.Action == "reject" {
-// 		newStatus = "rejected"
-// 	}
-
-// 	updateQuery := `
-// 		UPDATE group_members
-// 		SET status = ?
-// 		WHERE user_id = ? AND group_id = ?
-// 	`
-// 	_, err = h.db.Exec(updateQuery, newStatus, targetUserID, groupID)
-// 	if err != nil {
-// 		log.Printf("Failed to update join request: %v", err)
-// 		http.Error(w, "Failed to process join request", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// TODO: Create notification for target user
-
-// 	message := "Join request accepted successfully"
-// 	if req.Action == "reject" {
-// 		message = "Join request rejected successfully"
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]string{
-// 		"message": message,
-// 	})
-// }
+	}
+}

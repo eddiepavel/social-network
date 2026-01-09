@@ -53,6 +53,7 @@ type GroupMemberResponse struct {
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
 	Avatar    *string `json:"avatar,omitempty"`
+	CanRemove bool    `json:"can_remove_member,omitempty"`
 }
 
 // EventResponse represents a group event returned to the client
