@@ -713,3 +713,50 @@ func RemoveMember(app *app.App) http.HandlerFunc {
 
 	}
 }
+
+func DeleteGroup(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		groupId, err := helpers.GenerateFromString(r.PathValue("groupId"))
+
+		if err != nil {
+			utils.BadRequest(w, errors.New("wrong group id"))
+			return
+		}
+
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "user not found")
+			return
+		}
+
+		query := sqlite.NewQuery(app.DB)
+
+		group, err := query.Groups.GetGroupById(r.Context(), groupId)
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !bytes.Equal(group.CreatorID, currentUser) {
+			utils.Unauthorized(w, "you are not the owner of this group")
+			return
+		}
+
+		if err := query.Groups.DeleteDbGroup(r.Context(), group.GroupID); err != nil {
+			app.Logger.Error("could not delete group", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		utils.OK(w, map[string]string{"message": "group deleted"})
+
+	}
+}

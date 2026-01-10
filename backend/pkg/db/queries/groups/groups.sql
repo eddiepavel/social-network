@@ -76,3 +76,6 @@ ORDER BY ge.event_timestamp DESC;
 -- name: GetGroupJoinRequests :many
 SELECT * FROM group_members WHERE group_id = ? AND status = 'requested';
 
+-- name: DeleteDbGroup :exec
+DELETE FROM groups WHERE group_id = ?;
+

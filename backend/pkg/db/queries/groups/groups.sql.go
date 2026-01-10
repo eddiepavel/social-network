@@ -69,6 +69,15 @@ func (q *Queries) CreateGroupMember(ctx context.Context, arg CreateGroupMemberPa
 	return err
 }
 
+const deleteDbGroup = `-- name: DeleteDbGroup :exec
+DELETE FROM groups WHERE group_id = ?
+`
+
+func (q *Queries) DeleteDbGroup(ctx context.Context, groupID []byte) error {
+	_, err := q.db.ExecContext(ctx, deleteDbGroup, groupID)
+	return err
+}
+
 const getGroupById = `-- name: GetGroupById :one
 SELECT group_id, group_name, description, image, creator_id, created_at FROM groups WHERE group_id = ?
 `
