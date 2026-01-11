@@ -1,6 +1,6 @@
 -- name: CreateImage :exec
-INSERT INTO images (image_id, poster_id, image_path, created_at, expires_at)
-VALUES(?, ?, ?, ?, ?);
+INSERT INTO images (image_id, poster_id, image_path, file_name, created_at, expires_at)
+VALUES(?, ?, ?, ?, ?, ?);
 
 -- name: ImageState :exec
 UPDATE images SET expires_at = ? WHERE image_id = ?; 

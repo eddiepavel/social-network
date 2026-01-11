@@ -273,6 +273,7 @@ func (s *FileService) saveFileToDatabase(file File) error {
 		ImageID:   file.UUId,
 		PosterID:  file.User,
 		ImagePath: file.ImagePath,
+		FileName:  file.Filename,
 		CreatedAt: sql.NullTime{Time: file.CreatedAt, Valid: true},
 		ExpiresAt: sql.NullTime{Time: file.ExpiresAt, Valid: true},
 	})

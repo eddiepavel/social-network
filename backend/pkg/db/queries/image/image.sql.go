@@ -12,14 +12,15 @@ import (
 )
 
 const createImage = `-- name: CreateImage :exec
-INSERT INTO images (image_id, poster_id, image_path, created_at, expires_at)
-VALUES(?, ?, ?, ?, ?)
+INSERT INTO images (image_id, poster_id, image_path, file_name, created_at, expires_at)
+VALUES(?, ?, ?, ?, ?, ?)
 `
 
 type CreateImageParams struct {
 	ImageID   string
 	PosterID  []byte
 	ImagePath string
+	FileName  string
 	CreatedAt sql.NullTime
 	ExpiresAt sql.NullTime
 }
@@ -29,6 +30,7 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error 
 		arg.ImageID,
 		arg.PosterID,
 		arg.ImagePath,
+		arg.FileName,
 		arg.CreatedAt,
 		arg.ExpiresAt,
 	)
@@ -55,7 +57,7 @@ func (q *Queries) DeleteImages(ctx context.Context, imageID []string) error {
 }
 
 const getImageById = `-- name: GetImageById :one
-SELECT image_id, poster_id, image_path, created_at, expires_at FROM images WHERE image_id = ? LIMIT 1
+SELECT image_id, poster_id, image_path, file_name, created_at, expires_at FROM images WHERE image_id = ? LIMIT 1
 `
 
 func (q *Queries) GetImageById(ctx context.Context, imageID string) (Image, error) {
@@ -65,6 +67,7 @@ func (q *Queries) GetImageById(ctx context.Context, imageID string) (Image, erro
 		&i.ImageID,
 		&i.PosterID,
 		&i.ImagePath,
+		&i.FileName,
 		&i.CreatedAt,
 		&i.ExpiresAt,
 	)
@@ -72,7 +75,7 @@ func (q *Queries) GetImageById(ctx context.Context, imageID string) (Image, erro
 }
 
 const getNotSetImages = `-- name: GetNotSetImages :many
-SELECT image_id, poster_id, image_path, created_at, expires_at FROM images WHERE expires_at IS NOT NULL
+SELECT image_id, poster_id, image_path, file_name, created_at, expires_at FROM images WHERE expires_at IS NOT NULL
 `
 
 func (q *Queries) GetNotSetImages(ctx context.Context) ([]Image, error) {
@@ -88,6 +91,7 @@ func (q *Queries) GetNotSetImages(ctx context.Context) ([]Image, error) {
 			&i.ImageID,
 			&i.PosterID,
 			&i.ImagePath,
+			&i.FileName,
 			&i.CreatedAt,
 			&i.ExpiresAt,
 		); err != nil {

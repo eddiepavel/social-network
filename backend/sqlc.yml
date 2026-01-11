@@ -45,7 +45,8 @@ sql:
              "/pkg/db/migrations/sqlite/up/000010_create_group_members_table.sql",
              "/pkg/db/migrations/sqlite/up/000011_create_group_events_table.sql",
              "/pkg/db/migrations/sqlite/up/000012_create_group_rsvp_table.sql",
-             "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql"
+             "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql",
+             "/pkg/db/migrations/sqlite/up/000004_create_images_table.sql"
             ]
     gen:
       go:
