@@ -18,9 +18,13 @@ SELECT
     g.image,
     g.creator_id,
     g.created_at,
+    i.image_id as group_image,
+    i.image_path as group_image_path,
+    i.file_name as group_image_file_name,
     COUNT(gm.user_id) as member_count
 FROM groups g
 LEFT JOIN group_members gm ON g.group_id = gm.group_id AND gm.status = 'joined'
+LEFT JOIN images i ON g.image = i.image_id
 GROUP BY g.group_id
 ORDER BY g.created_at DESC;
 
@@ -32,7 +36,19 @@ WHERE user_id = ? AND group_id = ? LIMIT 1;
 DELETE FROM group_members WHERE user_id = ? AND group_id = ?;
 
 -- name: GetGroupById :one
-SELECT * FROM groups WHERE group_id = ?;
+SELECT
+    g.group_id,
+    g.group_name,
+    g.description,
+    g.image,
+    g.creator_id,
+    g.created_at,
+    i.image_id as group_image_id,
+    i.image_path as group_image_path,
+    i.file_name as group_image_file_name
+FROM groups g
+JOIN images i ON g.image = i.image_id
+WHERE g.group_id = ?;
 
 -- name: GetGroupMembers :many
 SELECT 

@@ -13,7 +13,6 @@ import (
 	"social-network/internal/utils"
 	db_groups "social-network/pkg/db/queries/groups"
 	"social-network/pkg/db/sqlite"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -114,10 +113,7 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 			Description: req.Description,
 			Image: func() string {
 				if group.Image.Valid {
-					filename := strings.Split(group.Image.String, "/")
-
-					path := app.File.GenerateSignImage(filename[len(filename)-1], userID, time.Now().Add(15*time.Minute))
-					return path
+					return group.Image.String
 				}
 				return ""
 			}(),
@@ -135,6 +131,13 @@ func GetGroups(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		groups, err := sqlite.NewQuery(app.DB).Groups.GetGroupsWithMemberCount(r.Context())
+
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "missing logged in user")
+			return
+		}
 
 		if err != nil {
 
@@ -163,6 +166,13 @@ func GetGroups(app *app.App) http.HandlerFunc {
 						return group.Image.String
 					}
 
+					return ""
+				}(),
+				ImageUrl: func() string {
+					if group.Image.Valid {
+						sign := app.File.GenerateSignImage(group.GroupImageFileName.String, currentUser, time.Now().Add(15*time.Minute))
+						return sign
+					}
 					return ""
 				}(),
 				CreatorID:   setCreatorId,

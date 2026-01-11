@@ -27,13 +27,22 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 		GroupID:     groupUUID,
 		GroupName:   getGroup.GroupName,
 		Description: getGroup.Description,
-		CreatedAt:   getGroup.CreatedAt.Local().String(),
-		IsOwner:     isOwner,
+		Image: func() string {
+			if getGroup.Image.Valid {
+				return getGroup.Image.String
+			}
+			return ""
+		}(),
+		ImageUrl: func() string {
+			if getGroup.Image.Valid {
+				sign := f.GenerateSignImage(getGroup.GroupImageFileName, user, time.Now().Add(15*time.Minute))
+				return sign
+			}
+			return ""
+		}(),
+		CreatedAt: getGroup.CreatedAt.Local().String(),
+		IsOwner:   isOwner,
 	}
-	if getGroup.Image.Valid {
-		group.Group.Image = f.GenerateSignImage(getGroup.Image.String, user, time.Now().Add(15*time.Minute))
-	}
-
 	// Get members
 	getMembers, _ := t.Groups.GetGroupMembers(ctx, groupId)
 	for _, member := range getMembers {

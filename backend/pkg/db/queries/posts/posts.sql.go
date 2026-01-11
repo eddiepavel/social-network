@@ -457,6 +457,7 @@ const getPostsForFeed = `-- name: GetPostsForFeed :many
 SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at,
        i.image_id,
        i.image_path,
+       i.file_name,
        (SELECT COUNT(*)
         FROM reactions
         WHERE target_type = 'post'
@@ -511,6 +512,7 @@ type GetPostsForFeedRow struct {
 	CreatedAt     sql.NullTime
 	ImageID_2     sql.NullString
 	ImagePath     sql.NullString
+	FileName      sql.NullString
 	ReactionCount int64
 	CommentCount  int64
 	UserReacted   int64
@@ -541,6 +543,7 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 			&i.CreatedAt,
 			&i.ImageID_2,
 			&i.ImagePath,
+			&i.FileName,
 			&i.ReactionCount,
 			&i.CommentCount,
 			&i.UserReacted,

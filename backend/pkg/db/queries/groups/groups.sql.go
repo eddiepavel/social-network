@@ -79,12 +79,36 @@ func (q *Queries) DeleteDbGroup(ctx context.Context, groupID []byte) error {
 }
 
 const getGroupById = `-- name: GetGroupById :one
-SELECT group_id, group_name, description, image, creator_id, created_at FROM groups WHERE group_id = ?
+SELECT
+    g.group_id,
+    g.group_name,
+    g.description,
+    g.image,
+    g.creator_id,
+    g.created_at,
+    i.image_id as group_image_id,
+    i.image_path as group_image_path,
+    i.file_name as group_image_file_name
+FROM groups g
+JOIN images i ON g.image = i.image_id
+WHERE g.group_id = ?
 `
 
-func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (Group, error) {
+type GetGroupByIdRow struct {
+	GroupID            []byte
+	GroupName          string
+	Description        string
+	Image              sql.NullString
+	CreatorID          []byte
+	CreatedAt          time.Time
+	GroupImageID       string
+	GroupImagePath     string
+	GroupImageFileName string
+}
+
+func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (GetGroupByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, getGroupById, groupID)
-	var i Group
+	var i GetGroupByIdRow
 	err := row.Scan(
 		&i.GroupID,
 		&i.GroupName,
@@ -92,6 +116,9 @@ func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (Group, erro
 		&i.Image,
 		&i.CreatorID,
 		&i.CreatedAt,
+		&i.GroupImageID,
+		&i.GroupImagePath,
+		&i.GroupImageFileName,
 	)
 	return i, err
 }
@@ -299,21 +326,28 @@ SELECT
     g.image,
     g.creator_id,
     g.created_at,
+    i.image_id as group_image,
+    i.image_path as group_image_path,
+    i.file_name as group_image_file_name,
     COUNT(gm.user_id) as member_count
 FROM groups g
 LEFT JOIN group_members gm ON g.group_id = gm.group_id AND gm.status = 'joined'
+LEFT JOIN images i ON g.image = i.image_id
 GROUP BY g.group_id
 ORDER BY g.created_at DESC
 `
 
 type GetGroupsWithMemberCountRow struct {
-	GroupID     []byte
-	GroupName   string
-	Description string
-	Image       sql.NullString
-	CreatorID   []byte
-	CreatedAt   time.Time
-	MemberCount int64
+	GroupID            []byte
+	GroupName          string
+	Description        string
+	Image              sql.NullString
+	CreatorID          []byte
+	CreatedAt          time.Time
+	GroupImage         sql.NullString
+	GroupImagePath     sql.NullString
+	GroupImageFileName sql.NullString
+	MemberCount        int64
 }
 
 func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]GetGroupsWithMemberCountRow, error) {
@@ -332,6 +366,9 @@ func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]GetGroupsWith
 			&i.Image,
 			&i.CreatorID,
 			&i.CreatedAt,
+			&i.GroupImage,
+			&i.GroupImagePath,
+			&i.GroupImageFileName,
 			&i.MemberCount,
 		); err != nil {
 			return nil, err

@@ -12,7 +12,6 @@ import (
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -171,10 +170,8 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 				Content:  post.Content,
 				ImageID:  &post.ImageID.String,
 				ImageUrl: func() string {
-					if post.ImagePath.Valid {
-						filename := strings.Split(post.ImagePath.String, "/")
-
-						path := app.File.GenerateSignImage(filename[len(filename)-1], currentUserID, time.Now().Add(15*time.Minute))
+					if post.ImageID.Valid {
+						path := app.File.GenerateSignImage(post.FileName.String, currentUserID, time.Now().Add(15*time.Minute))
 						return path
 					}
 					return ""

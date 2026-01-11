@@ -29,6 +29,7 @@ type Image struct {
 	ImageID   string
 	PosterID  []byte
 	ImagePath string
+	FileName  string
 	CreatedAt sql.NullTime
 	ExpiresAt sql.NullTime
 }

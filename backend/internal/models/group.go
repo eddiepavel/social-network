@@ -35,7 +35,8 @@ type GroupResponse struct {
 	GroupID     string `json:"group_id"`
 	GroupName   string `json:"group_name"`
 	Description string `json:"description"`
-	Image       string `json:"image"`
+	Image       string `json:"image,omitempty"`
+	ImageUrl    string `json:"image_url,omitempty"`
 	CreatorID   string `json:"creator_id"`
 	CreatedAt   string `json:"created_at"`
 	MemberCount int64  `json:"member_count,omitempty"`

@@ -36,6 +36,7 @@ WHERE
 SELECT p.*,
        i.image_id,
        i.image_path,
+       i.file_name,
        (SELECT COUNT(*)
         FROM reactions
         WHERE target_type = 'post'
