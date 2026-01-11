@@ -24,7 +24,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var secretKey = []byte(os.Getenv("SERCRET_KEY"))
+var secretKey = []byte(os.Getenv("SECRET_SIGN"))
 
 type FileService struct {
 	BasePath string
@@ -293,16 +293,16 @@ func (s *FileService) isValidFile(file []byte) bool {
 func (s *FileService) fileExtension(file []byte) (string, error) {
 	filetype := http.DetectContentType(file)
 
-	alowedFiles := []string{"png", "jpg", "gif"}
+	alowedFiles := []string{"png", "jpg", "gif", "jpeg"}
 
 	extension := strings.Split(filetype, "/")
 
 	if len(extension) != 2 {
-		return "", errors.New("wrong file")
+		return "", errors.New("wrong file format")
 	}
 
 	if !slices.Contains(alowedFiles, extension[1]) {
-		return "", errors.New("wrong file")
+		return "", errors.New("wrong file extension")
 	}
 
 	return extension[1], nil

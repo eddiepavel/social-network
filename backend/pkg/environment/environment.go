@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func SetEnv(filePath string, compare string) error {
+func SetEnv(filePath string) error {
 	file, err := os.Open(filePath)
 
 	if err != nil {
@@ -18,7 +18,7 @@ func SetEnv(filePath string, compare string) error {
 	scanner := bufio.NewScanner(file)
 
 	var envKeys []string
-	compareKeys := []string{"PORT", "DATABASE_NAME", "PRODUCTION", "APP_URL", "SECRET_KEY"}
+	compareKeys := []string{"PORT", "DATABASE_NAME", "PRODUCTION", "APP_URL", "SECRET_SIGN"}
 
 	lineNum := 0
 
