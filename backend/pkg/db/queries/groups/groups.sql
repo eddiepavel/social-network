@@ -95,3 +95,7 @@ SELECT * FROM group_members WHERE group_id = ? AND status = 'requested';
 -- name: DeleteDbGroup :exec
 DELETE FROM groups WHERE group_id = ?;
 
+-- name: UpdateDbGroup :one
+UPDATE groups SET group_name = ?, description = ?, image = ? 
+WHERE group_id = ? AND creator_id = ? RETURNING *;
+

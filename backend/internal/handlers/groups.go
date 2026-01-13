@@ -770,3 +770,111 @@ func DeleteGroup(app *app.App) http.HandlerFunc {
 
 	}
 }
+
+func UpdateGroup(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		groupId, err := helpers.GenerateFromString(r.PathValue("groupId"))
+
+		if err != nil {
+			utils.BadRequest(w, errors.New("wrong group id"))
+			return
+		}
+
+		inputs := helpers.ValidateCreateGroup.Build(r, app)
+
+		req := models.CreateGroupRequest{}
+
+		ok, errValidation := utils.Validate(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
+
+		if !ok {
+			utils.Unauthorized(w, "user not found")
+			return
+		}
+
+		query := sqlite.NewQuery(app.DB)
+
+		group, err := query.Groups.GetGroupById(r.Context(), groupId)
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if !bytes.Equal(currentUser, group.CreatorID) {
+			utils.Unauthorized(w, "you are not allowed to do moditifications to this group")
+			return
+		}
+
+		var image sql.NullString
+
+		if req.Image != "" {
+			if group.Image.Valid && req.Image != group.Image.String {
+
+				err := app.File.RemoveImage(group.GroupImageID)
+
+				if err != nil {
+					utils.Internal(w, errors.New("failed to update something went wrong"))
+					return
+				}
+
+				err = app.File.AssignImage(req.Image)
+
+				if err != nil {
+					utils.Internal(w, errors.New("failed to update something went wrong"))
+					return
+				}
+
+			} else if !group.Image.Valid {
+				err = app.File.AssignImage(req.Image)
+
+				if err != nil {
+					utils.Internal(w, errors.New("failed to update something went wrong"))
+					return
+				}
+			}
+
+			image = sql.NullString{Valid: true, String: req.Image}
+		}
+
+		updateGroup, err := query.Groups.UpdateDbGroup(r.Context(), db_groups.UpdateDbGroupParams{
+			GroupName:   req.GroupName,
+			Description: req.Description,
+			Image:       image,
+			GroupID:     groupId,
+			CreatorID:   currentUser,
+		})
+
+		if err != nil {
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		response := models.GroupResponse{
+			GroupID:     r.PathValue("groupId"),
+			GroupName:   updateGroup.GroupName,
+			Description: updateGroup.Description,
+			Image: func() string {
+				if group.Image.Valid {
+					return updateGroup.Image.String
+				}
+				return ""
+			}(),
+		}
+
+		utils.OK(w, response)
+
+	}
+}

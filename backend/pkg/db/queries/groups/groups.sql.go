@@ -442,6 +442,39 @@ func (q *Queries) RemoveUserFromGroup(ctx context.Context, arg RemoveUserFromGro
 	return err
 }
 
+const updateDbGroup = `-- name: UpdateDbGroup :one
+UPDATE groups SET group_name = ?, description = ?, image = ? 
+WHERE group_id = ? AND creator_id = ? RETURNING group_id, group_name, description, image, creator_id, created_at
+`
+
+type UpdateDbGroupParams struct {
+	GroupName   string
+	Description string
+	Image       sql.NullString
+	GroupID     []byte
+	CreatorID   []byte
+}
+
+func (q *Queries) UpdateDbGroup(ctx context.Context, arg UpdateDbGroupParams) (Group, error) {
+	row := q.db.QueryRowContext(ctx, updateDbGroup,
+		arg.GroupName,
+		arg.Description,
+		arg.Image,
+		arg.GroupID,
+		arg.CreatorID,
+	)
+	var i Group
+	err := row.Scan(
+		&i.GroupID,
+		&i.GroupName,
+		&i.Description,
+		&i.Image,
+		&i.CreatorID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const updateGroupMemberStatus = `-- name: UpdateGroupMemberStatus :exec
 UPDATE group_members SET status = ? WHERE user_id = ?
 `
