@@ -81,7 +81,7 @@ func (h *Handler) groupsRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /all", handlers.GetGroups(h.App))
 	mux.HandleFunc("POST /create", handlers.CreateGroup(h.App))
 	mux.HandleFunc("DELETE /delete/{groupId}", handlers.DeleteGroup(h.App))
-	mux.HandleFunc("PATCH /update/{groupId}", handlers.UpdateGroup(h.App))
+	mux.HandleFunc("PUT /update/{groupId}", handlers.UpdateGroup(h.App))
 	mux.HandleFunc("POST /invite/{groupId}", handlers.InviteToGroup(h.App))
 	mux.HandleFunc("POST /members/request/{groupId}", handlers.RequestToJoinGroup(h.App))
 	mux.HandleFunc("GET /members/requests/{groupId}", handlers.GetGroupRequests(h.App)) //group admin route only
