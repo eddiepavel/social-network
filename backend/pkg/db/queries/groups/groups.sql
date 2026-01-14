@@ -90,7 +90,18 @@ WHERE ge.group_id = ?
 ORDER BY ge.event_timestamp DESC;
 
 -- name: GetGroupJoinRequests :many
-SELECT * FROM group_members WHERE group_id = ? AND status = 'requested';
+SELECT
+    gm.user_id,
+    gm.group_id,
+    gm.status,
+    gm.invited_by,
+    gm.created_at,
+    u.user_id AS m_user_id,
+    u.first_name AS m_first_name,
+    u.last_name AS m_last_name
+FROM group_members gm
+JOIN users u ON gm.user_id = u.user_id
+WHERE group_id = ? AND status = 'requested';
 
 -- name: DeleteDbGroup :exec
 DELETE FROM groups WHERE group_id = ?;

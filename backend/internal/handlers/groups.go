@@ -521,8 +521,10 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 			uuid, _ := helpers.GenerateFromBytes(member.UserID)
 
 			pendingMembers = append(pendingMembers, models.GroupMemberResponse{
-				UserID: uuid,
-				Status: member.Status,
+				UserID:    uuid,
+				Status:    member.Status,
+				FirstName: &member.MFirstName,
+				LastName:  &member.MLastName,
 			})
 		}
 

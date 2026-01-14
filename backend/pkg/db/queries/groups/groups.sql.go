@@ -204,24 +204,49 @@ func (q *Queries) GetGroupEventsWithRSVPs(ctx context.Context, groupID []byte) (
 }
 
 const getGroupJoinRequests = `-- name: GetGroupJoinRequests :many
-SELECT user_id, group_id, status, invited_by, created_at FROM group_members WHERE group_id = ? AND status = 'requested'
+SELECT
+    gm.user_id,
+    gm.group_id,
+    gm.status,
+    gm.invited_by,
+    gm.created_at,
+    u.user_id AS m_user_id,
+    u.first_name AS m_first_name,
+    u.last_name AS m_last_name
+FROM group_members gm
+JOIN users u ON gm.user_id = u.user_id
+WHERE group_id = ? AND status = 'requested'
 `
 
-func (q *Queries) GetGroupJoinRequests(ctx context.Context, groupID []byte) ([]GroupMember, error) {
+type GetGroupJoinRequestsRow struct {
+	UserID     []byte
+	GroupID    []byte
+	Status     string
+	InvitedBy  []byte
+	CreatedAt  sql.NullTime
+	MUserID    []byte
+	MFirstName string
+	MLastName  string
+}
+
+func (q *Queries) GetGroupJoinRequests(ctx context.Context, groupID []byte) ([]GetGroupJoinRequestsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupJoinRequests, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GroupMember
+	var items []GetGroupJoinRequestsRow
 	for rows.Next() {
-		var i GroupMember
+		var i GetGroupJoinRequestsRow
 		if err := rows.Scan(
 			&i.UserID,
 			&i.GroupID,
 			&i.Status,
 			&i.InvitedBy,
 			&i.CreatedAt,
+			&i.MUserID,
+			&i.MFirstName,
+			&i.MLastName,
 		); err != nil {
 			return nil, err
 		}
