@@ -1,10 +1,9 @@
 {
 	"info": {
-		"_postman_id": "364abc95-bd52-41f8-986b-e191a0e8b616",
+		"_postman_id": "5c68c4d8-2f63-41d4-bf81-47cc3a8681dd",
 		"name": "Social Network",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
-		"_exporter_id": "44054371",
-		"_collection_link": "https://edouardospavel.postman.co/workspace/Edouardos-Pavel's-Workspace~ae203417-a07f-4206-8ccc-7879e57a4078/collection/44054371-364abc95-bd52-41f8-986b-e191a0e8b616?action=share&source=collection_link&creator=44054371"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28927006"
 	},
 	"item": [
 		{
@@ -24,7 +23,16 @@
 								}
 							}
 						},
-						"url": "{{url}}/public/register"
+						"url": {
+							"raw": "{{url}}/public/register",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"public",
+								"register"
+							]
+						}
 					},
 					"response": []
 				},
@@ -35,14 +43,23 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test2@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
+							"raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": "{{url}}/public/login"
+						"url": {
+							"raw": "{{url}}/public/login",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"public",
+								"login"
+							]
+						}
 					},
 					"response": []
 				},
@@ -55,7 +72,16 @@
 							"mode": "raw",
 							"raw": ""
 						},
-						"url": "{{url}}/auth/logout"
+						"url": {
+							"raw": "{{url}}/auth/logout",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
 					},
 					"response": []
 				}
@@ -69,7 +95,17 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/users/profile/9130f7d9-11ec-420a-892d-d2cf27aa3508"
+						"url": {
+							"raw": "{{url}}/users/profile/9130f7d9-11ec-420a-892d-d2cf27aa3508",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"profile",
+								"9130f7d9-11ec-420a-892d-d2cf27aa3508"
+							]
+						}
 					},
 					"response": []
 				},
@@ -87,7 +123,16 @@
 								}
 							}
 						},
-						"url": "{{url}}/users/privacy"
+						"url": {
+							"raw": "{{url}}/users/privacy",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"privacy"
+							]
+						}
 					},
 					"response": []
 				},
@@ -105,7 +150,16 @@
 								}
 							}
 						},
-						"url": "{{url}}/users/profile"
+						"url": {
+							"raw": "{{url}}/users/profile",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"profile"
+							]
+						}
 					},
 					"response": []
 				},
@@ -143,7 +197,17 @@
 					"request": {
 						"method": "POST",
 						"header": [],
-						"url": "{{url}}/followers/9130f7d9-11ec-420a-892d-d2cf27aa3508/follow"
+						"url": {
+							"raw": "{{url}}/followers/9130f7d9-11ec-420a-892d-d2cf27aa3508/follow",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"9130f7d9-11ec-420a-892d-d2cf27aa3508",
+								"follow"
+							]
+						}
 					},
 					"response": []
 				},
@@ -152,7 +216,17 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/following"
+						"url": {
+							"raw": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/following",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"2c3b42e0-edf4-4069-9e30-69426323460f",
+								"following"
+							]
+						}
 					},
 					"response": []
 				},
@@ -161,7 +235,17 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/followers"
+						"url": {
+							"raw": "{{url}}/followers/a31f0f16-f80d-4ad8-9e5d-c3be85fa6957/followers",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"a31f0f16-f80d-4ad8-9e5d-c3be85fa6957",
+								"followers"
+							]
+						}
 					},
 					"response": []
 				},
@@ -179,7 +263,18 @@
 								}
 							}
 						},
-						"url": "{{url}}/followers/requests/3/respond"
+						"url": {
+							"raw": "{{url}}/followers/requests/3/respond",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"requests",
+								"3",
+								"respond"
+							]
+						}
 					},
 					"response": []
 				},
@@ -188,7 +283,16 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/followers/requests"
+						"url": {
+							"raw": "{{url}}/followers/requests",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"followers",
+								"requests"
+							]
+						}
 					},
 					"response": []
 				}
@@ -202,7 +306,16 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/groups/all"
+						"url": {
+							"raw": "{{url}}/groups/all",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"all"
+							]
+						}
 					},
 					"response": []
 				},
@@ -211,7 +324,17 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/groups/group/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89"
+						"url": {
+							"raw": "{{url}}/groups/group/2a6b2164-f934-46de-ae6f-e389d0e64224",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"group",
+								"2a6b2164-f934-46de-ae6f-e389d0e64224"
+							]
+						}
 					},
 					"response": []
 				},
@@ -229,25 +352,17 @@
 								}
 							}
 						},
-						"url": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5"
-					},
-					"response": []
-				},
-				{
-					"name": "Handle Group Membership",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"action\" : \"request\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/groups/membership/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89/update"
+						"url": {
+							"raw": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"invite",
+								"6a8bf775-00d7-4598-881a-2cf85d9d66c5"
+							]
+						}
 					},
 					"response": []
 				},
@@ -258,14 +373,197 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"group_name\" : \"papakia2\",\r\n    \"description\" : \"stin seira\"\r\n}",
+							"raw": "{\r\n    \"group_name\" : \"papakia2222\",\r\n    \"description\" : \"stin seira\",\r\n    \"image\" : \"1dbbe5e2-5c30-41fa-a670-1c6f918ef33b\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": "{{url}}/groups/create"
+						"url": {
+							"raw": "{{url}}/groups/create",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"create"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Group Members",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/groups/members/requests/a6afa6b1-2254-49d4-b1fd-8efe9e9c27a",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"members",
+								"requests",
+								"a6afa6b1-2254-49d4-b1fd-8efe9e9c27a"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request To Join",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"action\": \"request\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/members/request/bdad9097-f765-4e6b-b644-13bcb588f38b",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"members",
+								"request",
+								"bdad9097-f765-4e6b-b644-13bcb588f38b"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Group Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/groups/members/requests/bdad9097-f765-4e6b-b644-13bcb588f38b",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"members",
+								"requests",
+								"bdad9097-f765-4e6b-b644-13bcb588f38b"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Respond Group Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"user_id\" : \"fc036224-1545-4654-a04c-675fd68f15b1\",\r\n    \"response\" : \"approve\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/members/respond/bdad9097-f765-4e6b-b644-13bcb588f38b",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"members",
+								"respond",
+								"bdad9097-f765-4e6b-b644-13bcb588f38b"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Member",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"user_id\" : \"fc036224-1545-4654-a04c-675fd68f15b1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/members/remove/bdad9097-f765-4e6b-b644-13bcb588f38b",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"members",
+								"remove",
+								"bdad9097-f765-4e6b-b644-13bcb588f38b"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Group",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/groups/delete/bdad9097-f765-4e6b-b644-13bcb588f38b",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"delete",
+								"bdad9097-f765-4e6b-b644-13bcb588f38b"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Group Update",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"group_name\" : \"dsdsdsdssss\",\r\n    \"description\" : \"updated2updated2updated222222222222asdasdasda\",\r\n    \"image\" : \"008caf8e-ac38-41ca-941d-a9c45496c8f0\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/groups/update/2a6b2164-f934-46de-ae6f-e389d0e64224",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"groups",
+								"update",
+								"2a6b2164-f934-46de-ae6f-e389d0e64224"
+							]
+						}
 					},
 					"response": []
 				}
@@ -369,7 +667,18 @@
 										}
 									}
 								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
+								"url": {
+									"raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"posts",
+										"id",
+										"fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+										"comment"
+									]
+								}
 							},
 							"response": []
 						},
@@ -380,14 +689,25 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"content\": \"this is the second comment reply from another user\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
+									"raw": "{\n    \"content\": \"this is the first comment reply\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
 										}
 									}
 								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
+								"url": {
+									"raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"posts",
+										"id",
+										"fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+										"comment"
+									]
+								}
 							},
 							"response": []
 						},
@@ -405,7 +725,18 @@
 										}
 									}
 								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
+								"url": {
+									"raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"posts",
+										"id",
+										"fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+										"comment"
+									]
+								}
 							},
 							"response": []
 						},
@@ -423,7 +754,19 @@
 										}
 									}
 								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6"
+								"url": {
+									"raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"posts",
+										"id",
+										"fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+										"comment",
+										"c92163b1-67e9-4459-abf3-76ee1121d7c6"
+									]
+								}
 							},
 							"response": []
 						},
@@ -432,39 +775,19 @@
 							"request": {
 								"method": "DELETE",
 								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Reactions",
-					"item": [
-						{
-							"name": "Get Post Reactions",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction"
-							},
-							"response": []
-						},
-						{
-							"name": "Toggle Post Reaction",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction"
-							},
-							"response": []
-						},
-						{
-							"name": "Toggle Comment Reaction",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c09973d8-9e5c-44ce-904c-f5fc1a77f24f/reaction"
+								"url": {
+									"raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"posts",
+										"id",
+										"fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+										"comment",
+										"c92163b1-67e9-4459-abf3-76ee1121d7c6"
+									]
+								}
 							},
 							"response": []
 						}
@@ -477,14 +800,23 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"content\": \"testing pagination\",\n    \"visibility\": \"semi-private\"\n}",
+							"raw": "{\n    \"content\": \"start testing comments and reactions\",\n    \"visibility\": \"public\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": "{{url}}/posts/create"
+						"url": {
+							"raw": "{{url}}/posts/create",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"create"
+							]
+						}
 					},
 					"response": []
 				},
@@ -493,7 +825,16 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/posts/feed"
+						"url": {
+							"raw": "{{url}}/posts/feed",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"feed"
+							]
+						}
 					},
 					"response": []
 				},
@@ -502,7 +843,17 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157"
+						"url": {
+							"raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"id",
+								"fa6e0cce-26d3-45c1-85d5-9a622edbf157"
+							]
+						}
 					},
 					"response": []
 				},
@@ -520,7 +871,18 @@
 								}
 							}
 						},
-						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328/privacy"
+						"url": {
+							"raw": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328/privacy",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"id",
+								"7f3e1470-cd69-4521-9d32-129e49ae2328",
+								"privacy"
+							]
+						}
 					},
 					"response": []
 				},
@@ -538,7 +900,18 @@
 								}
 							}
 						},
-						"url": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy"
+						"url": {
+							"raw": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"id",
+								"64565d9e-c26e-4f55-86c1-97ee9a80287a",
+								"privacy"
+							]
+						}
 					},
 					"response": []
 				},
@@ -556,7 +929,18 @@
 								}
 							}
 						},
-						"url": "{{url}}/posts/id/bb0e9498-ef24-4fa3-ba30-76797fbeaf3e/privacy"
+						"url": {
+							"raw": "{{url}}/posts/id/bb0e9498-ef24-4fa3-ba30-76797fbeaf3e/privacy",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"id",
+								"bb0e9498-ef24-4fa3-ba30-76797fbeaf3e",
+								"privacy"
+							]
+						}
 					},
 					"response": []
 				},
@@ -574,7 +958,17 @@
 								}
 							}
 						},
-						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328"
+						"url": {
+							"raw": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"id",
+								"7f3e1470-cd69-4521-9d32-129e49ae2328"
+							]
+						}
 					},
 					"response": []
 				},
@@ -583,7 +977,17 @@
 					"request": {
 						"method": "DELETE",
 						"header": [],
-						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328"
+						"url": {
+							"raw": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"posts",
+								"id",
+								"7f3e1470-cd69-4521-9d32-129e49ae2328"
+							]
+						}
 					},
 					"response": []
 				}
