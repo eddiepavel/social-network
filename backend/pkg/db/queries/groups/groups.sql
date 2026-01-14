@@ -8,7 +8,7 @@ INSERT INTO group_members (user_id, group_id, status, invited_by, created_at)
 VALUES (?, ?, ?, NULL, ?);
 
 -- name: GetGroupByName :one
-SELECT group_name FROM groups WHERE group_name = ? LIMIT 1;
+SELECT * FROM groups WHERE group_name = ? LIMIT 1;
 
 -- name: GetGroupsWithMemberCount :many
 SELECT

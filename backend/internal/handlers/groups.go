@@ -232,6 +232,10 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File)
 
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
 			app.Logger.Error("error fetching group details", "err", err)
 			utils.Internal(w, errors.New("internal server error"))
 			return
@@ -576,7 +580,7 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		if req.UserID == "" {
+		if req.UserID == "" || req.Response == "" {
 			utils.BadRequest(w, errors.New("user_id is required"))
 			return
 		}
@@ -675,7 +679,7 @@ func RemoveMember(app *app.App) http.HandlerFunc {
 		}
 
 		var req struct {
-			User string `json:"user_uuid"`
+			User string `json:"user_id"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -769,6 +773,15 @@ func DeleteGroup(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		if group.Image.Valid {
+			err := app.File.RemoveImage(group.GroupImageID.String)
+
+			if err != nil {
+				utils.Internal(w, err)
+				return
+			}
+		}
+
 		utils.OK(w, map[string]string{"message": "group deleted"})
 
 	}
@@ -784,7 +797,7 @@ func UpdateGroup(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		inputs := helpers.ValidateCreateGroup.Build(r, app)
+		inputs := helpers.ValidateUpdateGroup.Build(r, app)
 
 		req := models.CreateGroupRequest{}
 
@@ -850,6 +863,10 @@ func UpdateGroup(app *app.App) http.HandlerFunc {
 			}
 
 			image = sql.NullString{Valid: true, String: req.Image}
+
+		} else if req.Image == "" && group.Image.Valid {
+
+			image = sql.NullString{Valid: true, String: group.Image.String}
 		}
 
 		updateGroup, err := query.Groups.UpdateDbGroup(r.Context(), db_groups.UpdateDbGroupParams{

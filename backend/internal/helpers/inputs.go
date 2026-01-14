@@ -126,6 +126,51 @@ func (c CreateGroupValidator) Build(r *http.Request, app *app.App) map[string][]
 	}
 }
 
+type UpdateGroupValidator struct{}
+
+func (c UpdateGroupValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"group_name": {"required", "string", func(v interface{}) error {
+			groupName := v.(string)
+
+			group, err := sqlite.NewQuery(app.DB).Groups.GetGroupByName(r.Context(), groupName)
+
+			groupId, _ := GenerateFromString(r.PathValue("groupId"))
+
+			if !errors.Is(err, sql.ErrNoRows) && !bytes.Equal(group.GroupID, groupId) {
+				return errors.New("group name already exists")
+			}
+			return nil
+		}},
+		"description": {"required", "string", "min:10", "max:50"},
+		"image": {"sometimes", "string", func(v interface{}) error {
+			value := v.(string)
+
+			image, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), value)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("wrong id")
+				}
+
+				return errors.New("something went wrong")
+			}
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if !bytes.Equal(user, image.PosterID) {
+				return errors.New("wrong id")
+			}
+
+			if !image.ExpiresAt.Valid {
+				return errors.New("wrong id")
+			}
+
+			return nil
+		}},
+	}
+}
+
 type MemberShipGroupValidator struct{}
 
 func (up MemberShipGroupValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
@@ -238,6 +283,7 @@ var (
 	ValidateLogin                ValidationRuleBuilder = LoginValidator{}
 	ValidatePrivacy              ValidationRuleBuilder = PrivacyValidator{}
 	ValidateCreateGroup          ValidationRuleBuilder = CreateGroupValidator{}
+	ValidateUpdateGroup          ValidationRuleBuilder = UpdateGroupValidator{}
 	ValidateMemberShip           ValidationRuleBuilder = MemberShipGroupValidator{}
 	ValidatePost                 ValidationRuleBuilder = PostValidator{}
 	ValidateUpdatePost           ValidationRuleBuilder = UpdatePostValidator{}

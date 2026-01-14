@@ -37,8 +37,8 @@ type GroupResponse struct {
 	Description string `json:"description"`
 	Image       string `json:"image,omitempty"`
 	ImageUrl    string `json:"image_url,omitempty"`
-	CreatorID   string `json:"creator_id"`
-	CreatedAt   string `json:"created_at"`
+	CreatorID   string `json:"creator_id,omitempty"`
+	CreatedAt   string `json:"created_at,omitempty"`
 	MemberCount int64  `json:"member_count,omitempty"`
 	IsOwner     bool   `json:"is_owner,omitempty"`
 }

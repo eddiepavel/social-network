@@ -124,14 +124,21 @@ func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (GetGroupByI
 }
 
 const getGroupByName = `-- name: GetGroupByName :one
-SELECT group_name FROM groups WHERE group_name = ? LIMIT 1
+SELECT group_id, group_name, description, image, creator_id, created_at FROM groups WHERE group_name = ? LIMIT 1
 `
 
-func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (string, error) {
+func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (Group, error) {
 	row := q.db.QueryRowContext(ctx, getGroupByName, groupName)
-	var group_name string
-	err := row.Scan(&group_name)
-	return group_name, err
+	var i Group
+	err := row.Scan(
+		&i.GroupID,
+		&i.GroupName,
+		&i.Description,
+		&i.Image,
+		&i.CreatorID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getGroupEventsWithRSVPs = `-- name: GetGroupEventsWithRSVPs :many
