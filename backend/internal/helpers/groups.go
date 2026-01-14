@@ -35,7 +35,7 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 		}(),
 		ImageUrl: func() string {
 			if getGroup.Image.Valid {
-				sign := f.GenerateSignImage(getGroup.GroupImageFileName, user, time.Now().Add(15*time.Minute))
+				sign := f.GenerateSignImage(getGroup.GroupImageFileName.String, user, time.Now().Add(15*time.Minute))
 				return sign
 			}
 			return ""

@@ -75,6 +75,7 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 				return sql.NullString{Valid: false, String: ""}
 			}(),
 			CreatorID: userID,
+			CreatedAt: time.Now(),
 		})
 
 		if err != nil {
@@ -823,7 +824,7 @@ func UpdateGroup(app *app.App) http.HandlerFunc {
 		if req.Image != "" {
 			if group.Image.Valid && req.Image != group.Image.String {
 
-				err := app.File.RemoveImage(group.GroupImageID)
+				err := app.File.RemoveImage(group.GroupImageID.String)
 
 				if err != nil {
 					utils.Internal(w, errors.New("failed to update something went wrong"))

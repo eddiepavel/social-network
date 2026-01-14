@@ -90,7 +90,7 @@ SELECT
     i.image_path as group_image_path,
     i.file_name as group_image_file_name
 FROM groups g
-JOIN images i ON g.image = i.image_id
+LEFT JOIN images i ON g.image = i.image_id
 WHERE g.group_id = ?
 `
 
@@ -101,9 +101,9 @@ type GetGroupByIdRow struct {
 	Image              sql.NullString
 	CreatorID          []byte
 	CreatedAt          time.Time
-	GroupImageID       string
-	GroupImagePath     string
-	GroupImageFileName string
+	GroupImageID       sql.NullString
+	GroupImagePath     sql.NullString
+	GroupImageFileName sql.NullString
 }
 
 func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (GetGroupByIdRow, error) {

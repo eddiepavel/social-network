@@ -47,7 +47,7 @@ SELECT
     i.image_path as group_image_path,
     i.file_name as group_image_file_name
 FROM groups g
-JOIN images i ON g.image = i.image_id
+LEFT JOIN images i ON g.image = i.image_id
 WHERE g.group_id = ?;
 
 -- name: GetGroupMembers :many
