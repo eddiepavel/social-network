@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"social-network/app"
+	"social-network/internal/constants"
 	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
@@ -842,6 +843,26 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		// Create notification for comment or reply
+		if parentCommentID != nil && len(parentCommentID) > 0 {
+			// This is a reply to a comment - notify the comment author
+			parentCommentData, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), parentCommentID)
+			if err == nil && string(currentUserID) != string(parentCommentData.AuthorID) {
+				err = helpers.CreateNotification(app, parentCommentData.AuthorID, constants.NotificationCommentReply, currentUserID, nil, nil)
+				if err != nil {
+					app.Logger.Error("failed to create comment reply notification", "err", err)
+					// Don't fail the request if notification fails
+				}
+			}
+		} else if string(currentUserID) != string(postBasicInfo.AuthorID) {
+			// This is a comment on a post - notify the post author (if not commenting on own post)
+			err = helpers.CreateNotification(app, postBasicInfo.AuthorID, constants.NotificationPostComment, currentUserID, nil, nil)
+			if err != nil {
+				app.Logger.Error("failed to create post comment notification", "err", err)
+				// Don't fail the request if notification fails
+			}
+		}
+
 		commentUUID, _ := helpers.GenerateFromBytes(commentID)
 		authorID, _ := helpers.GenerateFromBytes(currentUserID)
 
@@ -1129,6 +1150,32 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 			if rowsAffected == 0 {
 				utils.Forbidden(w)
 				return
+			}
+
+			// Create notification for reaction
+			var notifType constants.NotificationType
+			var notifReceiver []byte
+
+			if targetType == "post" {
+				notifType = constants.NotificationPostReaction
+				notifReceiver = postBasicInfo.AuthorID
+			} else if targetType == "comment" {
+				notifType = constants.NotificationCommentReaction
+				commentData, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), targetID)
+				if err != nil {
+					app.Logger.Error("failed to get comment for notification", "err", err)
+				} else {
+					notifReceiver = commentData.AuthorID
+				}
+			}
+
+			// Don't notify if reacting to own content
+			if len(notifReceiver) > 0 && string(currentUserID) != string(notifReceiver) {
+				err = helpers.CreateNotification(app, notifReceiver, notifType, currentUserID, nil, nil)
+				if err != nil {
+					app.Logger.Error("failed to create reaction notification", "err", err, "type", notifType)
+					// Don't fail the request if notification fails
+				}
 			}
 
 			utils.OK(w, map[string]interface{}{

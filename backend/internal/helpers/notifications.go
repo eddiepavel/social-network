@@ -3,7 +3,9 @@ package helpers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"social-network/app"
+	"social-network/internal/constants"
 	db_notifications "social-network/pkg/db/queries/notifications"
 	"social-network/pkg/db/sqlite"
 	"time"
@@ -12,7 +14,13 @@ import (
 )
 
 // CreateNotification creates a notification
-func CreateNotification(app *app.App, receiverID []byte, notifType string, fromID []byte, groupID []byte, eventID []byte) error {
+func CreateNotification(app *app.App, receiverID []byte, notifType constants.NotificationType, fromID []byte, groupID []byte, eventID []byte) error {
+	// Validate notification type
+	if !notifType.IsValid() {
+		app.Logger.Error("invalid notification type", "type", notifType)
+		return errors.New("invalid notification type")
+	}
+
 	// Generate notification ID
 	notifUUID := uuid.New().String()
 
@@ -20,7 +28,7 @@ func CreateNotification(app *app.App, receiverID []byte, notifType string, fromI
 	params := db_notifications.CreateNotificationParams{
 		NotifID:    notifUUID,
 		ReceiverID: receiverID,
-		Type:       notifType,
+		Type:       notifType.String(),
 		FromID:     fromID,
 		GroupID:    groupID,
 		EventID:    eventID,

@@ -294,6 +294,25 @@ func (q *Queries) FindUserReaction(ctx context.Context, arg FindUserReactionPara
 	return reaction_id, err
 }
 
+const getCommentById = `-- name: GetCommentById :one
+SELECT comment_id, post_id, author_id, parent_comment_id, content, image_id, created_at FROM comments WHERE comment_id = ? LIMIT 1
+`
+
+func (q *Queries) GetCommentById(ctx context.Context, commentID []byte) (Comment, error) {
+	row := q.db.QueryRowContext(ctx, getCommentById, commentID)
+	var i Comment
+	err := row.Scan(
+		&i.CommentID,
+		&i.PostID,
+		&i.AuthorID,
+		&i.ParentCommentID,
+		&i.Content,
+		&i.ImageID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getFeedPostsCount = `-- name: GetFeedPostsCount :one
 SELECT COUNT(*)
 FROM posts p
