@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/helpers"
@@ -10,6 +11,7 @@ import (
 	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_chat "social-network/pkg/db/queries/chat"
+	db_followers "social-network/pkg/db/queries/followers"
 	"social-network/pkg/db/sqlite"
 	"time"
 
@@ -38,6 +40,7 @@ func GetChatList(app *app.App) http.HandlerFunc {
 
 		if len(list) == 0 {
 			utils.OK(w, []models.ChatList{})
+			return
 		}
 
 		var listResponse []models.ChatList
@@ -57,6 +60,7 @@ func GetChatList(app *app.App) http.HandlerFunc {
 				IsGroup:             chat.IsGroup == 1,
 				LastMessageID:       lastMessageID,
 				LastMessageTime:     chat.LastMessageTime.Time,
+				LastMessageContent:  chat.LastMessageContent,
 				LastMessageSenderID: lastMessageSenderID,
 				UnreadCount:         int(chat.UnreadCount),
 			})
@@ -86,13 +90,27 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		cursorPagination := r.URL.Query().Get("before")
+		cursorPagination := r.URL.Query().Get("beforeTime")
+		cursorMessage := r.URL.Query().Get("beforeMessage")
 		cursorTimestamp := time.Now()
+		var cursorMessageID []byte
+		limit := 20
 
 		if cursorPagination != "" {
 			cursorTimestamp, err = time.Parse(time.RFC3339, cursorPagination)
 			if err != nil {
 				utils.BadRequest(w, errors.New("invalid cursor format"))
+			}
+			if cursorMessage != "" {
+				cursorMessageID, err = helpers.GenerateFromString(cursorMessage)
+				app.Logger.Info("cursor message id", "cursorMessageID", cursorMessageID)
+				if err != nil {
+					utils.BadRequest(w, errors.New("invalid cursor message format"))
+					return
+				}
+			} else {
+				utils.BadRequest(w, errors.New("cursor message id required"))
+				return
 			}
 		}
 
@@ -114,9 +132,16 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 					return nil
 				}
 				return cursorTimestamp
-			},
+			}(),
 			CreatedAt: sql.NullTime{Time: cursorTimestamp, Valid: true},
-			Limit:     21,
+			Column4: func() interface{} {
+				if cursorMessageID != nil {
+					return cursorMessageID
+				}
+				return nil
+			}(),
+			MessageID: cursorMessageID,
+			Limit:     int64(limit + 1),
 		})
 
 		if err != nil {
@@ -126,16 +151,18 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 
 		if len(chatMessages) == 0 {
 			utils.OK(w, []models.ChatMessages{})
+			return
 		}
 
 		hasMore := false
-		if len(chatMessages) > 20 {
-			chatMessages = chatMessages[:20]
+		if len(chatMessages) > limit {
+			chatMessages = chatMessages[:limit]
 			hasMore = true
 		}
 
 		var messages []models.ChatMessages
 		var lastMessageTime time.Time
+		var lastMessageID []byte
 		for _, message := range chatMessages {
 			messageID, _ := helpers.GenerateFromBytes(message.MessageID)
 			senderID, _ := helpers.GenerateFromBytes(message.SenderID)
@@ -146,17 +173,32 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 				CreatedAt: message.CreatedAt.Time,
 			})
 			lastMessageTime = message.CreatedAt.Time
+			lastMessageID = message.MessageID
+		}
+
+		var cursor models.CursorPagination
+
+		if hasMore {
+			lastMessageUUID, _ := helpers.GenerateFromBytes(lastMessageID)
+			cursor = models.CursorPagination{
+				CursorTimestamp: lastMessageTime,
+				CursorID:        lastMessageUUID,
+			}
 		}
 
 		response := models.ChatMessageResponse{
-			Messages: messages,
-			HasMore:  hasMore,
-			NextCursor: func() time.Time {
-				if hasMore {
-					return lastMessageTime
-				}
-				return time.Time{}
-			}(),
+			Messages:   messages,
+			HasMore:    hasMore,
+			NextCursor: cursor,
+		}
+
+		err = sqlite.NewQuery(app.DB).Chat.MarkRoomMessagesAsRead(r.Context(), db_chat.MarkRoomMessagesAsReadParams{
+			UserID: currentUserID,
+			RoomID: roomID,
+		})
+
+		if err != nil {
+			app.Logger.Error("could not mark room as read ", err.Error())
 		}
 
 		utils.OK(w, response)
@@ -245,6 +287,65 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		targetID, _ := helpers.GenerateFromString(req.TargetID)
+
+		targetUser := helpers.FetchUser(app, targetID, r.Context(), w)
+
+		if targetUser.UserID == nil {
+			return
+		}
+
+		if !targetUser.IsPublic {
+			follower := true
+			followee := true
+
+			_, err := sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{
+				FollowerID: currentUserID,
+				FolloweeID: targetID,
+			})
+
+			if errors.Is(err, sql.ErrNoRows) {
+				follower = false
+			} else if err != nil {
+				utils.Internal(w, err)
+				return
+			}
+
+			_, err = sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{
+				FollowerID: targetID,
+				FolloweeID: currentUserID,
+			})
+
+			if errors.Is(err, sql.ErrNoRows) {
+				followee = false
+			} else if err != nil {
+				utils.Internal(w, err)
+				return
+			}
+
+			if !follower && !followee {
+				utils.BadRequest(w, errors.New("cannot send message to this user unless they follow you or you are following them"))
+				return
+			}
+		}
+
+		roomExists, err := sqlite.NewQuery(app.DB).Chat.FindRoomBetweenUsers(r.Context(), db_chat.FindRoomBetweenUsersParams{
+			UserID:   currentUserID,
+			UserID_2: targetID,
+		})
+
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			app.Logger.Error("failed to find room between users", "error", err.Error())
+			utils.Internal(w, err)
+			return
+		}
+
+		if roomExists != nil {
+			roomID, _ := helpers.GenerateFromBytes(roomExists)
+			utils.Internal(w, errors.New(fmt.Sprintf("room already exists, ID: %v", roomID)))
+			return
+		}
+
 		roomID, err := uuid.New().MarshalBinary()
 		if err != nil {
 			app.Logger.Error("failed uuid", "error", err.Error())
@@ -268,8 +369,6 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			RoomID: roomID,
 			UserID: currentUserID,
 		})
-
-		targetID, _ := helpers.GenerateFromString(req.TargetID)
 
 		err = sqlite.NewQuery(app.DB).Chat.AddRoomParticipant(r.Context(), db_chat.AddRoomParticipantParams{
 			RoomID: roomID,

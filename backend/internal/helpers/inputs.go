@@ -280,7 +280,7 @@ type MessageValidator struct{}
 
 func (mv MessageValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
-		"message": {"required", "string", "min:1", "max:500"},
+		"content": {"required", "string", "min:1", "max:500"},
 	}
 }
 
@@ -288,7 +288,7 @@ type FirstMessageValidator struct{}
 
 func (fmv FirstMessageValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
-		"message": {"required", "string", "min:1", "max:500"},
+		"content": {"required", "string", "min:1", "max:500"},
 		"target_id": {"required", "string", func(v interface{}) error {
 			targetId := v.(string)
 			userID, err := GenerateFromString(targetId)

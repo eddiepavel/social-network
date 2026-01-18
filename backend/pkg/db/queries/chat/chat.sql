@@ -26,7 +26,7 @@ SELECT
              FROM chat_messages cm
              WHERE cm.target_id = cr.room_id
                AND cm.sender_id != ?
-           AND cm.created_at > COALESCE(cp.last_read_at, cp.joined_at, '1970-01-01')
+           AND cm.created_at >= COALESCE(cp.last_read_at, cp.joined_at, '1970-01-01')
         ), 0
     ) AS INTEGER) AS unread_count,
 
@@ -67,20 +67,34 @@ SELECT
     cm.created_at
 FROM chat_messages cm
 WHERE cm.target_id = ?
-  AND (? IS NULL OR cm.created_at < ?)  -- Cursor pagination
-ORDER BY cm.created_at DESC
+  AND (? IS NULL OR cm.created_at <= ?)
+  AND (? IS NULL OR cm.message_id != ?)
+ORDER BY cm.created_at DESC, cm.message_id DESC
     LIMIT ?;
 
 -- name: GetRoomMessagesCount :one
 SELECT COUNT(*) FROM chat_messages WHERE target_id = ?;
 
 -- name: MarkRoomMessagesAsRead :exec
-UPDATE chat_participants SET last_read_at = ? WHERE user_id = ? AND room_id = ?;
+UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND room_id = ?;
 
 -- name: RemoveRoomParticipant :exec
 DELETE FROM chat_participants WHERE user_id = ? AND room_id = ?;
 
 -- name: CheckUserIsParticipant :one
 SELECT COUNT(*) FROM chat_participants WHERE user_id = ? AND room_id = ?;
+
+-- name: FindRoomBetweenUsers :one
+SELECT cr.room_id
+FROM chat_rooms cr
+         INNER JOIN chat_participants cp1
+                    ON cr.room_id = cp1.room_id
+                        AND cp1.user_id = ?
+         INNER JOIN chat_participants cp2
+                    ON cr.room_id = cp2.room_id
+                        AND cp2.user_id = ?
+WHERE cr.is_group = 0
+  AND cp1.user_id != cp2.user_id  -- Ensure different users
+LIMIT 1;
 
 

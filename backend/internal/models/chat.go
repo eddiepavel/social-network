@@ -23,9 +23,14 @@ type ChatMessages struct {
 }
 
 type ChatMessageResponse struct {
-	Messages   []ChatMessages `json:"messages"`
-	HasMore    bool           `json:"has_more"`
-	NextCursor time.Time      `json:"next_cursor"`
+	Messages   []ChatMessages   `json:"messages"`
+	HasMore    bool             `json:"has_more"`
+	NextCursor CursorPagination `json:"next_cursor"`
+}
+
+type CursorPagination struct {
+	CursorTimestamp time.Time `json:"cursor_timestamp"`
+	CursorID        string    `json:"cursor_id"`
 }
 
 type CreateMessageRequest struct {

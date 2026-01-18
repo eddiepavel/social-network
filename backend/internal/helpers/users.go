@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/models"
@@ -14,7 +15,7 @@ import (
 
 func FetchUser(app *app.App, userID []byte, ctx context.Context, w http.ResponseWriter) db_users.User {
 	user, err := sqlite.NewQuery(app.DB).Users.GetUserById(ctx, userID)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		utils.NotFound(w)
 		return db_users.User{}
 	}

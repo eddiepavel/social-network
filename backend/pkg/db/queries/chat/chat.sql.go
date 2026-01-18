@@ -76,6 +76,32 @@ func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) error {
 	return err
 }
 
+const findRoomBetweenUsers = `-- name: FindRoomBetweenUsers :one
+SELECT cr.room_id
+FROM chat_rooms cr
+         INNER JOIN chat_participants cp1
+                    ON cr.room_id = cp1.room_id
+                        AND cp1.user_id = ?
+         INNER JOIN chat_participants cp2
+                    ON cr.room_id = cp2.room_id
+                        AND cp2.user_id = ?
+WHERE cr.is_group = 0
+  AND cp1.user_id != cp2.user_id  -- Ensure different users
+LIMIT 1
+`
+
+type FindRoomBetweenUsersParams struct {
+	UserID   []byte
+	UserID_2 []byte
+}
+
+func (q *Queries) FindRoomBetweenUsers(ctx context.Context, arg FindRoomBetweenUsersParams) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, findRoomBetweenUsers, arg.UserID, arg.UserID_2)
+	var room_id []byte
+	err := row.Scan(&room_id)
+	return room_id, err
+}
+
 const getRoomMessages = `-- name: GetRoomMessages :many
 SELECT
     cm.message_id,
@@ -85,8 +111,9 @@ SELECT
     cm.created_at
 FROM chat_messages cm
 WHERE cm.target_id = ?
-  AND (? IS NULL OR cm.created_at < ?)  -- Cursor pagination
-ORDER BY cm.created_at DESC
+  AND (? IS NULL OR cm.created_at <= ?)
+  AND (? IS NULL OR cm.message_id != ?)
+ORDER BY cm.created_at DESC, cm.message_id DESC
     LIMIT ?
 `
 
@@ -94,6 +121,8 @@ type GetRoomMessagesParams struct {
 	TargetID  []byte
 	Column2   interface{}
 	CreatedAt sql.NullTime
+	Column4   interface{}
+	MessageID []byte
 	Limit     int64
 }
 
@@ -102,6 +131,8 @@ func (q *Queries) GetRoomMessages(ctx context.Context, arg GetRoomMessagesParams
 		arg.TargetID,
 		arg.Column2,
 		arg.CreatedAt,
+		arg.Column4,
+		arg.MessageID,
 		arg.Limit,
 	)
 	if err != nil {
@@ -161,7 +192,7 @@ SELECT
              FROM chat_messages cm
              WHERE cm.target_id = cr.room_id
                AND cm.sender_id != ?
-           AND cm.created_at > COALESCE(cp.last_read_at, cp.joined_at, '1970-01-01')
+           AND cm.created_at >= COALESCE(cp.last_read_at, cp.joined_at, '1970-01-01')
         ), 0
     ) AS INTEGER) AS unread_count,
 
@@ -252,17 +283,16 @@ func (q *Queries) GetUserChatList(ctx context.Context, arg GetUserChatListParams
 }
 
 const markRoomMessagesAsRead = `-- name: MarkRoomMessagesAsRead :exec
-UPDATE chat_participants SET last_read_at = ? WHERE user_id = ? AND room_id = ?
+UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND room_id = ?
 `
 
 type MarkRoomMessagesAsReadParams struct {
-	LastReadAt sql.NullTime
-	UserID     []byte
-	RoomID     []byte
+	UserID []byte
+	RoomID []byte
 }
 
 func (q *Queries) MarkRoomMessagesAsRead(ctx context.Context, arg MarkRoomMessagesAsReadParams) error {
-	_, err := q.db.ExecContext(ctx, markRoomMessagesAsRead, arg.LastReadAt, arg.UserID, arg.RoomID)
+	_, err := q.db.ExecContext(ctx, markRoomMessagesAsRead, arg.UserID, arg.RoomID)
 	return err
 }
 
