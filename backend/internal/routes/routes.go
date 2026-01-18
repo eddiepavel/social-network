@@ -91,6 +91,20 @@ func (h *Handler) groupsRoutes() *http.ServeMux {
 	return mux
 }
 
+func (h *Handler) chatRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /list", handlers.GetChatList(h.App))
+
+	mux.HandleFunc("GET /{roomId}", handlers.GetRoomMessages(h.App))
+	mux.HandleFunc("POST /{roomId}", handlers.CreateMessage(h.App))
+	mux.HandleFunc("POST /new", handlers.CreateRoomAndMessage(h.App))
+	//mux.HandleFunc("POST /{roomId}/add", handlers.AddParticipants(h.App))
+	//mux.HandleFunc("DELETE /{roomId}/remove", handlers.RemoveParticipants(h.App))
+
+	return mux
+}
+
 func (h *Handler) storageRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 

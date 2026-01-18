@@ -276,6 +276,34 @@ func (ucv UpdateCommentValidator) Build(r *http.Request, app *app.App) map[strin
 	}
 }
 
+type MessageValidator struct{}
+
+func (mv MessageValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"message": {"required", "string", "min:1", "max:500"},
+	}
+}
+
+type FirstMessageValidator struct{}
+
+func (fmv FirstMessageValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"message": {"required", "string", "min:1", "max:500"},
+		"target_id": {"required", "string", func(v interface{}) error {
+			targetId := v.(string)
+			userID, err := GenerateFromString(targetId)
+			if err != nil {
+				return errors.New("wrong target id")
+			}
+			_, err = sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), userID)
+			if err != nil {
+				return errors.New("user not found")
+			}
+			return nil
+		}},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister             ValidationRuleBuilder = RegisterValidator{}
@@ -291,4 +319,6 @@ var (
 	ValidateAddUserToPrivatePost ValidationRuleBuilder = AddUserToPrivatePostValidator{}
 	ValidateCreateComment        ValidationRuleBuilder = CreateCommentValidator{}
 	ValidateUpdateComment        ValidationRuleBuilder = UpdateCommentValidator{}
+	ValidateMessage              ValidationRuleBuilder = MessageValidator{}
+	ValidateFirstMessage         ValidationRuleBuilder = FirstMessageValidator{}
 )
