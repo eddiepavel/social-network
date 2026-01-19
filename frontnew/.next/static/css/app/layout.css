@@ -337,12 +337,40 @@ button {
   align-items: center;
   justify-content: space-between;
   padding: 20px 0;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .nav-links {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff7ea;
+}
+
+.search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  min-width: 180px;
+}
+
+.search button {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
 }
 
 .nav-links a {

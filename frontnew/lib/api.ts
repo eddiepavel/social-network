@@ -5,6 +5,7 @@ import type {
   Group,
   GroupDetails,
   Post,
+  SearchUser,
   User,
 } from "@/lib/types";
 
@@ -123,6 +124,11 @@ export function updatePrivacy(isPublic: boolean) {
     method: "PUT",
     body: JSON.stringify({ is_public: isPublic }),
   });
+}
+
+export function searchUsers(name: string) {
+  const params = new URLSearchParams({ name });
+  return apiFetch<SearchUser[]>(`/api/users/search?${params.toString()}`);
 }
 
 export function getGroups() {

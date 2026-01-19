@@ -27,6 +27,13 @@ export type User = {
   created_at?: string;
 };
 
+export type SearchUser = {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  nickname?: string;
+};
+
 export type FeedPost = {
   post_id: string;
   content: string;

@@ -13,8 +13,8 @@ export default function LandingPage() {
           <Link className="button" href="/register">
             Create account
           </Link>
-          <Link className="button ghost" href="/feed">
-            Explore feed
+          <Link className="button ghost" href="/login">
+            Login
           </Link>
         </div>
       </main>
