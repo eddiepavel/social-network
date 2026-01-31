@@ -1,9 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(app)/profile/[id]/page": "app/(app)/profile/[id]/page.js",
-  "/(app)/groups/page": "app/(app)/groups/page.js",
-  "/(auth)/register/page": "app/(auth)/register/page.js",
-  "/(app)/search/page": "app/(app)/search/page.js"
-}
