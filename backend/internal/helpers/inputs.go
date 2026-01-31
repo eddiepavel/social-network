@@ -72,12 +72,23 @@ func (upv UpdateProfileValidator) Build(r *http.Request, app *app.App) map[strin
 		"last_name":  {"sometimes", "string"},
 		"nickname": {"sometimes", "string", func(v interface{}) error {
 			nickname, _ := v.(string)
-			_, err := sqlite.NewQuery(app.DB).Users.GetUserByNickname(r.Context(), sql.NullString{Valid: true, String: nickname})
+			existingUser, err := sqlite.NewQuery(app.DB).Users.GetUserByNickname(r.Context(), sql.NullString{Valid: true, String: nickname})
 
-			if !errors.Is(err, sql.ErrNoRows) {
-				return errors.New("nickname exists")
+			if errors.Is(err, sql.ErrNoRows) {
+				// Nickname is available
+				return nil
 			}
-			return nil
+			if err != nil {
+				return errors.New("something went wrong")
+			}
+
+			// Check if the nickname belongs to the current user (that's OK)
+			currentUserID := r.Context().Value(contextkeys.UserIDKey).([]byte)
+			if bytes.Equal(existingUser.UserID, currentUserID) {
+				return nil
+			}
+
+			return errors.New("nickname exists")
 		}},
 		"avatar":   {"sometimes", "base64"},
 		"about_me": {"sometimes", "string"},
