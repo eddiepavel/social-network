@@ -1,13 +1,15 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
+import Avatar from "@/components/Avatar";
 import { searchUsers } from "@/lib/api";
 
-export default function SearchPage() {
+function SearchContent() {
   const params = useSearchParams();
   const name = params.get("name")?.trim() ?? "";
 
@@ -31,15 +33,29 @@ export default function SearchPage() {
         ) : null}
         <div className="grid">
           {data?.map((user) => (
-            <Link key={user.user_id} href={`/profile/${user.user_id}`} className="surface card">
-              <strong>
-                {user.first_name} {user.last_name}
-              </strong>
-              <span className="post-meta">{user.nickname || "No nickname"}</span>
+            <Link key={user.user_id} href={`/profile/${user.user_id}`} className="surface card search-result">
+              <Avatar
+                name={`${user.first_name} ${user.last_name}`}
+                size={40}
+              />
+              <div className="search-result-info">
+                <strong>
+                  {user.first_name} {user.last_name}
+                </strong>
+                <span className="post-meta">{user.nickname ? `@${user.nickname}` : "No nickname"}</span>
+              </div>
             </Link>
           ))}
         </div>
       </section>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<p>Loading search...</p>}>
+      <SearchContent />
+    </Suspense>
   );
 }

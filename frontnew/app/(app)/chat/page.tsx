@@ -1,21 +1,37 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
+import Button from "@/components/Button";
+import NewChatModal from "@/components/NewChatModal";
 import { getChatList } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
+import useSession from "@/hooks/useSession";
 
 export default function ChatPage() {
+  const { data: session } = useSession();
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["chat-list"],
     queryFn: getChatList,
+    refetchInterval: 5000,
   });
 
   return (
     <div className="grid" style={{ paddingBottom: 64 }}>
       <section className="surface card">
-        <SectionHeader title="Inbox" />
+        <SectionHeader
+          title="Inbox"
+          action={
+            session?.user_id && (
+              <Button onClick={() => setIsNewChatOpen(true)}>New Chat</Button>
+            )
+          }
+        />
         {isLoading ? <p>Loading chats...</p> : null}
         {isError ? <p style={{ color: "#b42318" }}>{(error as Error).message}</p> : null}
         {!isLoading && data?.length === 0 ? (
@@ -24,28 +40,41 @@ export default function ChatPage() {
             body="Start following people or join groups to unlock messaging."
           />
         ) : null}
-        <div className="grid">
+        <div className="chat-threads">
           {data?.map((thread) => (
-            <div key={thread.room_id} className="surface card" style={{ boxShadow: "none" }}>
-              <strong>{thread.room_name || (thread.is_group ? "Group chat" : "Direct chat")}</strong>
-              <p style={{ color: "var(--muted)", margin: 0 }}>
-                {thread.last_message_content || "No messages yet"}
-              </p>
-              <div className="post-meta">
-                <span>{thread.unread_count} unread</span>
-                <span>{thread.last_message_time ? formatDate(thread.last_message_time) : ""}</span>
+            <Link
+              key={thread.room_id}
+              href={`/chat/${thread.room_id}`}
+              className="chat-thread"
+            >
+              <div className="chat-thread-info">
+                <strong className="chat-thread-name">
+                  {thread.room_name || (thread.is_group ? "Group chat" : "Direct chat")}
+                </strong>
+                <p className="chat-thread-preview">
+                  {thread.last_message_content || "No messages yet"}
+                </p>
               </div>
-            </div>
+              <div className="chat-thread-meta">
+                {thread.unread_count > 0 && (
+                  <span className="chat-unread-badge">{thread.unread_count}</span>
+                )}
+                <span className="chat-thread-time">
+                  {thread.last_message_time ? formatDate(thread.last_message_time) : ""}
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
       </section>
-      <section className="surface card">
-        <SectionHeader title="Live chat" />
-        <p style={{ color: "var(--muted)" }}>
-          WebSocket chat is available at <code>/ws/chat</code> once the backend is running.
-          Hook a client to receive real-time messages.
-        </p>
-      </section>
+
+      {session?.user_id && (
+        <NewChatModal
+          isOpen={isNewChatOpen}
+          onClose={() => setIsNewChatOpen(false)}
+          currentUserId={session.user_id}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import useSession from "@/hooks/useSession";
 import { logoutUser } from "@/lib/api";
 import Button from "@/components/Button";
 import SearchBar from "@/components/SearchBar";
+import NotificationDropdown from "@/components/NotificationDropdown";
 
 export default function Nav() {
   const { data: session } = useSession();
@@ -34,7 +35,10 @@ export default function Nav() {
         <Link href="/groups">Groups</Link>
         <Link href="/chat">Chat</Link>
         {session?.user_id ? (
-          <Link href={`/profile/${session.user_id}`}>Profile</Link>
+          <>
+            <Link href={`/profile/${session.user_id}`}>Profile</Link>
+            <NotificationDropdown />
+          </>
         ) : (
           <Link href="/login">Login</Link>
         )}

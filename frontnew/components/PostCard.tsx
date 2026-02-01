@@ -1,25 +1,85 @@
+"use client";
+
+import Link from "next/link";
 import type { FeedPost } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import ReactionButton from "@/components/ReactionButton";
+import CommentSection from "@/components/CommentSection";
+import PostActions from "@/components/PostActions";
+import Avatar from "@/components/Avatar";
 
-export default function PostCard({ post }: { post: FeedPost }) {
+type PostCardProps = {
+  post: FeedPost & {
+    author_first_name?: string;
+    author_last_name?: string;
+    author_avatar?: string;
+  };
+  currentUserId?: string;
+  showFullComments?: boolean;
+};
+
+export default function PostCard({ post, currentUserId, showFullComments = false }: PostCardProps) {
+  const isOwner = currentUserId === post.author_id;
+  const authorName = post.author_first_name && post.author_last_name
+    ? `${post.author_first_name} ${post.author_last_name}`
+    : "User";
+
   return (
-    <article className="surface card">
-      <div className="post-meta">
-        <span className="tag">{post.visibility}</span>
-        <span>{formatDate(post.created_at)}</span>
+    <article className="surface card post-card">
+      <div className="post-header">
+        <Link href={`/profile/${post.author_id}`} className="post-author">
+          <Avatar
+            src={post.author_avatar}
+            name={authorName}
+            size={40}
+          />
+          <div className="post-author-info">
+            <span className="post-author-name">{authorName}</span>
+            <span className="post-time">{formatDate(post.created_at)}</span>
+          </div>
+        </Link>
+        <div className="post-header-right">
+          <span className="tag">{post.visibility}</span>
+          <PostActions
+            postId={post.post_id}
+            content={post.content}
+            visibility={post.visibility}
+            isOwner={isOwner}
+          />
+        </div>
       </div>
-      <p style={{ fontSize: "1.05rem" }}>{post.content}</p>
+
+      <Link href={`/post/${post.post_id}`} className="post-content-link">
+        <p className="post-text">{post.content}</p>
+      </Link>
+
       {post.image_url ? (
-        <img
-          src={post.image_url}
-          alt="Post visual"
-          style={{ width: "100%", borderRadius: 14, border: "1px solid #e2d6bf" }}
-        />
+        <Link href={`/post/${post.post_id}`}>
+          <img
+            src={post.image_url}
+            alt="Post visual"
+            className="post-image"
+          />
+        </Link>
       ) : null}
-      <div className="post-meta">
-        <span>{post.reaction_count} reactions</span>
-        <span>{post.comment_count} comments</span>
+
+      <div className="post-interactions">
+        <ReactionButton
+          postId={post.post_id}
+          reactionCount={post.reaction_count}
+          userReacted={post.user_reacted}
+        />
+        <Link href={`/post/${post.post_id}`} className="post-comment-link">
+          💬 {post.comment_count}
+        </Link>
       </div>
+
+      <CommentSection
+        postId={post.post_id}
+        commentCount={post.comment_count}
+        currentUserId={currentUserId}
+        initiallyExpanded={showFullComments}
+      />
     </article>
   );
 }

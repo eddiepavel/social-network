@@ -6,8 +6,10 @@ import PostCard from "@/components/PostCard";
 import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
 import { getFeed } from "@/lib/api";
+import useSession from "@/hooks/useSession";
 
 export default function FeedPage() {
+  const { data: session } = useSession();
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["feed", 1],
     queryFn: () => getFeed(1, 10),
@@ -19,7 +21,7 @@ export default function FeedPage() {
     <div className="split" style={{ paddingBottom: 64 }}>
       <div className="feed">
         <SectionHeader title="Your feed" />
-        <PostComposer />
+        {session?.user_id && <PostComposer />}
         {isLoading ? <p>Loading posts...</p> : null}
         {isError ? <p style={{ color: "#b42318" }}>{(error as Error).message}</p> : null}
         {posts.length === 0 && !isLoading ? (
@@ -29,7 +31,7 @@ export default function FeedPage() {
           />
         ) : null}
         {posts.map((post) => (
-          <PostCard key={post.post_id} post={post} />
+          <PostCard key={post.post_id} post={post} currentUserId={session?.user_id} />
         ))}
       </div>
       <aside className="grid">
