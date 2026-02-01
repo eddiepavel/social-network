@@ -124,8 +124,43 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (i
 	return result.RowsAffected()
 }
 
+const createGroupPost = `-- name: CreateGroupPost :one
+INSERT INTO posts (post_id, author_id, content, visibility, image_id, group_id)
+VALUES (?, ?, ?, 'group', ?, ?)
+RETURNING post_id, author_id, content, image_id, visibility, created_at, group_id
+`
+
+type CreateGroupPostParams struct {
+	PostID   []byte
+	AuthorID []byte
+	Content  string
+	ImageID  sql.NullString
+	GroupID  []byte
+}
+
+func (q *Queries) CreateGroupPost(ctx context.Context, arg CreateGroupPostParams) (Post, error) {
+	row := q.db.QueryRowContext(ctx, createGroupPost,
+		arg.PostID,
+		arg.AuthorID,
+		arg.Content,
+		arg.ImageID,
+		arg.GroupID,
+	)
+	var i Post
+	err := row.Scan(
+		&i.PostID,
+		&i.AuthorID,
+		&i.Content,
+		&i.ImageID,
+		&i.Visibility,
+		&i.CreatedAt,
+		&i.GroupID,
+	)
+	return i, err
+}
+
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING post_id, author_id, content, image_id, visibility, created_at
+INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING post_id, author_id, content, image_id, visibility, created_at, group_id
 `
 
 type CreatePostParams struct {
@@ -152,6 +187,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.ImageID,
 		&i.Visibility,
 		&i.CreatedAt,
+		&i.GroupID,
 	)
 	return i, err
 }
@@ -330,6 +366,94 @@ func (q *Queries) GetFeedPostsCount(ctx context.Context, arg GetFeedPostsCountPa
 	return count, err
 }
 
+const getGroupPosts = `-- name: GetGroupPosts :many
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
+       u.first_name, u.last_name, u.avatar,
+       i.image_id as post_image_id,
+       i.image_path,
+       i.file_name,
+       (SELECT COUNT(*) FROM reactions r WHERE r.target_type='post' AND r.target_id=p.post_id) as reaction_count,
+       (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.post_id) as comment_count,
+       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type='post' AND r.target_id=p.post_id AND r.author_id=?) as user_reacted
+FROM posts p
+JOIN users u ON p.author_id = u.user_id
+LEFT JOIN images i ON p.image_id = i.image_id
+WHERE p.group_id = ?
+ORDER BY p.created_at DESC
+LIMIT ? OFFSET ?
+`
+
+type GetGroupPostsParams struct {
+	AuthorID []byte
+	GroupID  []byte
+	Limit    int64
+	Offset   int64
+}
+
+type GetGroupPostsRow struct {
+	PostID        []byte
+	AuthorID      []byte
+	Content       string
+	ImageID       sql.NullString
+	Visibility    string
+	CreatedAt     sql.NullTime
+	GroupID       []byte
+	FirstName     string
+	LastName      string
+	Avatar        sql.NullString
+	PostImageID   sql.NullString
+	ImagePath     sql.NullString
+	FileName      sql.NullString
+	ReactionCount int64
+	CommentCount  int64
+	UserReacted   int64
+}
+
+func (q *Queries) GetGroupPosts(ctx context.Context, arg GetGroupPostsParams) ([]GetGroupPostsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupPosts,
+		arg.AuthorID,
+		arg.GroupID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGroupPostsRow
+	for rows.Next() {
+		var i GetGroupPostsRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.AuthorID,
+			&i.Content,
+			&i.ImageID,
+			&i.Visibility,
+			&i.CreatedAt,
+			&i.GroupID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Avatar,
+			&i.PostImageID,
+			&i.ImagePath,
+			&i.FileName,
+			&i.ReactionCount,
+			&i.CommentCount,
+			&i.UserReacted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostBasicInfo = `-- name: GetPostBasicInfo :one
 SELECT post_id, author_id, visibility FROM posts WHERE post_id = ?
 `
@@ -348,7 +472,7 @@ func (q *Queries) GetPostBasicInfo(ctx context.Context, postID []byte) (GetPostB
 }
 
 const getPostByID = `-- name: GetPostByID :one
-SELECT post_id, author_id, content, image_id, visibility, created_at FROM posts WHERE post_id = ?
+SELECT post_id, author_id, content, image_id, visibility, created_at, group_id FROM posts WHERE post_id = ?
 `
 
 func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (Post, error) {
@@ -361,6 +485,7 @@ func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (Post, error) 
 		&i.ImageID,
 		&i.Visibility,
 		&i.CreatedAt,
+		&i.GroupID,
 	)
 	return i, err
 }
@@ -454,7 +579,7 @@ func (q *Queries) GetPostVisibility(ctx context.Context, postID []byte) (string,
 }
 
 const getPostsForFeed = `-- name: GetPostsForFeed :many
-SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at,
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
        i.image_id,
        i.image_path,
        i.file_name,
@@ -510,6 +635,7 @@ type GetPostsForFeedRow struct {
 	ImageID       sql.NullString
 	Visibility    string
 	CreatedAt     sql.NullTime
+	GroupID       []byte
 	ImageID_2     sql.NullString
 	ImagePath     sql.NullString
 	FileName      sql.NullString
@@ -541,6 +667,114 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 			&i.ImageID,
 			&i.Visibility,
 			&i.CreatedAt,
+			&i.GroupID,
+			&i.ImageID_2,
+			&i.ImagePath,
+			&i.FileName,
+			&i.ReactionCount,
+			&i.CommentCount,
+			&i.UserReacted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserPosts = `-- name: GetUserPosts :many
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
+       i.image_id,
+       i.image_path,
+       i.file_name,
+       (SELECT COUNT(*)
+        FROM reactions
+        WHERE target_type = 'post'
+          AND target_id = p.post_id) as reaction_count,
+       (SELECT COUNT(*)
+        FROM comments
+        WHERE post_id = p.post_id)   as comment_count,
+       EXISTS(SELECT 1
+              FROM reactions r
+              WHERE r.target_type = 'post'
+                AND r.target_id = p.post_id
+                AND r.author_id = ?) as user_reacted
+FROM posts p
+LEFT JOIN images i ON p.image_id = i.image_id
+WHERE p.author_id = ?
+  AND (
+    p.visibility = 'public'
+    OR (p.visibility = 'semi-private' AND EXISTS(
+        SELECT 1 FROM followers WHERE follower_id = ? AND followee_id = p.author_id
+    ))
+    OR (p.visibility = 'private' AND (
+        p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions WHERE user_id = ? AND post_id = p.post_id)
+    ))
+    OR p.author_id = ?
+  )
+ORDER BY p.created_at DESC
+LIMIT ? OFFSET ?
+`
+
+type GetUserPostsParams struct {
+	AuthorID   []byte
+	AuthorID_2 []byte
+	FollowerID []byte
+	AuthorID_3 []byte
+	UserID     []byte
+	AuthorID_4 []byte
+	Limit      int64
+	Offset     int64
+}
+
+type GetUserPostsRow struct {
+	PostID        []byte
+	AuthorID      []byte
+	Content       string
+	ImageID       sql.NullString
+	Visibility    string
+	CreatedAt     sql.NullTime
+	GroupID       []byte
+	ImageID_2     sql.NullString
+	ImagePath     sql.NullString
+	FileName      sql.NullString
+	ReactionCount int64
+	CommentCount  int64
+	UserReacted   int64
+}
+
+func (q *Queries) GetUserPosts(ctx context.Context, arg GetUserPostsParams) ([]GetUserPostsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserPosts,
+		arg.AuthorID,
+		arg.AuthorID_2,
+		arg.FollowerID,
+		arg.AuthorID_3,
+		arg.UserID,
+		arg.AuthorID_4,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUserPostsRow
+	for rows.Next() {
+		var i GetUserPostsRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.AuthorID,
+			&i.Content,
+			&i.ImageID,
+			&i.Visibility,
+			&i.CreatedAt,
+			&i.GroupID,
 			&i.ImageID_2,
 			&i.ImagePath,
 			&i.FileName,

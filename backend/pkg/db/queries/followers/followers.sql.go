@@ -34,6 +34,30 @@ func (q *Queries) CheckIfUserFollows(ctx context.Context, arg CheckIfUserFollows
 	return i, err
 }
 
+const checkPendingFollowRequest = `-- name: CheckPendingFollowRequest :one
+SELECT id, follower_id, followee_id, status, created_at, responded_at FROM follow_requests
+WHERE follower_id = ? AND followee_id = ? AND status = 'pending'
+`
+
+type CheckPendingFollowRequestParams struct {
+	FollowerID []byte
+	FolloweeID []byte
+}
+
+func (q *Queries) CheckPendingFollowRequest(ctx context.Context, arg CheckPendingFollowRequestParams) (FollowRequest, error) {
+	row := q.db.QueryRowContext(ctx, checkPendingFollowRequest, arg.FollowerID, arg.FolloweeID)
+	var i FollowRequest
+	err := row.Scan(
+		&i.ID,
+		&i.FollowerID,
+		&i.FolloweeID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.RespondedAt,
+	)
+	return i, err
+}
+
 const createFollowRequest = `-- name: CreateFollowRequest :exec
 INSERT INTO follow_requests (follower_id, followee_id) VALUES (?, ?)
 `

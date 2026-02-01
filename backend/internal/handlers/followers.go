@@ -117,6 +117,8 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
+				// Create notification for follow request
+				_ = helpers.CreateNotification(app.DB, r.Context(), user.UserID, "follow_request", currentUserID, nil, nil)
 				utils.OK(w, "Follow requested successfully")
 				return
 			} else {
@@ -408,6 +410,68 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 		}
 
 		utils.OK(w, followersList)
+	}
+}
+
+// GetFollowStatus handles GET /api/followers/status/{userId}
+// Returns the follow relationship status between current user and target user
+func GetFollowStatus(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		userIDHex := r.PathValue("userId")
+		if userIDHex == "" {
+			utils.BadRequest(w, errors.New("user ID required"))
+			return
+		}
+
+		userID, err := helpers.GenerateFromString(userIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid user ID format"))
+			return
+		}
+
+		// Check if it's the same user
+		if string(currentUserID) == string(userID) {
+			utils.OK(w, models.FollowStatusResponse{Status: "self"})
+			return
+		}
+
+		// Check if already following
+		_, err = sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(),
+			db_followers.CheckIfUserFollowsParams{
+				FollowerID: currentUserID,
+				FolloweeID: userID,
+			})
+		if err == nil {
+			utils.OK(w, models.FollowStatusResponse{Status: "following"})
+			return
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			utils.Internal(w, err)
+			return
+		}
+
+		// Check for pending follow request
+		_, err = sqlite.NewQuery(app.DB).Followers.CheckPendingFollowRequest(r.Context(),
+			db_followers.CheckPendingFollowRequestParams{
+				FollowerID: currentUserID,
+				FolloweeID: userID,
+			})
+		if err == nil {
+			utils.OK(w, models.FollowStatusResponse{Status: "requested"})
+			return
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			utils.Internal(w, err)
+			return
+		}
+
+		utils.OK(w, models.FollowStatusResponse{Status: "none"})
 	}
 }
 

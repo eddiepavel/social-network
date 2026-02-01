@@ -107,6 +107,33 @@ WHERE group_id = ? AND status = 'requested';
 DELETE FROM groups WHERE group_id = ?;
 
 -- name: UpdateDbGroup :one
-UPDATE groups SET group_name = ?, description = ?, image = ? 
+UPDATE groups SET group_name = ?, description = ?, image = ?
 WHERE group_id = ? AND creator_id = ? RETURNING *;
+
+-- name: GetGroupEvents :many
+SELECT e.*,
+    (SELECT COUNT(*) FROM group_rsvp r WHERE r.event_id=e.event_id AND r.status='going') as going_count,
+    (SELECT COUNT(*) FROM group_rsvp r WHERE r.event_id=e.event_id AND r.status='not going') as not_going_count,
+    (SELECT r.status FROM group_rsvp r WHERE r.event_id=e.event_id AND r.user_id=?) as user_rsvp
+FROM group_events e
+WHERE e.group_id = ?
+ORDER BY e.event_timestamp ASC;
+
+-- name: CreateGroupEvent :one
+INSERT INTO group_events (event_id, group_id, creator_id, title, description, event_timestamp)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+-- name: GetEventByID :one
+SELECT * FROM group_events WHERE event_id = ?;
+
+-- name: UpsertRSVP :exec
+INSERT INTO group_rsvp (event_id, user_id, status) VALUES (?, ?, ?)
+ON CONFLICT(event_id, user_id) DO UPDATE SET status = excluded.status;
+
+-- name: GetGroupMemberIDs :many
+SELECT user_id FROM group_members WHERE group_id = ? AND status = 'joined';
+
+-- name: GetEventGroupID :one
+SELECT group_id FROM group_events WHERE event_id = ?;
 

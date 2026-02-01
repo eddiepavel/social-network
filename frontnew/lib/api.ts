@@ -1,18 +1,26 @@
 import type {
   ApiEnvelope,
   ChatMessage,
+  ChatMessagesResponse,
   ChatThread,
   Comment,
+  CreateEventRequest,
+  CreateGroupPostRequest,
   FeedPost,
   Follower,
   FollowRequest,
   Group,
   GroupDetails,
+  GroupEvent,
   GroupJoinRequest,
+  Notification,
+  NotificationsResponse,
   Post,
   PostWithDetails,
+  RSVPRequest,
   SearchUser,
   User,
+  WSMessage,
 } from "@/lib/types";
 
 const BASE_URL =
@@ -175,24 +183,24 @@ export function postMessage(roomId: string, input: { content: string }) {
 
 // Follow endpoint is a toggle - calling it again will unfollow
 export function followUser(userId: string) {
-  return apiFetch<string>(`/api/followers/${userId}/follow`, {
+  return apiFetch<string>(`/api/followers/user/${userId}/follow`, {
     method: "POST",
   });
 }
 
 // Unfollow uses the same toggle endpoint
 export function unfollowUser(userId: string) {
-  return apiFetch<string>(`/api/followers/${userId}/follow`, {
+  return apiFetch<string>(`/api/followers/user/${userId}/follow`, {
     method: "POST",
   });
 }
 
 export function getFollowers(userId: string) {
-  return apiFetch<Follower[]>(`/api/followers/${userId}/followers`);
+  return apiFetch<Follower[]>(`/api/followers/user/${userId}/followers`);
 }
 
 export function getFollowing(userId: string) {
-  return apiFetch<Follower[]>(`/api/followers/${userId}/following`);
+  return apiFetch<Follower[]>(`/api/followers/user/${userId}/following`);
 }
 
 export function getFollowRequests() {
@@ -206,23 +214,9 @@ export function respondToFollowRequest(requestId: string, accept: boolean) {
   });
 }
 
-// Get follow status by checking if user is in following list
-export async function getFollowStatus(userId: string, currentUserId: string): Promise<{ status: "none" | "following" | "requested" | "self" }> {
-  if (userId === currentUserId) {
-    return { status: "self" };
-  }
-
-  try {
-    const following = await getFollowing(currentUserId);
-    const isFollowing = following.some(f => f.user_id === userId);
-    if (isFollowing) {
-      return { status: "following" };
-    }
-    // Note: Can't detect "requested" status without backend support
-    return { status: "none" };
-  } catch {
-    return { status: "none" };
-  }
+// Get follow status using the dedicated endpoint
+export function getFollowStatus(userId: string) {
+  return apiFetch<{ status: "none" | "following" | "requested" | "self" }>(`/api/followers/status/${userId}`);
 }
 
 // ============================================
@@ -334,8 +328,9 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
 // CHAT API
 // ============================================
 
-export function getRoomMessages(roomId: string) {
-  return apiFetch<ChatMessage[]>(`/api/chat/${roomId}`);
+export async function getRoomMessages(roomId: string) {
+  const response = await apiFetch<ChatMessagesResponse>(`/api/chat/${roomId}`);
+  return response.messages ?? [];
 }
 
 export function sendMessage(roomId: string, content: string) {
@@ -345,10 +340,10 @@ export function sendMessage(roomId: string, content: string) {
   });
 }
 
-export function startNewChat(userId: string) {
+export function startNewChat(userId: string, content: string = "👋") {
   return apiFetch<{ room_id: string }>("/api/chat/new", {
     method: "POST",
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ target_id: userId, content }),
   });
 }
 
@@ -398,4 +393,206 @@ export function deleteGroup(groupId: string) {
   return apiFetch<string>(`/api/groups/delete/${groupId}`, {
     method: "DELETE",
   });
+}
+
+// ============================================
+// USER POSTS API
+// ============================================
+
+export function getUserPosts(userId: string, page = 1, size = 10) {
+  return apiFetch<FeedPost[]>(`/api/users/profile/${userId}/posts?page=${page}&size=${size}`);
+}
+
+// ============================================
+// NOTIFICATIONS API
+// ============================================
+
+export function getNotifications(page = 1, size = 20) {
+  return apiFetch<NotificationsResponse>(`/api/notifications/?page=${page}&size=${size}`);
+}
+
+export function markNotificationRead(notifId: string) {
+  return apiFetch<{ message: string }>(`/api/notifications/${notifId}/read`, {
+    method: "POST",
+  });
+}
+
+export function markAllNotificationsRead() {
+  return apiFetch<{ message: string }>("/api/notifications/read-all", {
+    method: "POST",
+  });
+}
+
+// ============================================
+// GROUP EVENTS API
+// ============================================
+
+export function getGroupEvents(groupId: string) {
+  return apiFetch<GroupEvent[]>(`/api/groups/group/${groupId}/events`);
+}
+
+export function createGroupEvent(groupId: string, input: CreateEventRequest) {
+  return apiFetch<GroupEvent>(`/api/groups/group/${groupId}/events`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function rsvpToEvent(eventId: string, status: RSVPRequest["status"]) {
+  return apiFetch<{ message: string; status: string }>(`/api/events/${eventId}/rsvp`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ============================================
+// GROUP POSTS API
+// ============================================
+
+export function getGroupPosts(groupId: string, page = 1, size = 10) {
+  return apiFetch<FeedPost[]>(`/api/groups/group/${groupId}/posts?page=${page}&size=${size}`);
+}
+
+export function createGroupPost(groupId: string, input: CreateGroupPostRequest) {
+  return apiFetch<Post>(`/api/groups/group/${groupId}/posts`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// ============================================
+// WEBSOCKET CHAT API
+// ============================================
+
+const WS_BASE_URL =
+  process.env.NEXT_PUBLIC_WS_BASE?.replace(/\/$/, "") ||
+  "ws://localhost:8000";
+
+export type WebSocketCallbacks = {
+  onMessage?: (message: WSMessage) => void;
+  onTyping?: (message: WSMessage) => void;
+  onRead?: (message: WSMessage) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
+  onError?: (error: Event) => void;
+};
+
+export class ChatWebSocket {
+  private ws: WebSocket | null = null;
+  private callbacks: WebSocketCallbacks = {};
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+
+  connect(callbacks: WebSocketCallbacks = {}) {
+    this.callbacks = callbacks;
+    this.createConnection();
+  }
+
+  private createConnection() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    this.ws = new WebSocket(`${WS_BASE_URL}/ws/chat`);
+
+    this.ws.onopen = () => {
+      this.reconnectAttempts = 0;
+      this.callbacks.onOpen?.();
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const message: WSMessage = JSON.parse(event.data);
+        switch (message.type) {
+          case "message":
+            this.callbacks.onMessage?.(message);
+            break;
+          case "typing":
+            this.callbacks.onTyping?.(message);
+            break;
+          case "read":
+            this.callbacks.onRead?.(message);
+            break;
+        }
+      } catch (err) {
+        console.error("Failed to parse WebSocket message:", err);
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.callbacks.onClose?.();
+      this.attemptReconnect();
+    };
+
+    this.ws.onerror = (error) => {
+      this.callbacks.onError?.(error);
+    };
+  }
+
+  private attemptReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error("Max reconnect attempts reached");
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+
+    this.reconnectTimeout = setTimeout(() => {
+      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      this.createConnection();
+    }, delay);
+  }
+
+  disconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
+    this.ws?.close();
+    this.ws = null;
+  }
+
+  subscribe(roomId: string) {
+    this.send({ type: "subscribe", room_id: roomId });
+  }
+
+  unsubscribe(roomId: string) {
+    this.send({ type: "unsubscribe", room_id: roomId });
+  }
+
+  sendMessage(roomId: string, content: string) {
+    this.send({ type: "message", room_id: roomId, content });
+  }
+
+  sendTyping(roomId: string) {
+    this.send({ type: "typing", room_id: roomId });
+  }
+
+  markAsRead(roomId: string) {
+    this.send({ type: "read", room_id: roomId });
+  }
+
+  private send(message: WSMessage) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    } else {
+      console.warn("WebSocket is not connected");
+    }
+  }
+
+  get isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+}
+
+// Singleton instance for the app
+let chatWsInstance: ChatWebSocket | null = null;
+
+export function getChatWebSocket(): ChatWebSocket {
+  if (!chatWsInstance) {
+    chatWsInstance = new ChatWebSocket();
+  }
+  return chatWsInstance;
 }

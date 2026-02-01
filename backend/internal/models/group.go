@@ -59,12 +59,27 @@ type GroupMemberResponse struct {
 
 // EventResponse represents a group event returned to the client
 type EventResponse struct {
-	EventID     string         `json:"event_id"`
-	EventName   string         `json:"event_name"`
-	Description string         `json:"description"`
-	Timestamp   string         `json:"timestamp"`
-	CreatedAt   time.Time      `json:"created_at"`
-	RSVPs       []RSVPResponse `json:"rsvps"`
+	EventID       string         `json:"event_id"`
+	EventName     string         `json:"event_name"`
+	Description   string         `json:"description"`
+	Timestamp     string         `json:"timestamp"`
+	CreatedAt     time.Time      `json:"created_at"`
+	GoingCount    int64          `json:"going_count"`
+	NotGoingCount int64          `json:"not_going_count"`
+	UserRsvp      *string        `json:"user_rsvp,omitempty"`
+	RSVPs         []RSVPResponse `json:"rsvps,omitempty"`
+}
+
+// CreateEventRequest represents the request body for creating a group event
+type CreateEventRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Timestamp   string `json:"timestamp"` // ISO 8601 format
+}
+
+// RSVPRequest represents the request body for RSVP-ing to an event
+type RSVPRequest struct {
+	Status string `json:"status"` // "going", "not going", "maybe"
 }
 
 // RSVPResponse represents an event RSVP returned to the client

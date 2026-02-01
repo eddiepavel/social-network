@@ -392,6 +392,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		utils.OK(w, "first message sent successfully")
+		roomUUID, _ := helpers.GenerateFromBytes(roomID)
+		utils.OK(w, map[string]string{"room_id": roomUUID})
 	}
 }

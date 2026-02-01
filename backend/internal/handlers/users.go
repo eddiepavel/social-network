@@ -9,9 +9,12 @@ import (
 	"social-network/internal/middleware"
 	"social-network/internal/models"
 	"social-network/internal/utils"
+	db_posts "social-network/pkg/db/queries/posts"
 	db_users "social-network/pkg/db/queries/users"
 	"social-network/pkg/db/sqlite"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // GetUserProfile handles GET /api/users/:id
@@ -176,6 +179,104 @@ func UpdatePrivacy(app *app.App) func(w http.ResponseWriter, r *http.Request) {
 		response := helpers.UserToResponse(user)
 
 		utils.OK(w, response)
+	}
+}
+
+// GetUserPosts handles GET /api/users/profile/{id}/posts
+// Returns posts by a specific user respecting visibility rules
+func GetUserPosts(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		targetUserIDHex := r.PathValue("id")
+		if targetUserIDHex == "" {
+			utils.BadRequest(w, errors.New("user ID required"))
+			return
+		}
+
+		targetUserID, err := helpers.GenerateFromString(targetUserIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid user ID format"))
+			return
+		}
+
+		// Verify target user exists
+		targetUser := helpers.FetchUser(app, targetUserID, r.Context(), w)
+		if targetUser.UserID == nil {
+			return
+		}
+
+		// Parse pagination parameters
+		page := 1
+		size := 10
+
+		if pageParam := r.URL.Query().Get("page"); pageParam != "" {
+			if parsedPage, err := strconv.Atoi(pageParam); err == nil && parsedPage > 0 {
+				page = parsedPage
+			}
+		}
+
+		if sizeParam := r.URL.Query().Get("size"); sizeParam != "" {
+			if parsedSize, err := strconv.Atoi(sizeParam); err == nil && parsedSize > 0 {
+				size = parsedSize
+			}
+		}
+
+		offset := int64((page - 1) * size)
+		limit := int64(size)
+
+		posts, err := sqlite.NewQuery(app.DB).Posts.GetUserPosts(r.Context(), db_posts.GetUserPostsParams{
+			AuthorID:   currentUserID, // for user_reacted check
+			AuthorID_2: targetUserID,  // whose posts to fetch
+			FollowerID: currentUserID, // for semi-private visibility check
+			AuthorID_3: currentUserID, // for private visibility OR author check
+			UserID:     currentUserID, // for viewing_permissions check
+			AuthorID_4: currentUserID, // OR author owns post
+			Limit:      limit,
+			Offset:     offset,
+		})
+
+		if err != nil {
+			app.Logger.Error("failed to get user posts", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		var userPosts []models.FeedPostResponse
+		for _, post := range posts {
+			postUuid, _ := helpers.GenerateFromBytes(post.PostID)
+			authorUuid, _ := helpers.GenerateFromBytes(post.AuthorID)
+
+			userPosts = append(userPosts, models.FeedPostResponse{
+				PostID:   postUuid,
+				AuthorID: authorUuid,
+				Content:  post.Content,
+				ImageID:  &post.ImageID.String,
+				ImageUrl: func() string {
+					if post.ImageID.Valid {
+						path := app.File.GenerateSignImage(post.FileName.String, currentUserID, time.Now().Add(15*time.Minute))
+						return path
+					}
+					return ""
+				}(),
+				Visibility: post.Visibility,
+				CreatedAt: func() time.Time {
+					if post.CreatedAt.Valid {
+						return post.CreatedAt.Time
+					}
+					return time.Time{}
+				}(),
+				UserReacted:   post.UserReacted != 0,
+				ReactionCount: post.ReactionCount,
+				CommentCount:  post.CommentCount,
+			})
+		}
+
+		utils.OK(w, userPosts)
 	}
 }
 

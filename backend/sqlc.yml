@@ -33,7 +33,9 @@ sql:
              "/pkg/db/migrations/sqlite/up/000006_create_viewing_permissions_table.sql",
              "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql",
              "/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql",
-             "/pkg/db/migrations/sqlite/up/000004_create_images_table.sql"
+             "/pkg/db/migrations/sqlite/up/000004_create_images_table.sql",
+             "/pkg/db/migrations/sqlite/up/000009_create_groups_table.sql",
+             "/pkg/db/migrations/sqlite/up/000019_add_group_id_to_posts.sql"
             ]
     gen:
       go:
@@ -52,6 +54,7 @@ sql:
       go:
         package: "db_groups"
         out: "/pkg/db/queries/groups"
+        emit_result_struct_pointers: true
   - engine: "sqlite"
     queries: ["/pkg/db/queries/image/image.sql"]
     schema: ["/pkg/db/migrations/sqlite/up/000004_create_images_table.sql",
@@ -72,3 +75,14 @@ sql:
       go:
         package: "db_chat"
         out: "/pkg/db/queries/chat"
+  - engine: "sqlite"
+    queries: [ "/pkg/db/queries/notifications/notifications.sql" ]
+    schema: [ "/pkg/db/migrations/sqlite/up/000014_create_notifications_table.sql",
+              "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql",
+              "/pkg/db/migrations/sqlite/up/000009_create_groups_table.sql",
+              "/pkg/db/migrations/sqlite/up/000011_create_group_events_table.sql"
+    ]
+    gen:
+      go:
+        package: "db_notifications"
+        out: "/pkg/db/queries/notifications"

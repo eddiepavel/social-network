@@ -33,10 +33,15 @@ func main() {
 	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
 	file.StartCleanUp()
 
+	// Initialize WebSocket Hub
+	hub := services.NewHub(logger)
+	go hub.Run()
+
 	app := &app.App{
 		DB:     db.DB,
 		Logger: logger,
 		File:   file,
+		Hub:    hub,
 	}
 
 	defer func() {

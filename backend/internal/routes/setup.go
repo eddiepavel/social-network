@@ -47,6 +47,9 @@ func Setup(app *app.App) http.Handler {
 	groupsGroup := handler.createGroup(handler.groupsRoutes, []string{"auth"})
 	storageRoutes := handler.createGroup(handler.storageRoutes, []string{"auth"})
 	chatRoutes := handler.createGroup(handler.chatRoutes, []string{"auth"})
+	notificationsRoutes := handler.createGroup(handler.notificationsRoutes, []string{"auth"})
+	eventsRoutes := handler.createGroup(handler.eventsRoutes, []string{"auth"})
+	websocketRoutes := handler.createGroup(handler.websocketRoutes, []string{}) // No auth middleware, handled internally
 
 	// prefix
 	apiMux.Handle("/public/", http.StripPrefix("/public", publicGroup))
@@ -57,7 +60,12 @@ func Setup(app *app.App) http.Handler {
 	apiMux.Handle("/groups/", http.StripPrefix("/groups", groupsGroup))
 	apiMux.Handle("/storage/", http.StripPrefix("/storage", storageRoutes))
 	apiMux.Handle("/chat/", http.StripPrefix("/chat", chatRoutes))
+	apiMux.Handle("/notifications/", http.StripPrefix("/notifications", notificationsRoutes))
+	apiMux.Handle("/events/", http.StripPrefix("/events", eventsRoutes))
 	mux.Handle("/api/", http.StripPrefix("/api", apiMux))
+
+	// WebSocket route (outside /api/ prefix)
+	mux.Handle("/ws/", http.StripPrefix("/ws", websocketRoutes))
 
 	return mux
 

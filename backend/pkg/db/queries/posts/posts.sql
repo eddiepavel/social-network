@@ -194,3 +194,57 @@ DELETE FROM reactions WHERE author_id = ? AND target_type = ? AND target_id = ?;
 
 -- name: CheckCommentExists :one
 SELECT EXISTS(SELECT 1 FROM comments WHERE comment_id = ?);
+
+-- name: CreateGroupPost :one
+INSERT INTO posts (post_id, author_id, content, visibility, image_id, group_id)
+VALUES (?, ?, ?, 'group', ?, ?)
+RETURNING *;
+
+-- name: GetGroupPosts :many
+SELECT p.*,
+       u.first_name, u.last_name, u.avatar,
+       i.image_id as post_image_id,
+       i.image_path,
+       i.file_name,
+       (SELECT COUNT(*) FROM reactions r WHERE r.target_type='post' AND r.target_id=p.post_id) as reaction_count,
+       (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.post_id) as comment_count,
+       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type='post' AND r.target_id=p.post_id AND r.author_id=?) as user_reacted
+FROM posts p
+JOIN users u ON p.author_id = u.user_id
+LEFT JOIN images i ON p.image_id = i.image_id
+WHERE p.group_id = ?
+ORDER BY p.created_at DESC
+LIMIT ? OFFSET ?;
+
+-- name: GetUserPosts :many
+SELECT p.*,
+       i.image_id,
+       i.image_path,
+       i.file_name,
+       (SELECT COUNT(*)
+        FROM reactions
+        WHERE target_type = 'post'
+          AND target_id = p.post_id) as reaction_count,
+       (SELECT COUNT(*)
+        FROM comments
+        WHERE post_id = p.post_id)   as comment_count,
+       EXISTS(SELECT 1
+              FROM reactions r
+              WHERE r.target_type = 'post'
+                AND r.target_id = p.post_id
+                AND r.author_id = ?) as user_reacted
+FROM posts p
+LEFT JOIN images i ON p.image_id = i.image_id
+WHERE p.author_id = ?
+  AND (
+    p.visibility = 'public'
+    OR (p.visibility = 'semi-private' AND EXISTS(
+        SELECT 1 FROM followers WHERE follower_id = ? AND followee_id = p.author_id
+    ))
+    OR (p.visibility = 'private' AND (
+        p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions WHERE user_id = ? AND post_id = p.post_id)
+    ))
+    OR p.author_id = ?
+  )
+ORDER BY p.created_at DESC
+LIMIT ? OFFSET ?;

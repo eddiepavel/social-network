@@ -65,7 +65,7 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
         ) : messages?.length === 0 ? (
           <p className="chat-empty">No messages yet. Start the conversation!</p>
         ) : (
-          messages?.map((message) => (
+          [...messages].reverse().map((message) => (
             <MessageBubble
               key={message.message_id}
               message={message}

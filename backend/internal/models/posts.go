@@ -58,6 +58,8 @@ type FeedPostResponse struct {
 	ImageUrl      string    `json:"image_url"`
 	Visibility    string    `json:"visibility"`
 	AuthorID      string    `json:"author_id"`
+	AuthorName    string    `json:"author_name,omitempty"`
+	AuthorAvatar  *string   `json:"author_avatar,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	ReactionCount int64     `json:"reaction_count"`
 	UserReacted   bool      `json:"user_reacted"`

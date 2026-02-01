@@ -10,6 +10,7 @@ import (
 	db_followers "social-network/pkg/db/queries/followers"
 	db_groups "social-network/pkg/db/queries/groups"
 	db_image "social-network/pkg/db/queries/image"
+	db_notifications "social-network/pkg/db/queries/notifications"
 	db_posts "social-network/pkg/db/queries/posts"
 	db_sessions "social-network/pkg/db/queries/sessions"
 	db_users "social-network/pkg/db/queries/users"
@@ -31,24 +32,26 @@ type Config struct {
 }
 
 type Transactions struct {
-	Users     *db_users.Queries
-	Followers *db_followers.Queries
-	Sessions  *db_sessions.Queries
-	Posts     *db_posts.Queries
-	Groups    *db_groups.Queries
-	Image     *db_image.Queries
-	Chat      *db_chat.Queries
+	Users         *db_users.Queries
+	Followers     *db_followers.Queries
+	Sessions      *db_sessions.Queries
+	Posts         *db_posts.Queries
+	Groups        *db_groups.Queries
+	Image         *db_image.Queries
+	Chat          *db_chat.Queries
+	Notifications *db_notifications.Queries
 }
 
 func NewQuery(db *sql.DB) *Transactions {
 	return &Transactions{
-		Users:     db_users.New(db),
-		Followers: db_followers.New(db),
-		Sessions:  db_sessions.New(db),
-		Posts:     db_posts.New(db),
-		Groups:    db_groups.New(db),
-		Image:     db_image.New(db),
-		Chat:      db_chat.New(db),
+		Users:         db_users.New(db),
+		Followers:     db_followers.New(db),
+		Sessions:      db_sessions.New(db),
+		Posts:         db_posts.New(db),
+		Groups:        db_groups.New(db),
+		Image:         db_image.New(db),
+		Chat:          db_chat.New(db),
+		Notifications: db_notifications.New(db),
 	}
 }
 

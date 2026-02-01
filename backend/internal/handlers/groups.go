@@ -12,7 +12,9 @@ import (
 	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_groups "social-network/pkg/db/queries/groups"
+	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -361,6 +363,8 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 				utils.Internal(w, errors.New("failed to send invitations"))
 				return
 			}
+			// Create notification for group invitation
+			_ = helpers.CreateNotification(app.DB, r.Context(), users[i], "group_invitation", userId, groupID, nil)
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -441,6 +445,9 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 					return
 				}
 
+				// Create notification for group creator about join request
+				_ = helpers.CreateNotification(app.DB, r.Context(), getGroup.CreatorID, "group_request", userId, groupID, nil)
+
 				utils.OK(w, map[string]string{"message": "created"})
 				return
 			}
@@ -515,7 +522,7 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 		}
 
 		if len(groupMemberRequests) <= 0 {
-			utils.OK(w, map[string]string{"message": "no requests yet"})
+			utils.OK(w, []models.GroupMemberResponse{})
 			return
 		}
 
@@ -784,6 +791,414 @@ func DeleteGroup(app *app.App) http.HandlerFunc {
 
 		utils.OK(w, map[string]string{"message": "group deleted"})
 
+	}
+}
+
+// GetGroupEvents handles GET /api/groups/{groupId}/events
+// Returns all events for a group (members only)
+func GetGroupEvents(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid group ID"))
+			return
+		}
+
+		// Check if user is a member
+		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			GroupID: groupID,
+			UserID:  userID,
+		})
+		if err != nil || isMember.Status != "joined" {
+			utils.Forbidden(w)
+			return
+		}
+
+		events, err := sqlite.NewQuery(app.DB).Groups.GetGroupEvents(r.Context(), db_groups.GetGroupEventsParams{
+			GroupID: groupID,
+			UserID:  userID,
+		})
+		if err != nil {
+			app.Logger.Error("failed to get group events", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		var eventsList []models.EventResponse
+		for _, e := range events {
+			eventID, _ := helpers.GenerateFromBytes(e.EventID)
+			eventsList = append(eventsList, models.EventResponse{
+				EventID:     eventID,
+				EventName:   e.Title,
+				Description: e.Description,
+				Timestamp:   e.EventTimestamp.Format(time.RFC3339),
+				CreatedAt: func() time.Time {
+					if e.CreatedAt.Valid {
+						return e.CreatedAt.Time
+					}
+					return time.Time{}
+				}(),
+				GoingCount:    e.GoingCount,
+				NotGoingCount: e.NotGoingCount,
+				UserRsvp: func() *string {
+					if e.UserRsvp.Valid {
+						return &e.UserRsvp.String
+					}
+					return nil
+				}(),
+			})
+		}
+
+		utils.OK(w, eventsList)
+	}
+}
+
+// CreateGroupEvent handles POST /api/groups/{groupId}/events
+// Creates a new event in a group (members only)
+func CreateGroupEvent(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid group ID"))
+			return
+		}
+
+		// Check if user is a member
+		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			GroupID: groupID,
+			UserID:  userID,
+		})
+		if err != nil || isMember.Status != "joined" {
+			utils.Forbidden(w)
+			return
+		}
+
+		var req models.CreateEventRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.BadRequest(w, errors.New("invalid request body"))
+			return
+		}
+		defer r.Body.Close()
+
+		if req.Title == "" || req.Description == "" || req.Timestamp == "" {
+			utils.BadRequest(w, errors.New("title, description, and timestamp are required"))
+			return
+		}
+
+		eventTimestamp, err := time.Parse(time.RFC3339, req.Timestamp)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid timestamp format, use RFC3339"))
+			return
+		}
+
+		eventID, err := uuid.New().MarshalBinary()
+		if err != nil {
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		event, err := sqlite.NewQuery(app.DB).Groups.CreateGroupEvent(r.Context(), db_groups.CreateGroupEventParams{
+			EventID:        eventID,
+			GroupID:        groupID,
+			CreatorID:      userID,
+			Title:          req.Title,
+			Description:    req.Description,
+			EventTimestamp: eventTimestamp,
+		})
+		if err != nil {
+			app.Logger.Error("failed to create event", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		// Notify all group members about the new event
+		members, err := sqlite.NewQuery(app.DB).Groups.GetGroupMemberIDs(r.Context(), groupID)
+		if err == nil {
+			for _, memberID := range members {
+				if !bytes.Equal(memberID, userID) {
+					_ = helpers.CreateNotification(app.DB, r.Context(), memberID, "group_event", userID, groupID, eventID)
+				}
+			}
+		}
+
+		eventIDStr, _ := helpers.GenerateFromBytes(event.EventID)
+		response := models.EventResponse{
+			EventID:     eventIDStr,
+			EventName:   event.Title,
+			Description: event.Description,
+			Timestamp:   event.EventTimestamp.Format(time.RFC3339),
+			CreatedAt: func() time.Time {
+				if event.CreatedAt.Valid {
+					return event.CreatedAt.Time
+				}
+				return time.Now()
+			}(),
+			GoingCount:    0,
+			NotGoingCount: 0,
+		}
+
+		utils.OK(w, response)
+	}
+}
+
+// RSVPToEvent handles POST /api/events/{eventId}/rsvp
+// Updates user's RSVP status for an event
+func RSVPToEvent(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		eventID, err := helpers.GenerateFromString(r.PathValue("eventId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid event ID"))
+			return
+		}
+
+		// Get event's group ID to verify membership
+		groupID, err := sqlite.NewQuery(app.DB).Groups.GetEventGroupID(r.Context(), eventID)
+		if err != nil {
+			utils.NotFound(w)
+			return
+		}
+
+		// Check if user is a group member
+		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			GroupID: groupID,
+			UserID:  userID,
+		})
+		if err != nil || isMember.Status != "joined" {
+			utils.Forbidden(w)
+			return
+		}
+
+		var req models.RSVPRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.BadRequest(w, errors.New("invalid request body"))
+			return
+		}
+		defer r.Body.Close()
+
+		// Validate status
+		validStatuses := map[string]bool{"going": true, "not going": true, "maybe": true}
+		if !validStatuses[req.Status] {
+			utils.BadRequest(w, errors.New("status must be 'going', 'not going', or 'maybe'"))
+			return
+		}
+
+		eventIDStr, _ := helpers.GenerateFromBytes(eventID)
+		err = sqlite.NewQuery(app.DB).Groups.UpsertRSVP(r.Context(), db_groups.UpsertRSVPParams{
+			EventID: eventIDStr,
+			UserID:  userID,
+			Status:  sql.NullString{String: req.Status, Valid: true},
+		})
+		if err != nil {
+			app.Logger.Error("failed to upsert RSVP", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		utils.OK(w, map[string]string{"message": "RSVP updated", "status": req.Status})
+	}
+}
+
+// GetGroupPosts handles GET /api/groups/{groupId}/posts
+// Returns all posts in a group (members only)
+func GetGroupPosts(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid group ID"))
+			return
+		}
+
+		// Check if user is a member
+		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			GroupID: groupID,
+			UserID:  userID,
+		})
+		if err != nil || isMember.Status != "joined" {
+			utils.Forbidden(w)
+			return
+		}
+
+		// Parse pagination parameters
+		page := 1
+		size := 10
+
+		if pageParam := r.URL.Query().Get("page"); pageParam != "" {
+			if parsedPage, err := strconv.Atoi(pageParam); err == nil && parsedPage > 0 {
+				page = parsedPage
+			}
+		}
+
+		if sizeParam := r.URL.Query().Get("size"); sizeParam != "" {
+			if parsedSize, err := strconv.Atoi(sizeParam); err == nil && parsedSize > 0 {
+				size = parsedSize
+			}
+		}
+
+		offset := int64((page - 1) * size)
+		limit := int64(size)
+
+		posts, err := sqlite.NewQuery(app.DB).Posts.GetGroupPosts(r.Context(), db_posts.GetGroupPostsParams{
+			AuthorID: userID,
+			GroupID:  groupID,
+			Limit:    limit,
+			Offset:   offset,
+		})
+		if err != nil {
+			app.Logger.Error("failed to get group posts", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		var postsList []models.FeedPostResponse
+		for _, p := range posts {
+			postID, _ := helpers.GenerateFromBytes(p.PostID)
+			authorID, _ := helpers.GenerateFromBytes(p.AuthorID)
+
+			postsList = append(postsList, models.FeedPostResponse{
+				PostID:   postID,
+				AuthorID: authorID,
+				Content:  p.Content,
+				ImageID: func() *string {
+					if p.ImageID.Valid {
+						return &p.ImageID.String
+					}
+					return nil
+				}(),
+				ImageUrl: func() string {
+					if p.ImageID.Valid && p.FileName.Valid {
+						return app.File.GenerateSignImage(p.FileName.String, userID, time.Now().Add(15*time.Minute))
+					}
+					return ""
+				}(),
+				Visibility: p.Visibility,
+				CreatedAt: func() time.Time {
+					if p.CreatedAt.Valid {
+						return p.CreatedAt.Time
+					}
+					return time.Time{}
+				}(),
+				UserReacted:   p.UserReacted != 0,
+				ReactionCount: p.ReactionCount,
+				CommentCount:  p.CommentCount,
+				AuthorName:    p.FirstName + " " + p.LastName,
+				AuthorAvatar: func() *string {
+					if p.Avatar.Valid {
+						return &p.Avatar.String
+					}
+					return nil
+				}(),
+			})
+		}
+
+		utils.OK(w, postsList)
+	}
+}
+
+// CreateGroupPost handles POST /api/groups/{groupId}/posts
+// Creates a new post in a group (members only)
+func CreateGroupPost(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		groupID, err := helpers.GenerateFromString(r.PathValue("groupId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid group ID"))
+			return
+		}
+
+		// Check if user is a member
+		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+			GroupID: groupID,
+			UserID:  userID,
+		})
+		if err != nil || isMember.Status != "joined" {
+			utils.Forbidden(w)
+			return
+		}
+
+		var req models.CreatePostRequest
+		inputs := helpers.ValidatePost.Build(r, app)
+		ok, errValidation := utils.Validate(r, inputs, &req)
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		postID, err := uuid.New().MarshalBinary()
+		if err != nil {
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		var image sql.NullString
+		if req.ImageID != "" {
+			image = sql.NullString{String: req.ImageID, Valid: true}
+		}
+
+		post, err := sqlite.NewQuery(app.DB).Posts.CreateGroupPost(r.Context(), db_posts.CreateGroupPostParams{
+			PostID:   postID,
+			AuthorID: userID,
+			Content:  req.Content,
+			ImageID:  image,
+			GroupID:  groupID,
+		})
+		if err != nil {
+			app.Logger.Error("failed to create group post", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if image.Valid {
+			_ = app.File.AssignImage(image.String)
+		}
+
+		postIDStr, _ := helpers.GenerateFromBytes(post.PostID)
+		authorIDStr, _ := helpers.GenerateFromBytes(post.AuthorID)
+
+		response := models.PostResponse{
+			PostID:     postIDStr,
+			AuthorID:   post.AuthorID,
+			Content:    post.Content,
+			Visibility: post.Visibility,
+			CreatedAt: func() time.Time {
+				if post.CreatedAt.Valid {
+					return post.CreatedAt.Time
+				}
+				return time.Now()
+			}(),
+			ImageID: image.String,
+		}
+		_ = authorIDStr
+
+		utils.OK(w, response)
 	}
 }
 

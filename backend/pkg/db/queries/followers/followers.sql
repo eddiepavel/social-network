@@ -30,3 +30,7 @@ UPDATE follow_requests SET status = 'accepted' WHERE id = ?;
 
 -- name: CreateFollowRequest :exec
 INSERT INTO follow_requests (follower_id, followee_id) VALUES (?, ?);
+
+-- name: CheckPendingFollowRequest :one
+SELECT * FROM follow_requests
+WHERE follower_id = ? AND followee_id = ? AND status = 'pending';

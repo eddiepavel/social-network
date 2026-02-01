@@ -29,6 +29,7 @@ func (h *Handler) userRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /profile/{id}", handlers.GetUserProfile(h.App))
+	mux.HandleFunc("GET /profile/{id}/posts", handlers.GetUserPosts(h.App))
 	mux.HandleFunc("PUT /profile", handlers.UpdateProfile(h.App))
 	mux.HandleFunc("PUT /privacy", handlers.UpdatePrivacy(h.App))
 	mux.HandleFunc("GET /search", handlers.SearchUsers(h.App))
@@ -41,9 +42,10 @@ func (h *Handler) followersRoutes() *http.ServeMux {
 
 	mux.HandleFunc("GET /requests", handlers.GetFollowRequests(h.App))
 	mux.HandleFunc("POST /requests/{requestId}/respond", handlers.UpdateFollowRequest(h.App))
-	mux.HandleFunc("POST /{userId}/follow", handlers.FollowUser(h.App))
-	mux.HandleFunc("GET /{userId}/followers", handlers.GetFollowers(h.App))
-	mux.HandleFunc("GET /{userId}/following", handlers.GetFollowing(h.App))
+	mux.HandleFunc("GET /status/{userId}", handlers.GetFollowStatus(h.App))
+	mux.HandleFunc("POST /user/{userId}/follow", handlers.FollowUser(h.App))
+	mux.HandleFunc("GET /user/{userId}/followers", handlers.GetFollowers(h.App))
+	mux.HandleFunc("GET /user/{userId}/following", handlers.GetFollowing(h.App))
 
 	return mux
 }
@@ -88,6 +90,14 @@ func (h *Handler) groupsRoutes() *http.ServeMux {
 	mux.HandleFunc("POST /members/respond/{groupId}", handlers.RespondRequest(h.App))   //group admin route only
 	mux.HandleFunc("POST /members/remove/{groupId}", handlers.RemoveMember(h.App))      //group admin route or if current logged in user want to leave joined group
 
+	// Group Events
+	mux.HandleFunc("GET /group/{groupId}/events", handlers.GetGroupEvents(h.App))
+	mux.HandleFunc("POST /group/{groupId}/events", handlers.CreateGroupEvent(h.App))
+
+	// Group Posts
+	mux.HandleFunc("GET /group/{groupId}/posts", handlers.GetGroupPosts(h.App))
+	mux.HandleFunc("POST /group/{groupId}/posts", handlers.CreateGroupPost(h.App))
+
 	return mux
 }
 
@@ -110,6 +120,32 @@ func (h *Handler) storageRoutes() *http.ServeMux {
 
 	mux.HandleFunc("POST /upload", handlers.Upload(h.App))
 	mux.HandleFunc("GET /image/{image}", handlers.GetImage(h.App))
+
+	return mux
+}
+
+func (h *Handler) eventsRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /{eventId}/rsvp", handlers.RSVPToEvent(h.App))
+
+	return mux
+}
+
+func (h *Handler) notificationsRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /", handlers.GetNotifications(h.App))
+	mux.HandleFunc("POST /{id}/read", handlers.MarkNotificationAsRead(h.App))
+	mux.HandleFunc("POST /read-all", handlers.MarkAllNotificationsAsRead(h.App))
+
+	return mux
+}
+
+func (h *Handler) websocketRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /chat", handlers.WebSocketHandler(h.App, h.App.Hub))
 
 	return mux
 }

@@ -26,7 +26,7 @@ type CreateGroupParams struct {
 	CreatedAt   time.Time
 }
 
-func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
+func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (*Group, error) {
 	row := q.db.QueryRowContext(ctx, createGroup,
 		arg.GroupID,
 		arg.GroupName,
@@ -44,7 +44,44 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.CreatorID,
 		&i.CreatedAt,
 	)
-	return i, err
+	return &i, err
+}
+
+const createGroupEvent = `-- name: CreateGroupEvent :one
+INSERT INTO group_events (event_id, group_id, creator_id, title, description, event_timestamp)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING event_id, creator_id, group_id, title, description, event_timestamp, created_at
+`
+
+type CreateGroupEventParams struct {
+	EventID        []byte
+	GroupID        []byte
+	CreatorID      []byte
+	Title          string
+	Description    string
+	EventTimestamp time.Time
+}
+
+func (q *Queries) CreateGroupEvent(ctx context.Context, arg CreateGroupEventParams) (*GroupEvent, error) {
+	row := q.db.QueryRowContext(ctx, createGroupEvent,
+		arg.EventID,
+		arg.GroupID,
+		arg.CreatorID,
+		arg.Title,
+		arg.Description,
+		arg.EventTimestamp,
+	)
+	var i GroupEvent
+	err := row.Scan(
+		&i.EventID,
+		&i.CreatorID,
+		&i.GroupID,
+		&i.Title,
+		&i.Description,
+		&i.EventTimestamp,
+		&i.CreatedAt,
+	)
+	return &i, err
 }
 
 const createGroupMember = `-- name: CreateGroupMember :exec
@@ -78,6 +115,36 @@ func (q *Queries) DeleteDbGroup(ctx context.Context, groupID []byte) error {
 	return err
 }
 
+const getEventByID = `-- name: GetEventByID :one
+SELECT event_id, creator_id, group_id, title, description, event_timestamp, created_at FROM group_events WHERE event_id = ?
+`
+
+func (q *Queries) GetEventByID(ctx context.Context, eventID []byte) (*GroupEvent, error) {
+	row := q.db.QueryRowContext(ctx, getEventByID, eventID)
+	var i GroupEvent
+	err := row.Scan(
+		&i.EventID,
+		&i.CreatorID,
+		&i.GroupID,
+		&i.Title,
+		&i.Description,
+		&i.EventTimestamp,
+		&i.CreatedAt,
+	)
+	return &i, err
+}
+
+const getEventGroupID = `-- name: GetEventGroupID :one
+SELECT group_id FROM group_events WHERE event_id = ?
+`
+
+func (q *Queries) GetEventGroupID(ctx context.Context, eventID []byte) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, getEventGroupID, eventID)
+	var group_id []byte
+	err := row.Scan(&group_id)
+	return group_id, err
+}
+
 const getGroupById = `-- name: GetGroupById :one
 SELECT
     g.group_id,
@@ -106,7 +173,7 @@ type GetGroupByIdRow struct {
 	GroupImageFileName sql.NullString
 }
 
-func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (GetGroupByIdRow, error) {
+func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (*GetGroupByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, getGroupById, groupID)
 	var i GetGroupByIdRow
 	err := row.Scan(
@@ -120,14 +187,14 @@ func (q *Queries) GetGroupById(ctx context.Context, groupID []byte) (GetGroupByI
 		&i.GroupImagePath,
 		&i.GroupImageFileName,
 	)
-	return i, err
+	return &i, err
 }
 
 const getGroupByName = `-- name: GetGroupByName :one
 SELECT group_id, group_name, description, image, creator_id, created_at FROM groups WHERE group_name = ? LIMIT 1
 `
 
-func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (Group, error) {
+func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (*Group, error) {
 	row := q.db.QueryRowContext(ctx, getGroupByName, groupName)
 	var i Group
 	err := row.Scan(
@@ -138,7 +205,69 @@ func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (Group, 
 		&i.CreatorID,
 		&i.CreatedAt,
 	)
-	return i, err
+	return &i, err
+}
+
+const getGroupEvents = `-- name: GetGroupEvents :many
+SELECT e.event_id, e.creator_id, e.group_id, e.title, e.description, e.event_timestamp, e.created_at,
+    (SELECT COUNT(*) FROM group_rsvp r WHERE r.event_id=e.event_id AND r.status='going') as going_count,
+    (SELECT COUNT(*) FROM group_rsvp r WHERE r.event_id=e.event_id AND r.status='not going') as not_going_count,
+    (SELECT r.status FROM group_rsvp r WHERE r.event_id=e.event_id AND r.user_id=?) as user_rsvp
+FROM group_events e
+WHERE e.group_id = ?
+ORDER BY e.event_timestamp ASC
+`
+
+type GetGroupEventsParams struct {
+	UserID  []byte
+	GroupID []byte
+}
+
+type GetGroupEventsRow struct {
+	EventID        []byte
+	CreatorID      []byte
+	GroupID        []byte
+	Title          string
+	Description    string
+	EventTimestamp time.Time
+	CreatedAt      sql.NullTime
+	GoingCount     int64
+	NotGoingCount  int64
+	UserRsvp       sql.NullString
+}
+
+func (q *Queries) GetGroupEvents(ctx context.Context, arg GetGroupEventsParams) ([]*GetGroupEventsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupEvents, arg.UserID, arg.GroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetGroupEventsRow
+	for rows.Next() {
+		var i GetGroupEventsRow
+		if err := rows.Scan(
+			&i.EventID,
+			&i.CreatorID,
+			&i.GroupID,
+			&i.Title,
+			&i.Description,
+			&i.EventTimestamp,
+			&i.CreatedAt,
+			&i.GoingCount,
+			&i.NotGoingCount,
+			&i.UserRsvp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getGroupEventsWithRSVPs = `-- name: GetGroupEventsWithRSVPs :many
@@ -175,13 +304,13 @@ type GetGroupEventsWithRSVPsRow struct {
 	RsvpAvatar     sql.NullString
 }
 
-func (q *Queries) GetGroupEventsWithRSVPs(ctx context.Context, groupID []byte) ([]GetGroupEventsWithRSVPsRow, error) {
+func (q *Queries) GetGroupEventsWithRSVPs(ctx context.Context, groupID []byte) ([]*GetGroupEventsWithRSVPsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupEventsWithRSVPs, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGroupEventsWithRSVPsRow
+	var items []*GetGroupEventsWithRSVPsRow
 	for rows.Next() {
 		var i GetGroupEventsWithRSVPsRow
 		if err := rows.Scan(
@@ -199,7 +328,7 @@ func (q *Queries) GetGroupEventsWithRSVPs(ctx context.Context, groupID []byte) (
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, &i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -236,13 +365,13 @@ type GetGroupJoinRequestsRow struct {
 	MLastName  string
 }
 
-func (q *Queries) GetGroupJoinRequests(ctx context.Context, groupID []byte) ([]GetGroupJoinRequestsRow, error) {
+func (q *Queries) GetGroupJoinRequests(ctx context.Context, groupID []byte) ([]*GetGroupJoinRequestsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupJoinRequests, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGroupJoinRequestsRow
+	var items []*GetGroupJoinRequestsRow
 	for rows.Next() {
 		var i GetGroupJoinRequestsRow
 		if err := rows.Scan(
@@ -257,7 +386,34 @@ func (q *Queries) GetGroupJoinRequests(ctx context.Context, groupID []byte) ([]G
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getGroupMemberIDs = `-- name: GetGroupMemberIDs :many
+SELECT user_id FROM group_members WHERE group_id = ? AND status = 'joined'
+`
+
+func (q *Queries) GetGroupMemberIDs(ctx context.Context, groupID []byte) ([][]byte, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupMemberIDs, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items [][]byte
+	for rows.Next() {
+		var user_id []byte
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -288,13 +444,13 @@ type GetGroupMembersRow struct {
 	Avatar    sql.NullString
 }
 
-func (q *Queries) GetGroupMembers(ctx context.Context, groupID []byte) ([]GetGroupMembersRow, error) {
+func (q *Queries) GetGroupMembers(ctx context.Context, groupID []byte) ([]*GetGroupMembersRow, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupMembers, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGroupMembersRow
+	var items []*GetGroupMembersRow
 	for rows.Next() {
 		var i GetGroupMembersRow
 		if err := rows.Scan(
@@ -306,7 +462,7 @@ func (q *Queries) GetGroupMembers(ctx context.Context, groupID []byte) ([]GetGro
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, &i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -321,13 +477,13 @@ const getGroupMembersWithRequests = `-- name: GetGroupMembersWithRequests :many
 SELECT user_id, group_id, status, invited_by, created_at FROM group_members WHERE group_id = ?
 `
 
-func (q *Queries) GetGroupMembersWithRequests(ctx context.Context, groupID []byte) ([]GroupMember, error) {
+func (q *Queries) GetGroupMembersWithRequests(ctx context.Context, groupID []byte) ([]*GroupMember, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupMembersWithRequests, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GroupMember
+	var items []*GroupMember
 	for rows.Next() {
 		var i GroupMember
 		if err := rows.Scan(
@@ -339,7 +495,7 @@ func (q *Queries) GetGroupMembersWithRequests(ctx context.Context, groupID []byt
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, &i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -382,13 +538,13 @@ type GetGroupsWithMemberCountRow struct {
 	MemberCount        int64
 }
 
-func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]GetGroupsWithMemberCountRow, error) {
+func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]*GetGroupsWithMemberCountRow, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupsWithMemberCount)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGroupsWithMemberCountRow
+	var items []*GetGroupsWithMemberCountRow
 	for rows.Next() {
 		var i GetGroupsWithMemberCountRow
 		if err := rows.Scan(
@@ -405,7 +561,7 @@ func (q *Queries) GetGroupsWithMemberCount(ctx context.Context) ([]GetGroupsWith
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, &i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -447,7 +603,7 @@ type IsGroupMemberParams struct {
 	GroupID []byte
 }
 
-func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (GroupMember, error) {
+func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (*GroupMember, error) {
 	row := q.db.QueryRowContext(ctx, isGroupMember, arg.UserID, arg.GroupID)
 	var i GroupMember
 	err := row.Scan(
@@ -457,7 +613,7 @@ func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (G
 		&i.InvitedBy,
 		&i.CreatedAt,
 	)
-	return i, err
+	return &i, err
 }
 
 const removeUserFromGroup = `-- name: RemoveUserFromGroup :exec
@@ -475,7 +631,7 @@ func (q *Queries) RemoveUserFromGroup(ctx context.Context, arg RemoveUserFromGro
 }
 
 const updateDbGroup = `-- name: UpdateDbGroup :one
-UPDATE groups SET group_name = ?, description = ?, image = ? 
+UPDATE groups SET group_name = ?, description = ?, image = ?
 WHERE group_id = ? AND creator_id = ? RETURNING group_id, group_name, description, image, creator_id, created_at
 `
 
@@ -487,7 +643,7 @@ type UpdateDbGroupParams struct {
 	CreatorID   []byte
 }
 
-func (q *Queries) UpdateDbGroup(ctx context.Context, arg UpdateDbGroupParams) (Group, error) {
+func (q *Queries) UpdateDbGroup(ctx context.Context, arg UpdateDbGroupParams) (*Group, error) {
 	row := q.db.QueryRowContext(ctx, updateDbGroup,
 		arg.GroupName,
 		arg.Description,
@@ -504,7 +660,7 @@ func (q *Queries) UpdateDbGroup(ctx context.Context, arg UpdateDbGroupParams) (G
 		&i.CreatorID,
 		&i.CreatedAt,
 	)
-	return i, err
+	return &i, err
 }
 
 const updateGroupMemberStatus = `-- name: UpdateGroupMemberStatus :exec
@@ -518,5 +674,21 @@ type UpdateGroupMemberStatusParams struct {
 
 func (q *Queries) UpdateGroupMemberStatus(ctx context.Context, arg UpdateGroupMemberStatusParams) error {
 	_, err := q.db.ExecContext(ctx, updateGroupMemberStatus, arg.Status, arg.UserID)
+	return err
+}
+
+const upsertRSVP = `-- name: UpsertRSVP :exec
+INSERT INTO group_rsvp (event_id, user_id, status) VALUES (?, ?, ?)
+ON CONFLICT(event_id, user_id) DO UPDATE SET status = excluded.status
+`
+
+type UpsertRSVPParams struct {
+	EventID string
+	UserID  []byte
+	Status  sql.NullString
+}
+
+func (q *Queries) UpsertRSVP(ctx context.Context, arg UpsertRSVPParams) error {
+	_, err := q.db.ExecContext(ctx, upsertRSVP, arg.EventID, arg.UserID, arg.Status)
 	return err
 }

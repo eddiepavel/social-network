@@ -6,6 +6,7 @@ package db_posts
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Comment struct {
@@ -25,6 +26,15 @@ type Follower struct {
 	CreatedAt  sql.NullTime
 }
 
+type Group struct {
+	GroupID     []byte
+	GroupName   string
+	Description string
+	Image       sql.NullString
+	CreatorID   []byte
+	CreatedAt   time.Time
+}
+
 type Image struct {
 	ImageID   string
 	PosterID  []byte
@@ -41,6 +51,7 @@ type Post struct {
 	ImageID    sql.NullString
 	Visibility string
 	CreatedAt  sql.NullTime
+	GroupID    []byte
 }
 
 type Reaction struct {

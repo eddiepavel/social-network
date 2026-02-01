@@ -1,51 +1,77 @@
 import { formatDate } from "@/lib/utils";
 import type { GroupEvent } from "@/lib/types";
 import Button from "@/components/Button";
+import { rsvpToEvent } from "@/lib/api";
+import { useState } from "react";
 
 type EventCardProps = {
   event: GroupEvent;
+  onRsvpUpdate?: (eventId: string, status: string) => void;
 };
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
+  const [currentRsvp, setCurrentRsvp] = useState(event.user_rsvp);
+  const [goingCount, setGoingCount] = useState(event.going_count);
+  const [notGoingCount, setNotGoingCount] = useState(event.not_going_count);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRsvp = async (status: "going" | "not going") => {
+    setIsLoading(true);
+    try {
+      await rsvpToEvent(event.event_id, status);
+
+      // Update counts based on previous and new status
+      if (currentRsvp === "going") setGoingCount(c => c - 1);
+      if (currentRsvp === "not going") setNotGoingCount(c => c - 1);
+
+      if (status === "going") setGoingCount(c => c + 1);
+      if (status === "not going") setNotGoingCount(c => c + 1);
+
+      setCurrentRsvp(status);
+      onRsvpUpdate?.(event.event_id, status);
+    } catch (error) {
+      console.error("Failed to RSVP:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="event-card surface card" style={{ boxShadow: "none" }}>
       <div className="event-header">
-        <h4 className="event-title">{event.title}</h4>
-        <span className="event-date">{formatDate(event.event_date)}</span>
+        <h4 className="event-title">{event.event_name}</h4>
+        <span className="event-date">{formatDate(event.timestamp)}</span>
       </div>
 
       <p className="event-description">{event.description}</p>
 
-      {event.location && (
-        <p className="event-location">
-          <span className="event-location-icon">📍</span>
-          {event.location}
-        </p>
-      )}
-
       <div className="event-stats">
         <span className="event-stat">
           <span className="event-stat-icon">✅</span>
-          {event.going_count ?? 0} going
+          {goingCount} going
         </span>
         <span className="event-stat">
           <span className="event-stat-icon">❌</span>
-          {event.not_going_count ?? 0} not going
+          {notGoingCount} not going
         </span>
       </div>
 
       <div className="event-actions">
-        <Button variant={event.user_rsvp === "going" ? "solid" : "ghost"} disabled>
+        <Button
+          variant={currentRsvp === "going" ? "solid" : "ghost"}
+          onClick={() => handleRsvp("going")}
+          disabled={isLoading}
+        >
           Going
         </Button>
-        <Button variant={event.user_rsvp === "not_going" ? "solid" : "ghost"} disabled>
+        <Button
+          variant={currentRsvp === "not going" ? "solid" : "ghost"}
+          onClick={() => handleRsvp("not going")}
+          disabled={isLoading}
+        >
           Not Going
         </Button>
       </div>
-
-      <p className="event-note" style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 8 }}>
-        RSVP functionality coming soon
-      </p>
     </div>
   );
 }

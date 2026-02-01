@@ -41,6 +41,8 @@ export type FeedPost = {
   image_url?: string;
   visibility: string;
   author_id: string;
+  author_name?: string;
+  author_avatar?: string;
   created_at: string;
   reaction_count: number;
   user_reacted: boolean;
@@ -104,6 +106,15 @@ export type ChatMessage = {
   sender_avatar?: string;
 };
 
+export type ChatMessagesResponse = {
+  messages: ChatMessage[];
+  has_more: boolean;
+  next_cursor?: {
+    cursor_timestamp: string;
+    cursor_id: string;
+  };
+};
+
 export type Follower = {
   user_id: string;
   first_name: string;
@@ -148,28 +159,31 @@ export type PostWithDetails = FeedPost & {
 
 export type GroupEvent = {
   event_id: string;
-  group_id: string;
-  title: string;
+  event_name: string;
   description: string;
-  event_date: string;
-  location?: string;
-  creator_id: string;
+  timestamp: string;
   created_at: string;
-  going_count?: number;
-  not_going_count?: number;
-  user_rsvp?: "going" | "not_going" | null;
+  going_count: number;
+  not_going_count: number;
+  user_rsvp?: string | null;
 };
 
 export type Notification = {
-  id: string;
-  type: "follow_request" | "follow_accepted" | "new_message" | "group_invite" | "event_invite";
-  from_user_id?: string;
-  from_user_name?: string;
+  notif_id: string;
+  type: "follow_request" | "group_invitation" | "group_request" | "group_event" | "message";
+  is_seen: boolean;
+  from_id: string;
+  from_name?: string;
   group_id?: string;
   group_name?: string;
-  message?: string;
+  event_id?: string;
+  event_title?: string;
   created_at: string;
-  read: boolean;
+};
+
+export type NotificationsResponse = {
+  notifications: Notification[];
+  unread_count: number;
 };
 
 export type GroupJoinRequest = {
@@ -180,4 +194,34 @@ export type GroupJoinRequest = {
   nickname?: string;
   avatar?: string;
   created_at: string;
+};
+
+// WebSocket message types
+export type WSMessageType = "message" | "typing" | "read" | "subscribe" | "unsubscribe";
+
+export type WSMessage = {
+  type: WSMessageType;
+  room_id?: string;
+  content?: string;
+  sender_id?: string;
+  timestamp?: string;
+  data?: Record<string, unknown>;
+};
+
+// Group post creation request
+export type CreateGroupPostRequest = {
+  content: string;
+  image_id?: string;
+};
+
+// Event creation request
+export type CreateEventRequest = {
+  title: string;
+  description: string;
+  timestamp: string; // ISO 8601 format
+};
+
+// RSVP request
+export type RSVPRequest = {
+  status: "going" | "not going" | "maybe";
 };

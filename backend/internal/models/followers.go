@@ -18,3 +18,8 @@ type FollowRequestsResponse struct {
 	FollowerName string    `json:"follower_name"`
 	CreatedAt    time.Time `json:"created_at"`
 }
+
+// FollowStatusResponse represents the follow status between two users
+type FollowStatusResponse struct {
+	Status string `json:"status"` // "following", "requested", "none", "self"
+}
