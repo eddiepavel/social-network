@@ -6,7 +6,6 @@ import type {
   FeedPost,
   Follower,
   FollowRequest,
-  FollowStatus,
   Group,
   GroupDetails,
   GroupJoinRequest,
@@ -174,15 +173,17 @@ export function postMessage(roomId: string, input: { content: string }) {
 // FOLLOWERS API
 // ============================================
 
+// Follow endpoint is a toggle - calling it again will unfollow
 export function followUser(userId: string) {
-  return apiFetch<string>(`/api/followers/follow/${userId}`, {
+  return apiFetch<string>(`/api/followers/${userId}/follow`, {
     method: "POST",
   });
 }
 
+// Unfollow uses the same toggle endpoint
 export function unfollowUser(userId: string) {
-  return apiFetch<string>(`/api/followers/unfollow/${userId}`, {
-    method: "DELETE",
+  return apiFetch<string>(`/api/followers/${userId}/follow`, {
+    method: "POST",
   });
 }
 
@@ -199,14 +200,29 @@ export function getFollowRequests() {
 }
 
 export function respondToFollowRequest(requestId: string, accept: boolean) {
-  return apiFetch<string>(`/api/followers/requests/${requestId}`, {
-    method: "PUT",
+  return apiFetch<string>(`/api/followers/requests/${requestId}/respond`, {
+    method: "POST",
     body: JSON.stringify({ accept }),
   });
 }
 
-export function getFollowStatus(userId: string) {
-  return apiFetch<{ status: FollowStatus }>(`/api/followers/status/${userId}`);
+// Get follow status by checking if user is in following list
+export async function getFollowStatus(userId: string, currentUserId: string): Promise<{ status: "none" | "following" | "requested" | "self" }> {
+  if (userId === currentUserId) {
+    return { status: "self" };
+  }
+
+  try {
+    const following = await getFollowing(currentUserId);
+    const isFollowing = following.some(f => f.user_id === userId);
+    if (isFollowing) {
+      return { status: "following" };
+    }
+    // Note: Can't detect "requested" status without backend support
+    return { status: "none" };
+  } catch {
+    return { status: "none" };
+  }
 }
 
 // ============================================
@@ -214,43 +230,43 @@ export function getFollowStatus(userId: string) {
 // ============================================
 
 export function getPost(postId: string) {
-  return apiFetch<PostWithDetails>(`/api/posts/${postId}`);
+  return apiFetch<PostWithDetails>(`/api/posts/id/${postId}`);
 }
 
 export function editPost(postId: string, input: { content?: string; visibility?: string }) {
-  return apiFetch<Post>(`/api/posts/${postId}`, {
+  return apiFetch<Post>(`/api/posts/id/${postId}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export function deletePost(postId: string) {
-  return apiFetch<string>(`/api/posts/${postId}`, {
+  return apiFetch<string>(`/api/posts/id/${postId}`, {
     method: "DELETE",
   });
 }
 
 export function toggleReaction(postId: string) {
-  return apiFetch<{ reacted: boolean; count: number }>(`/api/posts/${postId}/react`, {
+  return apiFetch<{ reacted: boolean; count: number }>(`/api/posts/id/${postId}/reaction`, {
     method: "POST",
   });
 }
 
 export function updatePostVisibility(postId: string, visibility: string) {
-  return apiFetch<Post>(`/api/posts/${postId}/visibility`, {
+  return apiFetch<Post>(`/api/posts/id/${postId}`, {
     method: "PUT",
     body: JSON.stringify({ visibility }),
   });
 }
 
 export function addPrivateViewer(postId: string, userId: string) {
-  return apiFetch<string>(`/api/posts/${postId}/viewers/${userId}`, {
+  return apiFetch<string>(`/api/posts/id/${postId}/viewers/${userId}`, {
     method: "POST",
   });
 }
 
 export function removePrivateViewer(postId: string, userId: string) {
-  return apiFetch<string>(`/api/posts/${postId}/viewers/${userId}`, {
+  return apiFetch<string>(`/api/posts/id/${postId}/viewers/${userId}`, {
     method: "DELETE",
   });
 }
@@ -260,31 +276,32 @@ export function removePrivateViewer(postId: string, userId: string) {
 // ============================================
 
 export function getComments(postId: string) {
-  return apiFetch<Comment[]>(`/api/posts/${postId}/comments`);
+  return apiFetch<Comment[]>(`/api/posts/id/${postId}/comment`);
 }
 
 export function createComment(postId: string, input: { content: string }) {
-  return apiFetch<Comment>(`/api/posts/${postId}/comments`, {
+  return apiFetch<Comment>(`/api/posts/id/${postId}/comment`, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function editComment(commentId: string, input: { content: string }) {
-  return apiFetch<Comment>(`/api/comments/${commentId}`, {
+// Note: Backend requires postId in path for comment operations
+export function editComment(postId: string, commentId: string, input: { content: string }) {
+  return apiFetch<Comment>(`/api/posts/id/${postId}/comment/${commentId}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
-export function deleteComment(commentId: string) {
-  return apiFetch<string>(`/api/comments/${commentId}`, {
+export function deleteComment(postId: string, commentId: string) {
+  return apiFetch<string>(`/api/posts/id/${postId}/comment/${commentId}`, {
     method: "DELETE",
   });
 }
 
-export function toggleCommentReaction(commentId: string) {
-  return apiFetch<{ reacted: boolean; count: number }>(`/api/comments/${commentId}/react`, {
+export function toggleCommentReaction(postId: string, commentId: string) {
+  return apiFetch<{ reacted: boolean; count: number }>(`/api/posts/id/${postId}/comment/${commentId}/reaction`, {
     method: "POST",
   });
 }
@@ -297,7 +314,7 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${BASE_URL}/api/files/upload`, {
+  const response = await fetch(`${BASE_URL}/api/storage/upload`, {
     method: "POST",
     credentials: "include",
     body: formData,
@@ -318,7 +335,7 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
 // ============================================
 
 export function getRoomMessages(roomId: string) {
-  return apiFetch<ChatMessage[]>(`/api/chat/${roomId}/messages`);
+  return apiFetch<ChatMessage[]>(`/api/chat/${roomId}`);
 }
 
 export function sendMessage(roomId: string, content: string) {
@@ -329,8 +346,9 @@ export function sendMessage(roomId: string, content: string) {
 }
 
 export function startNewChat(userId: string) {
-  return apiFetch<{ room_id: string }>(`/api/chat/start/${userId}`, {
+  return apiFetch<{ room_id: string }>("/api/chat/new", {
     method: "POST",
+    body: JSON.stringify({ user_id: userId }),
   });
 }
 
@@ -339,8 +357,9 @@ export function startNewChat(userId: string) {
 // ============================================
 
 export function inviteToGroup(groupId: string, userId: string) {
-  return apiFetch<string>(`/api/groups/members/invite/${groupId}/${userId}`, {
+  return apiFetch<string>(`/api/groups/invite/${groupId}`, {
     method: "POST",
+    body: JSON.stringify({ user_id: userId }),
   });
 }
 
@@ -349,33 +368,34 @@ export function getGroupRequests(groupId: string) {
 }
 
 export function respondToGroupRequest(groupId: string, userId: string, accept: boolean) {
-  return apiFetch<string>(`/api/groups/members/requests/${groupId}/${userId}`, {
-    method: "PUT",
-    body: JSON.stringify({ accept }),
+  return apiFetch<string>(`/api/groups/members/respond/${groupId}`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, accept }),
   });
 }
 
 export function leaveGroup(groupId: string) {
-  return apiFetch<string>(`/api/groups/members/leave/${groupId}`, {
-    method: "DELETE",
+  return apiFetch<string>(`/api/groups/members/remove/${groupId}`, {
+    method: "POST",
   });
 }
 
 export function removeMember(groupId: string, userId: string) {
-  return apiFetch<string>(`/api/groups/members/${groupId}/${userId}`, {
-    method: "DELETE",
+  return apiFetch<string>(`/api/groups/members/remove/${groupId}`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
   });
 }
 
 export function updateGroup(groupId: string, input: { group_name?: string; description?: string; image?: string }) {
-  return apiFetch<Group>(`/api/groups/${groupId}`, {
+  return apiFetch<Group>(`/api/groups/update/${groupId}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export function deleteGroup(groupId: string) {
-  return apiFetch<string>(`/api/groups/${groupId}`, {
+  return apiFetch<string>(`/api/groups/delete/${groupId}`, {
     method: "DELETE",
   });
 }

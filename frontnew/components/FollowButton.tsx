@@ -2,8 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Button from "@/components/Button";
-import { followUser, unfollowUser, getFollowStatus } from "@/lib/api";
-import type { FollowStatus } from "@/lib/types";
+import { followUser, unfollowUser, getFollowing } from "@/lib/api";
 
 type FollowButtonProps = {
   userId: string;
@@ -13,29 +12,28 @@ type FollowButtonProps = {
 export default function FollowButton({ userId, currentUserId }: FollowButtonProps) {
   const queryClient = useQueryClient();
 
-  const { data: statusData, isLoading } = useQuery({
-    queryKey: ["follow-status", userId],
-    queryFn: () => getFollowStatus(userId),
+  // Check if current user is following this user by checking the following list
+  const { data: following, isLoading } = useQuery({
+    queryKey: ["following", currentUserId],
+    queryFn: () => getFollowing(currentUserId!),
     enabled: !!currentUserId && currentUserId !== userId,
   });
 
-  const status: FollowStatus = statusData?.status ?? "none";
+  const isFollowing = following?.some(f => f.user_id === userId) ?? false;
 
   const follow = useMutation({
     mutationFn: () => followUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["follow-status", userId] });
-      queryClient.invalidateQueries({ queryKey: ["followers"] });
-      queryClient.invalidateQueries({ queryKey: ["following"] });
+      queryClient.invalidateQueries({ queryKey: ["following", currentUserId] });
+      queryClient.invalidateQueries({ queryKey: ["followers", userId] });
     },
   });
 
   const unfollow = useMutation({
     mutationFn: () => unfollowUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["follow-status", userId] });
-      queryClient.invalidateQueries({ queryKey: ["followers"] });
-      queryClient.invalidateQueries({ queryKey: ["following"] });
+      queryClient.invalidateQueries({ queryKey: ["following", currentUserId] });
+      queryClient.invalidateQueries({ queryKey: ["followers", userId] });
     },
   });
 
@@ -47,7 +45,7 @@ export default function FollowButton({ userId, currentUserId }: FollowButtonProp
     return <Button variant="ghost" disabled>...</Button>;
   }
 
-  if (status === "following") {
+  if (isFollowing) {
     return (
       <Button
         variant="ghost"
@@ -56,19 +54,6 @@ export default function FollowButton({ userId, currentUserId }: FollowButtonProp
         className="follow-btn following"
       >
         Following
-      </Button>
-    );
-  }
-
-  if (status === "requested") {
-    return (
-      <Button
-        variant="ghost"
-        onClick={() => unfollow.mutate()}
-        disabled={unfollow.isPending}
-        className="follow-btn requested"
-      >
-        Requested
       </Button>
     );
   }

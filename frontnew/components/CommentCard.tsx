@@ -23,7 +23,7 @@ export default function CommentCard({ comment, postId, currentUserId }: CommentC
   const isOwner = currentUserId === comment.author_id;
 
   const updateComment = useMutation({
-    mutationFn: () => editComment(comment.comment_id, { content: editContent }),
+    mutationFn: () => editComment(postId, comment.comment_id, { content: editContent }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", postId] });
       setIsEditing(false);
@@ -31,7 +31,7 @@ export default function CommentCard({ comment, postId, currentUserId }: CommentC
   });
 
   const removeComment = useMutation({
-    mutationFn: () => deleteComment(comment.comment_id),
+    mutationFn: () => deleteComment(postId, comment.comment_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", postId] });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
