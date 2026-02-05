@@ -183,28 +183,28 @@ func (v *Validator) ValidateInput(value interface{}, rules []interface{}, key st
 }
 
 // NEW: validate against JSON body instead of form values.
-func Validate(r *http.Request, inputs map[string][]interface{}, req any) (bool, map[string][]string) {
+func Validate(r *http.Request, inputs map[string][]interface{}, req any) (bool, map[string]string) {
 
 	bodyBytes, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		return false, map[string][]string{"_json": {"bad request"}}
+		return false, map[string]string{"_json": "bad request"}
 	}
 
 	var body map[string]any
 
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
-		return false, map[string][]string{"_json": {"bad request"}}
+		return false, map[string]string{"_json": "bad request"}
 	}
 
 	defer r.Body.Close()
 
 	if err := json.Unmarshal(bodyBytes, req); err != nil {
-		return false, map[string][]string{"_json": {"bad request"}}
+		return false, map[string]string{"_json": "bad request"}
 	}
 
 	v := NewValidator()
-	errs := make(map[string][]string)
+	errs := make(map[string]string)
 	hold := make(map[string]interface{})
 
 	// Collect all referenced values into hold (for same: rules)
@@ -220,7 +220,7 @@ func Validate(r *http.Request, inputs map[string][]interface{}, req any) (bool, 
 		val, _ := getByPath(body, key) // nil if missing
 		fieldErrs := v.ValidateInput(val, rules, key, hold)
 		if len(fieldErrs) > 0 {
-			errs[key] = fieldErrs
+			errs[key] = fieldErrs[0]
 		}
 	}
 
