@@ -6,16 +6,25 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
-import { loginUser } from "@/lib/api";
+import { loginUser, ApiError } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const login = useMutation({
     mutationFn: loginUser,
     onSuccess: () => router.push("/feed"),
+    onError: (error) => {
+
+      setValidationErrors({});
+      
+      if (error instanceof ApiError && error.details && typeof error.details === 'object') {
+        setValidationErrors(error.details);
+      }
+    },
   });
 
   return (
@@ -28,19 +37,47 @@ export default function LoginPage() {
         type="email"
         placeholder="you@email.com"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        onChange={(event) => {
+          setEmail(event.target.value);
+          if (validationErrors.email) {
+            setValidationErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.email;
+              return newErrors;
+            });
+          }
+        }}
+        error={validationErrors.email}
       />
       <FormField
         label="Password"
         name="password"
         type="password"
         value={password}
-        onChange={(event) => setPassword(event.target.value)}
+        onChange={(event) => {
+          setPassword(event.target.value);
+          if (validationErrors.password) {
+            setValidationErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.password;
+              return newErrors;
+            });
+          }
+        }}
+        error={validationErrors.password}
       />
-      {login.isError ? <p style={{ color: "#b42318" }}>{login.error.message}</p> : null}
+      {login.isError ? (
+        login.error instanceof ApiError && typeof login.error.details === 'object' ? null : (
+          <p style={{ color: "#b42318" }}>
+            {login.error instanceof ApiError && typeof login.error.details === 'string'
+              ? login.error.details
+              : login.error.message}
+          </p>
+        )
+      ) : null}
       <Button
         onClick={() => login.mutate({ email, password })}
-        disabled={!email || !password || login.isPending}
+        disabled={login.isPending}
       >
         Sign in
       </Button>

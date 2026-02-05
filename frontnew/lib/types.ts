@@ -3,7 +3,7 @@ export type ApiEnvelope<T> = {
   error?: {
     code: string;
     message: string;
-    details?: unknown;
+    details?: string | Record<string, string>;
   };
   pagination?: {
     page: number;

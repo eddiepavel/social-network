@@ -149,6 +149,19 @@ button {
   border-radius: 12px;
   border: 1px solid var(--border);
   background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-field input[style*="borderColor: rgb(180, 35, 24)"],
+.form-field textarea[style*="borderColor: rgb(180, 35, 24)"] {
+  border-width: 2px;
 }
 
 .form-field textarea {

@@ -29,6 +29,18 @@ const BASE_URL =
 
 type ApiOptions = RequestInit & { raw?: boolean };
 
+export class ApiError extends Error {
+  code: string;
+  details?: string | Record<string, string>;
+
+  constructor(message: string, code: string, details?: string | Record<string, string>) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.details = details;
+  }
+}
+
 async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     credentials: "include",
@@ -49,7 +61,9 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const payload = (await response.json()) as ApiEnvelope<T>;
   if (!response.ok || payload.error) {
     const message = payload.error?.message || "Request failed.";
-    throw new Error(message);
+    const code = payload.error?.code || String(response.status);
+    const details = payload.error?.details;
+    throw new ApiError(message, code, details);
   }
 
   if (payload.data === undefined) {
