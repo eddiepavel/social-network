@@ -1,7 +1,11 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
+	"os"
+	"social-network/internal/utils"
+	"strconv"
 )
 
 // CORS middleware to allow frontend requests
@@ -10,15 +14,22 @@ func (m *MiddlewareChain) CorsMiddleware(next http.HandlerFunc) http.HandlerFunc
 
 		origin := r.Header.Get("Origin")
 
-		// Allow specific origins
-		allowedOrigins := map[string]bool{
-			"http://localhost:5173":            true,
-			"http://127.0.0.1:5173":            true,
-			"https://fipwnwbppb.a.pinggy.link": true,
+		allowedOrigin := os.Getenv("ALLOW_ORIGIN")
+
+		isProduction, err := strconv.ParseBool(os.Getenv("PRODUCTION"))
+
+		if err != nil {
+			utils.Internal(w, errors.New("internal server error"))
+			return
 		}
 
-		if allowedOrigins[origin] {
+		if !isProduction {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		if isProduction && allowedOrigin == origin {
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 
