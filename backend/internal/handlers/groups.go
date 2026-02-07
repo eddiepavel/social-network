@@ -880,20 +880,20 @@ func CreateGroupEvent(app *app.App) http.HandlerFunc {
 			GroupID: groupID,
 			UserID:  userID,
 		})
+
 		if err != nil || isMember.Status != "joined" {
 			utils.Forbidden(w)
 			return
 		}
 
-		var req models.CreateEventRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			utils.BadRequest(w, errors.New("invalid request body"))
-			return
-		}
-		defer r.Body.Close()
+		inputs := helpers.ValidateEventCreate.Build(r, app)
 
-		if req.Title == "" || req.Description == "" || req.Timestamp == "" {
-			utils.BadRequest(w, errors.New("title, description, and timestamp are required"))
+		var req models.CreateEventRequest
+
+		ok, validationErrors := utils.Validate(r, inputs, &req)
+
+		if !ok {
+			utils.Error(w, 422, "422", "validation error", validationErrors)
 			return
 		}
 

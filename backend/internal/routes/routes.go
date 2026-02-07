@@ -128,6 +128,7 @@ func (h *Handler) eventsRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /{eventId}/rsvp", handlers.RSVPToEvent(h.App))
+	mux.HandleFunc("POST /{groupId}/create", handlers.CreateGroupEvent(h.App))
 
 	return mux
 }

@@ -8,6 +8,7 @@ import (
 	"social-network/app"
 	contextkeys "social-network/internal/contextKeys"
 	"social-network/pkg/db/sqlite"
+	"time"
 )
 
 // ValidationRuleBuilder interface ensures all validators follow the same contract
@@ -315,6 +316,30 @@ func (fmv FirstMessageValidator) Build(r *http.Request, app *app.App) map[string
 	}
 }
 
+type CreateGroupEventValidator struct{}
+
+func (cgev CreateGroupEventValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"title":       {"required", "string"},
+		"description": {"required", "string"},
+		"timestamp": {"required", "string", func(v interface{}) error {
+			date := v.(string)
+
+			parsedTime, err := time.Parse(time.RFC3339, date)
+
+			if err != nil {
+				return errors.New("invalid date format, expected ISO 8601 (e.g., 2006-01-02T15:04:05Z)")
+			}
+
+			if parsedTime.Before(time.Now()) {
+				return errors.New("event date must be in the future")
+			}
+
+			return nil
+		}},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister             ValidationRuleBuilder = RegisterValidator{}
@@ -332,4 +357,5 @@ var (
 	ValidateUpdateComment        ValidationRuleBuilder = UpdateCommentValidator{}
 	ValidateMessage              ValidationRuleBuilder = MessageValidator{}
 	ValidateFirstMessage         ValidationRuleBuilder = FirstMessageValidator{}
+	ValidateEventCreate          ValidationRuleBuilder = CreateGroupEventValidator{}
 )
