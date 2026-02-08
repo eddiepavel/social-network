@@ -453,7 +453,7 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 			}
 
 			if errors.Is(err, sql.ErrNoRows) && p.Action == "remove" {
-				utils.Error(w, http.StatusConflict, "409", "invalid action or state", nil)
+				utils.Error(w, http.StatusConflict, "409", "invalid action or state", "invalid action or state")
 				return
 			}
 
@@ -476,7 +476,7 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		utils.Error(w, http.StatusConflict, "409", "invalid action or state", nil)
+		utils.Error(w, http.StatusConflict, "409", "invalid action or state", "invalid action or state")
 
 	}
 }

@@ -26,7 +26,7 @@ func (rv RegisterValidator) Build(r *http.Request, app *app.App) map[string][]in
 			_, err := sqlite.NewQuery(app.DB).Users.GetUserByEmail(r.Context(), email)
 
 			if !errors.Is(err, sql.ErrNoRows) {
-				return errors.New("username exists")
+				return errors.New("email already exists")
 			}
 			return nil
 		}},
@@ -203,7 +203,7 @@ type PostValidator struct{}
 
 func (pv PostValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
-		"content": {"required", "string", "min:10", "max:255"},
+		"content": {"required", "string", "min:1", "max:500"},
 		"visibility": {"required", "string", func(v interface{}) error {
 			visibility := v.(string)
 			if visibility != "public" && visibility != "private" && visibility != "semi-private" {
@@ -242,7 +242,7 @@ type UpdatePostValidator struct{}
 
 func (upv UpdatePostValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
-		"content":  {"required", "string", "min:10", "max:255"},
+		"content":  {"required", "string", "min:1", "max:500"},
 		"image_id": {"sometimes", "string"},
 	}
 }

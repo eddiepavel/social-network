@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
-import { updateGroup, deleteGroup } from "@/lib/api";
+import { updateGroup, deleteGroup, ApiError } from "@/lib/api";
 import type { Group } from "@/lib/types";
 
 type GroupSettingsProps = {
@@ -19,6 +19,7 @@ export default function GroupSettings({ group, isOpen, onClose }: GroupSettingsP
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     group_name: group.group_name,
     description: group.description,
@@ -27,9 +28,16 @@ export default function GroupSettings({ group, isOpen, onClose }: GroupSettingsP
   const update = useMutation({
     mutationFn: () => updateGroup(group.group_id, form),
     onSuccess: () => {
+      setValidationErrors({});
       queryClient.invalidateQueries({ queryKey: ["group", group.group_id] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
       onClose();
+    },
+    onError: (error) => {
+      setValidationErrors({});
+      if (error instanceof ApiError && error.details && typeof error.details === 'object') {
+        setValidationErrors(error.details);
+      }
     },
   });
 
@@ -71,15 +79,32 @@ export default function GroupSettings({ group, isOpen, onClose }: GroupSettingsP
           label="Group Name"
           name="group_name"
           value={form.group_name}
-          onChange={(e) => setForm((prev) => ({ ...prev, group_name: e.target.value }))}
+          onChange={(e) => {
+            setForm((prev) => ({ ...prev, group_name: e.target.value }));
+            if (validationErrors.group_name) setValidationErrors(prev => { const n = {...prev}; delete n.group_name; return n; });
+          }}
+          error={validationErrors.group_name}
         />
         <FormField
           label="Description"
           name="description"
           as="textarea"
           value={form.description}
-          onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+          onChange={(e) => {
+            setForm((prev) => ({ ...prev, description: e.target.value }));
+            if (validationErrors.description) setValidationErrors(prev => { const n = {...prev}; delete n.description; return n; });
+          }}
+          error={validationErrors.description}
         />
+        {update.isError ? (
+          update.error instanceof ApiError && typeof update.error.details === 'object' ? null : (
+            <p style={{ color: "#b42318" }}>
+              {update.error instanceof ApiError && typeof update.error.details === 'string'
+                ? update.error.details
+                : update.error.message}
+            </p>
+          )
+        ) : null}
         <div className="modal-actions">
           <Button
             onClick={() => update.mutate()}

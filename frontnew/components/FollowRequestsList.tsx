@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { getFollowRequests, respondToFollowRequest } from "@/lib/api";
+import { getFollowRequests, respondToFollowRequest, ApiError } from "@/lib/api";
 import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
@@ -23,6 +23,7 @@ export default function FollowRequestsList() {
       queryClient.invalidateQueries({ queryKey: ["follow-requests"] });
       queryClient.invalidateQueries({ queryKey: ["followers"] });
     },
+    onError: () => {},
   });
 
   if (isLoading) return <p>Loading requests...</p>;
@@ -67,6 +68,13 @@ export default function FollowRequestsList() {
             >
               Decline
             </Button>
+            {respond.isError ? (
+              <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+                {respond.error instanceof ApiError && typeof respond.error.details === 'string'
+                  ? respond.error.details
+                  : respond.error.message}
+              </p>
+            ) : null}
           </div>
         </div>
       ))}

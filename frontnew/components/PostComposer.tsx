@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import ImageUpload from "@/components/ImageUpload";
-import { createPost, uploadFile } from "@/lib/api";
+import { createPost, uploadFile, ApiError } from "@/lib/api";
 
 export default function PostComposer() {
   const [content, setContent] = useState("");
@@ -13,6 +13,7 @@ export default function PostComposer() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
 
   const create = useMutation({
@@ -23,7 +24,14 @@ export default function PostComposer() {
       setContent("");
       setImageFile(null);
       setImagePreview(null);
+      setValidationErrors({});
       queryClient.invalidateQueries({ queryKey: ["feed"] });
+    },
+    onError: (error) => {
+      setValidationErrors({});
+      if (error instanceof ApiError && error.details && typeof error.details === 'object') {
+        setValidationErrors(error.details);
+      }
     },
   });
 
@@ -69,7 +77,11 @@ export default function PostComposer() {
         as="textarea"
         placeholder="Start a conversation, drop a quick update, or share a thought."
         value={content}
-        onChange={(event) => setContent(event.target.value)}
+        onChange={(event) => {
+          setContent(event.target.value);
+          if (validationErrors.content) setValidationErrors(prev => { const n = {...prev}; delete n.content; return n; });
+        }}
+        error={validationErrors.content}
       />
 
       {imagePreview && (
@@ -117,7 +129,13 @@ export default function PostComposer() {
       </div>
 
       {create.isError ? (
-        <p style={{ color: "#b42318" }}>{create.error.message}</p>
+        create.error instanceof ApiError && typeof create.error.details === 'object' ? null : (
+          <p style={{ color: "#b42318" }}>
+            {create.error instanceof ApiError && typeof create.error.details === 'string'
+              ? create.error.details
+              : create.error.message}
+          </p>
+        )
       ) : null}
     </div>
   );

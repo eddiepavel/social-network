@@ -5,7 +5,7 @@ import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
-import { getGroupRequests, respondToGroupRequest } from "@/lib/api";
+import { getGroupRequests, respondToGroupRequest, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 type GroupRequestsListProps = {
@@ -28,6 +28,7 @@ export default function GroupRequestsList({ groupId }: GroupRequestsListProps) {
       queryClient.invalidateQueries({ queryKey: ["group-requests", groupId] });
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
     },
+    onError: () => {},
   });
 
   if (isLoading) return <p>Loading requests...</p>;
@@ -72,6 +73,13 @@ export default function GroupRequestsList({ groupId }: GroupRequestsListProps) {
             >
               Decline
             </Button>
+            {respond.isError ? (
+              <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+                {respond.error instanceof ApiError && typeof respond.error.details === 'string'
+                  ? respond.error.details
+                  : respond.error.message}
+              </p>
+            ) : null}
           </div>
         </div>
       ))}

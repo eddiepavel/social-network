@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
-import { editComment, deleteComment } from "@/lib/api";
+import { editComment, deleteComment, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { Comment } from "@/lib/types";
 
@@ -28,6 +28,7 @@ export default function CommentCard({ comment, postId, currentUserId }: CommentC
       queryClient.invalidateQueries({ queryKey: ["comments", postId] });
       setIsEditing(false);
     },
+    onError: () => {},
   });
 
   const removeComment = useMutation({
@@ -36,6 +37,7 @@ export default function CommentCard({ comment, postId, currentUserId }: CommentC
       queryClient.invalidateQueries({ queryKey: ["comments", postId] });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
     },
+    onError: () => {},
   });
 
   const authorName = comment.author_first_name && comment.author_last_name
@@ -77,6 +79,13 @@ export default function CommentCard({ comment, postId, currentUserId }: CommentC
                 Cancel
               </Button>
             </div>
+            {updateComment.isError ? (
+              <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+                {updateComment.error instanceof ApiError && typeof updateComment.error.details === 'string'
+                  ? updateComment.error.details
+                  : updateComment.error.message}
+              </p>
+            ) : null}
           </div>
         ) : (
           <>
@@ -96,6 +105,13 @@ export default function CommentCard({ comment, postId, currentUserId }: CommentC
                 >
                   Delete
                 </button>
+                {removeComment.isError ? (
+                  <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+                    {removeComment.error instanceof ApiError && typeof removeComment.error.details === 'string'
+                      ? removeComment.error.details
+                      : removeComment.error.message}
+                  </p>
+                ) : null}
               </div>
             )}
           </>

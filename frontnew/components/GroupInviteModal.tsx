@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import Avatar from "@/components/Avatar";
-import { searchUsers, inviteToGroup } from "@/lib/api";
+import { searchUsers, inviteToGroup, ApiError } from "@/lib/api";
 import type { SearchUser } from "@/lib/types";
 
 type GroupInviteModalProps = {
@@ -27,11 +27,17 @@ export default function GroupInviteModal({
   const [isSearching, setIsSearching] = useState(false);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
+  const [errorMsg, setErrorMsg] = useState("");
+
   const invite = useMutation({
     mutationFn: (userId: string) => inviteToGroup(groupId, userId),
     onSuccess: (_, userId) => {
+      setErrorMsg("");
       setInvitedIds((prev) => new Set(prev).add(userId));
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
+    },
+    onError: (error) => {
+      setErrorMsg(error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message);
     },
   });
 
@@ -71,6 +77,7 @@ export default function GroupInviteModal({
         </Button>
       </div>
 
+      {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 4px" }}>{errorMsg}</p>}
       <div className="group-invite-results">
         {isSearching ? (
           <p>Searching...</p>

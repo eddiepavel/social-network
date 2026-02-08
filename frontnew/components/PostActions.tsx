@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Dropdown from "@/components/Dropdown";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
-import { editPost, deletePost } from "@/lib/api";
+import { editPost, deletePost, ApiError } from "@/lib/api";
 
 type PostActionsProps = {
   postId: string;
@@ -30,6 +30,7 @@ export default function PostActions({ postId, content, visibility, isOwner }: Po
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
       setIsEditOpen(false);
     },
+    onError: () => {},
   });
 
   const remove = useMutation({
@@ -39,6 +40,7 @@ export default function PostActions({ postId, content, visibility, isOwner }: Po
       setIsDeleteOpen(false);
       router.push("/feed");
     },
+    onError: () => {},
   });
 
   if (!isOwner) return null;
@@ -76,6 +78,13 @@ export default function PostActions({ postId, content, visibility, isOwner }: Po
               <option value="private">Private</option>
             </select>
           </label>
+          {update.isError ? (
+            <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+              {update.error instanceof ApiError && typeof update.error.details === 'string'
+                ? update.error.details
+                : update.error.message}
+            </p>
+          ) : null}
           <div className="modal-actions">
             <Button
               onClick={() => update.mutate()}
@@ -92,6 +101,13 @@ export default function PostActions({ postId, content, visibility, isOwner }: Po
 
       <Modal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} title="Delete Post">
         <p>Are you sure you want to delete this post? This action cannot be undone.</p>
+        {remove.isError ? (
+          <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+            {remove.error instanceof ApiError && typeof remove.error.details === 'string'
+              ? remove.error.details
+              : remove.error.message}
+          </p>
+        ) : null}
         <div className="modal-actions">
           <Button
             onClick={() => remove.mutate()}

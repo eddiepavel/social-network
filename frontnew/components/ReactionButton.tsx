@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toggleReaction } from "@/lib/api";
+import { toggleReaction, ApiError } from "@/lib/api";
 
 type ReactionButtonProps = {
   postId: string;
@@ -22,6 +22,7 @@ export default function ReactionButton({
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
     },
+    onError: () => {},
   });
 
   return (

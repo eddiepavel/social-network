@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import Avatar from "@/components/Avatar";
-import { searchUsers, startNewChat } from "@/lib/api";
+import { searchUsers, startNewChat, ApiError } from "@/lib/api";
 import type { SearchUser } from "@/lib/types";
 
 type NewChatModalProps = {
@@ -22,12 +22,18 @@ export default function NewChatModal({ isOpen, onClose, currentUserId }: NewChat
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  const [errorMsg, setErrorMsg] = useState("");
+
   const startChat = useMutation({
     mutationFn: (userId: string) => startNewChat(userId),
     onSuccess: (data) => {
+      setErrorMsg("");
       queryClient.invalidateQueries({ queryKey: ["chat-list"] });
       onClose();
       router.push(`/chat/${data.room_id}`);
+    },
+    onError: (error) => {
+      setErrorMsg(error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message);
     },
   });
 
@@ -60,6 +66,7 @@ export default function NewChatModal({ isOpen, onClose, currentUserId }: NewChat
         </Button>
       </div>
 
+      {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 4px" }}>{errorMsg}</p>}
       <div className="new-chat-results">
         {isSearching ? (
           <p>Searching...</p>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import CommentCard from "@/components/CommentCard";
 import Button from "@/components/Button";
-import { getComments, createComment } from "@/lib/api";
+import { getComments, createComment, ApiError } from "@/lib/api";
 
 type CommentSectionProps = {
   postId: string;
@@ -37,6 +37,7 @@ export default function CommentSection({
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
       setNewComment("");
     },
+    onError: () => {},
   });
 
   if (!isExpanded) {
@@ -68,6 +69,13 @@ export default function CommentSection({
           >
             Post
           </Button>
+          {addComment.isError ? (
+            <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
+              {addComment.error instanceof ApiError && typeof addComment.error.details === 'string'
+                ? addComment.error.details
+                : addComment.error.message}
+            </p>
+          ) : null}
         </div>
       )}
 

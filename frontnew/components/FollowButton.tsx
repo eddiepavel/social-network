@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Button from "@/components/Button";
-import { followUser, unfollowUser, getFollowing } from "@/lib/api";
+import { followUser, unfollowUser, getFollowing, ApiError } from "@/lib/api";
 
 type FollowButtonProps = {
   userId: string;
@@ -21,19 +22,29 @@ export default function FollowButton({ userId, currentUserId }: FollowButtonProp
 
   const isFollowing = following?.some(f => f.user_id === userId) ?? false;
 
+  const [errorMsg, setErrorMsg] = useState("");
+
   const follow = useMutation({
     mutationFn: () => followUser(userId),
     onSuccess: () => {
+      setErrorMsg("");
       queryClient.invalidateQueries({ queryKey: ["following", currentUserId] });
       queryClient.invalidateQueries({ queryKey: ["followers", userId] });
+    },
+    onError: (error) => {
+      setErrorMsg(error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message);
     },
   });
 
   const unfollow = useMutation({
     mutationFn: () => unfollowUser(userId),
     onSuccess: () => {
+      setErrorMsg("");
       queryClient.invalidateQueries({ queryKey: ["following", currentUserId] });
       queryClient.invalidateQueries({ queryKey: ["followers", userId] });
+    },
+    onError: (error) => {
+      setErrorMsg(error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message);
     },
   });
 
@@ -59,12 +70,15 @@ export default function FollowButton({ userId, currentUserId }: FollowButtonProp
   }
 
   return (
-    <Button
-      onClick={() => follow.mutate()}
-      disabled={follow.isPending}
-      className="follow-btn"
-    >
-      Follow
-    </Button>
+    <div>
+      <Button
+        onClick={() => follow.mutate()}
+        disabled={follow.isPending}
+        className="follow-btn"
+      >
+        Follow
+      </Button>
+      {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem" }}>{errorMsg}</p>}
+    </div>
   );
 }

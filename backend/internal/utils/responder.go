@@ -62,11 +62,11 @@ func Unauthorized(w http.ResponseWriter, reason string) {
 }
 
 func Forbidden(w http.ResponseWriter) {
-	Error(w, http.StatusForbidden, "403", "You don't have access to this resource.", nil)
+	Error(w, http.StatusForbidden, "403", "You don't have access to this resource.", "You don't have access to this resource.")
 }
 
 func NotFound(w http.ResponseWriter) {
-	Error(w, http.StatusNotFound, "404", "Resource not found.", nil)
+	Error(w, http.StatusNotFound, "404", "Resource not found.", "Resource not found.")
 }
 
 func Internal(w http.ResponseWriter, err error) {

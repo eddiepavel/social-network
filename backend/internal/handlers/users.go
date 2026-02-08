@@ -291,7 +291,7 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 
 		searchParams := strings.TrimSpace(r.URL.Query().Get("name"))
 
-		var users []models.UserResponse
+		users := []models.UserResponse{}
 
 		searchUsers, err := sqlite.NewQuery(app.DB).Users.QueryUsers(r.Context(), db_users.QueryUsersParams{
 			FollowerID: userId,

@@ -13,7 +13,7 @@ import FollowersList from "@/components/FollowersList";
 import FollowRequestsList from "@/components/FollowRequestsList";
 import Tabs from "@/components/Tabs";
 import ImageUpload from "@/components/ImageUpload";
-import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing } from "@/lib/api";
+import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing, ApiError } from "@/lib/api";
 import useSession from "@/hooks/useSession";
 
 export default function ProfilePage() {
@@ -44,6 +44,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("followers");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -66,6 +67,12 @@ export default function ProfilePage() {
   const saveProfile = useMutation({
     mutationFn: updateProfile,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile", userId] }),
+    onError: (error) => {
+      setValidationErrors({});
+      if (error instanceof ApiError && error.details && typeof error.details === 'object') {
+        setValidationErrors(error.details);
+      }
+    },
   });
 
   const updatePrivacyMutation = useMutation({
@@ -171,10 +178,10 @@ export default function ProfilePage() {
               compact
             />
           </div>
-          <FormField label="First name" name="first_name" value={form.first_name} onChange={updateField("first_name")} />
-          <FormField label="Last name" name="last_name" value={form.last_name} onChange={updateField("last_name")} />
-          <FormField label="Nickname" name="nickname" value={form.nickname} onChange={updateField("nickname")} />
-          <FormField label="About" name="about_me" as="textarea" value={form.about_me} onChange={updateField("about_me")} />
+          <FormField label="First name" name="first_name" value={form.first_name} onChange={(e) => { updateField("first_name")(e); if (validationErrors.first_name) setValidationErrors(prev => { const n = {...prev}; delete n.first_name; return n; }); }} error={validationErrors.first_name} />
+          <FormField label="Last name" name="last_name" value={form.last_name} onChange={(e) => { updateField("last_name")(e); if (validationErrors.last_name) setValidationErrors(prev => { const n = {...prev}; delete n.last_name; return n; }); }} error={validationErrors.last_name} />
+          <FormField label="Nickname" name="nickname" value={form.nickname} onChange={(e) => { updateField("nickname")(e); if (validationErrors.nickname) setValidationErrors(prev => { const n = {...prev}; delete n.nickname; return n; }); }} error={validationErrors.nickname} />
+          <FormField label="About" name="about_me" as="textarea" value={form.about_me} onChange={(e) => { updateField("about_me")(e); if (validationErrors.about_me) setValidationErrors(prev => { const n = {...prev}; delete n.about_me; return n; }); }} error={validationErrors.about_me} />
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Button
               onClick={handleSaveProfile}
@@ -191,7 +198,13 @@ export default function ProfilePage() {
             </Button>
           </div>
           {saveProfile.isError ? (
-            <p style={{ color: "#b42318" }}>{saveProfile.error.message}</p>
+            saveProfile.error instanceof ApiError && typeof saveProfile.error.details === 'object' ? null : (
+              <p style={{ color: "#b42318" }}>
+                {saveProfile.error instanceof ApiError && typeof saveProfile.error.details === 'string'
+                  ? saveProfile.error.details
+                  : saveProfile.error.message}
+              </p>
+            )
           ) : null}
         </section>
       ) : null}

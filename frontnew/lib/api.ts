@@ -154,9 +154,10 @@ export function updatePrivacy(isPublic: boolean) {
   });
 }
 
-export function searchUsers(name: string) {
+export async function searchUsers(name: string) {
   const params = new URLSearchParams({ name });
-  return apiFetch<SearchUser[]>(`/api/users/search?${params.toString()}`);
+  const result = await apiFetch<SearchUser[]>(`/api/users/search?${params.toString()}`);
+  return result ?? [];
 }
 
 export function getGroups() {
@@ -328,14 +329,14 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
     body: formData,
   });
 
-  const payload = (await response.json()) as ApiEnvelope<{ file_id: string; url: string }>;
+  const payload = (await response.json()) as ApiEnvelope<{ uuid: string; url: string }>;
   if (!response.ok || payload.error) {
     throw new Error(payload.error?.message || "Upload failed");
   }
   if (!payload.data) {
     throw new Error("Unexpected empty response");
   }
-  return payload.data;
+  return { file_id: payload.data.uuid, url: payload.data.url };
 }
 
 // ============================================

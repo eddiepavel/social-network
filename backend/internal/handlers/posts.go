@@ -790,18 +790,18 @@ func CreateComment(app *app.App) http.HandlerFunc {
 				utils.BadRequest(w, errors.New("invalid parent comment ID format"))
 				return
 			}
-		}
 
-		parentComment, err := sqlite.NewQuery(app.DB).Posts.CheckCommentExists(r.Context(), parentCommentID)
-		if err != nil {
-			app.Logger.Error("failed to check parent comment", "error", err.Error())
-			utils.Internal(w, errors.New("internal server error"))
-			return
-		}
+			parentComment, err := sqlite.NewQuery(app.DB).Posts.CheckCommentExists(r.Context(), parentCommentID)
+			if err != nil {
+				app.Logger.Error("failed to check parent comment", "error", err.Error())
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
 
-		if parentComment == 0 {
-			utils.BadRequest(w, errors.New("parent comment does not exist"))
-			return
+			if parentComment == 0 {
+				utils.BadRequest(w, errors.New("parent comment does not exist"))
+				return
+			}
 		}
 
 		// Generate new comment ID

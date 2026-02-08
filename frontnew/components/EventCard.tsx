@@ -1,7 +1,7 @@
 import { formatDate } from "@/lib/utils";
 import type { GroupEvent } from "@/lib/types";
 import Button from "@/components/Button";
-import { rsvpToEvent } from "@/lib/api";
+import { rsvpToEvent, ApiError } from "@/lib/api";
 import { useState } from "react";
 
 type EventCardProps = {
@@ -14,9 +14,11 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
   const [goingCount, setGoingCount] = useState(event.going_count);
   const [notGoingCount, setNotGoingCount] = useState(event.not_going_count);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleRsvp = async (status: "going" | "not going") => {
     setIsLoading(true);
+    setErrorMsg("");
     try {
       await rsvpToEvent(event.event_id, status);
 
@@ -30,7 +32,11 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
       setCurrentRsvp(status);
       onRsvpUpdate?.(event.event_id, status);
     } catch (error) {
-      console.error("Failed to RSVP:", error);
+      if (error instanceof ApiError && typeof error.details === 'string') {
+        setErrorMsg(error.details);
+      } else if (error instanceof Error) {
+        setErrorMsg(error.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -56,6 +62,7 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
         </span>
       </div>
 
+      {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem" }}>{errorMsg}</p>}
       <div className="event-actions">
         <Button
           variant={currentRsvp === "going" ? "solid" : "ghost"}

@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import MessageBubble from "@/components/MessageBubble";
 import EmojiPicker from "@/components/EmojiPicker";
 import Button from "@/components/Button";
-import { getRoomMessages, sendMessage } from "@/lib/api";
+import { getRoomMessages, sendMessage, ApiError } from "@/lib/api";
 
 type ChatRoomProps = {
   roomId: string;
@@ -34,6 +34,7 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
       queryClient.invalidateQueries({ queryKey: ["chat-messages", roomId] });
       queryClient.invalidateQueries({ queryKey: ["chat-list"] });
     },
+    onError: () => {},
   });
 
   const scrollToBottom = () => {
@@ -76,6 +77,13 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
         <div ref={messagesEndRef} />
       </div>
 
+      {send.isError ? (
+        <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 12px" }}>
+          {send.error instanceof ApiError && typeof send.error.details === 'string'
+            ? send.error.details
+            : send.error.message}
+        </p>
+      ) : null}
       <form className="chat-input-form" onSubmit={handleSubmit}>
         <EmojiPicker onSelect={handleEmojiSelect} />
         <input
