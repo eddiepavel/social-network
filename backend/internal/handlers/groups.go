@@ -365,7 +365,7 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 				return
 			}
 			// Create notification for group invitation
-			_ = helpers.CreateNotification(app.DB, r.Context(), users[i], "group_invitation", userId, groupID, nil)
+			_ = helpers.CreateNotification(app, users[i], "group_invitation", userId, groupID, nil)
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -957,7 +957,7 @@ func CreateGroupEvent(app *app.App) http.HandlerFunc {
 		if err == nil {
 			for _, memberID := range members {
 				if !bytes.Equal(memberID, userID) {
-					_ = helpers.CreateNotification(app.DB, r.Context(), memberID, "group_event", userID, groupID, eventID)
+					_ = helpers.CreateNotification(app, memberID, "group_event", userID, groupID, event.EventID)
 				}
 			}
 		}

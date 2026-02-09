@@ -195,6 +195,9 @@ DELETE FROM reactions WHERE author_id = ? AND target_type = ? AND target_id = ?;
 -- name: CheckCommentExists :one
 SELECT EXISTS(SELECT 1 FROM comments WHERE comment_id = ?);
 
+-- name: GetCommentById :one
+SELECT * FROM comments WHERE comment_id = ? LIMIT 1;
+
 -- name: CreateGroupPost :one
 INSERT INTO posts (post_id, author_id, content, visibility, image_id, group_id)
 VALUES (?, ?, ?, 'group', ?, ?)

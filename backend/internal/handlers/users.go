@@ -295,7 +295,9 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 		users := []models.UserResponse{}
 
 		searchUsers, err := sqlite.NewQuery(app.DB).Users.QueryUsers(r.Context(), db_users.QueryUsersParams{
+			Column1: sql.NullString{Valid: true, String: searchParams},
 			Column2: sql.NullString{Valid: true, String: searchParams},
+			Column3: sql.NullString{Valid: true, String: searchParams},
 		})
 
 		if err != nil {
