@@ -851,7 +851,7 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			// This is a reply to a comment - notify the comment author
 			parentCommentData, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), parentCommentID)
 			if err == nil && string(currentUserID) != string(parentCommentData.AuthorID) {
-				err = helpers.CreateNotification(app, parentCommentData.AuthorID, constants.NotificationCommentReply, currentUserID, nil, nil)
+				err = helpers.CreateNotification(app, parentCommentData.AuthorID, constants.NotificationCommentReply, currentUserID, nil, nil, nil)
 				if err != nil {
 					app.Logger.Error("failed to create comment reply notification", "err", err)
 					// Don't fail the request if notification fails
@@ -859,7 +859,7 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			}
 		} else if string(currentUserID) != string(postBasicInfo.AuthorID) {
 			// This is a comment on a post - notify the post author (if not commenting on own post)
-			err = helpers.CreateNotification(app, postBasicInfo.AuthorID, constants.NotificationPostComment, currentUserID, nil, nil)
+			err = helpers.CreateNotification(app, postBasicInfo.AuthorID, constants.NotificationPostComment, currentUserID, nil, nil, nil)
 			if err != nil {
 				app.Logger.Error("failed to create post comment notification", "err", err)
 				// Don't fail the request if notification fails
@@ -1174,7 +1174,7 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 
 			// Don't notify if reacting to own content
 			if len(notifReceiver) > 0 && string(currentUserID) != string(notifReceiver) {
-				err = helpers.CreateNotification(app, notifReceiver, notifType, currentUserID, nil, nil)
+				err = helpers.CreateNotification(app, notifReceiver, notifType, currentUserID, nil, nil, nil)
 				if err != nil {
 					app.Logger.Error("failed to create reaction notification", "err", err, "type", notifType)
 					// Don't fail the request if notification fails

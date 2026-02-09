@@ -14,7 +14,7 @@ import (
 )
 
 // CreateNotification creates a notification
-func CreateNotification(app *app.App, receiverID []byte, notifType constants.NotificationType, fromID []byte, groupID []byte, eventID []byte) error {
+func CreateNotification(app *app.App, receiverID []byte, notifType constants.NotificationType, fromID []byte, groupID []byte, eventID []byte, tx *sql.Tx) error {
 	// Validate notification type
 	if !notifType.IsValid() {
 		app.Logger.Error("invalid notification type", "type", notifType)
@@ -36,7 +36,17 @@ func CreateNotification(app *app.App, receiverID []byte, notifType constants.Not
 	}
 
 	// Create notification using background context
+	if tx != nil {
+		_, err := sqlite.NewQuery(app.DB).Notifications.WithTx(tx).CreateNotification(context.Background(), params)
+		if err != nil {
+			app.Logger.Error("failed to create notification", "err", err, "type", notifType)
+			return err
+		}
+		return nil
+	}
+
 	_, err := sqlite.NewQuery(app.DB).Notifications.CreateNotification(context.Background(), params)
+
 	if err != nil {
 		app.Logger.Error("failed to create notification", "err", err, "type", notifType)
 		return err
