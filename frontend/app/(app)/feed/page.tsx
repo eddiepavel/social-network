@@ -34,21 +34,6 @@ export default function FeedPage() {
           <PostCard key={post.post_id} post={post} currentUserId={session?.user_id} />
         ))}
       </div>
-      <aside className="grid">
-        <div className="surface card">
-          <h3>Privacy snapshot</h3>
-          <p style={{ color: "var(--muted)" }}>
-            Posts can be public, semi-private, or fully private. Adjust per post to stay
-            intentional.
-          </p>
-        </div>
-        <div className="surface card">
-          <h3>Make it a ritual</h3>
-          <p style={{ color: "var(--muted)" }}>
-            Try a weekly update, a standing question, or a highlight reel from your week.
-          </p>
-        </div>
-      </aside>
     </div>
   );
 }
