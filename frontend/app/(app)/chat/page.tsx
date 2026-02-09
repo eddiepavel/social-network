@@ -18,7 +18,7 @@ export default function ChatPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["chat-list"],
     queryFn: getChatList,
-    refetchInterval: 5000,
+    refetchInterval: 1000000,
   });
 
   return (

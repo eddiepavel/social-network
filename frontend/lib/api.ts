@@ -366,10 +366,10 @@ export function startNewChat(userId: string, content: string = "👋") {
 // GROUPS MANAGEMENT API
 // ============================================
 
-export function inviteToGroup(groupId: string, userId: string) {
+export function inviteToGroup(groupId: string, userId: string[]) {
   return apiFetch<string>(`/api/groups/invite/${groupId}`, {
     method: "POST",
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ users: userId }),
   });
 }
 

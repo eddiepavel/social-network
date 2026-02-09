@@ -28,12 +28,18 @@ export default function GroupInviteModal({
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
   const [errorMsg, setErrorMsg] = useState("");
+  const [success, setSuccess] = useState<any>("")
 
   const invite = useMutation({
-    mutationFn: (userId: string) => inviteToGroup(groupId, userId),
-    onSuccess: (_, userId) => {
+    mutationFn: () => inviteToGroup(groupId, Array.from(invitedIds)),
+    onSuccess: (data: any) => {
       setErrorMsg("");
-      setInvitedIds((prev) => new Set(prev).add(userId));
+      setSuccess(data.message)
+      setSearchResults([])
+      setSearchQuery("")
+      setTimeout(() => {
+        setSuccess("")
+      }, 3000)
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
     },
     onError: (error) => {
@@ -61,6 +67,18 @@ export default function GroupInviteModal({
     onClose();
   };
 
+  const appendUsers = (userId: string) => {
+    setInvitedIds((prev) => new Set(prev).add(userId));
+  }
+
+  const removeUser = (userId: string) => {
+    setInvitedIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(userId);
+      return newSet;
+    });
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Invite to Group">
       <div className="group-invite-search">
@@ -75,9 +93,16 @@ export default function GroupInviteModal({
         <Button onClick={handleSearch} disabled={isSearching}>
           Search
         </Button>
+        {invitedIds.size > 0 && (<Button
+          variant={invite.isPending ? "ghost" : "solid"}
+          onClick={() => invite.mutate()}
+          disabled={invite.isPending}
+        >Invite all </Button>)}
+
       </div>
 
       {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 4px" }}>{errorMsg}</p>}
+      {success && <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 4px" }}>{success}</p>}
       <div className="group-invite-results">
         {isSearching ? (
           <p>Searching...</p>
@@ -100,13 +125,15 @@ export default function GroupInviteModal({
                     <span className="group-invite-user-nickname">@{user.nickname}</span>
                   )}
                 </div>
-                <Button
-                  variant={isInvited ? "ghost" : "solid"}
-                  onClick={() => invite.mutate(user.user_id)}
-                  disabled={invite.isPending || isInvited}
-                >
-                  {isInvited ? "Invited" : "Invite"}
-                </Button>
+                {isInvited ? <Button onClick={() => removeUser(user.user_id)}>Remove</Button> :
+                  <Button
+                    variant={isInvited ? "ghost" : "solid"}
+                    onClick={() => appendUsers(user.user_id)}
+                    disabled={invite.isPending || isInvited}
+                  >
+                    Invite
+                  </Button>
+                }
               </div>
             );
           })
