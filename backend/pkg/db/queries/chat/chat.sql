@@ -97,4 +97,5 @@ WHERE cr.is_group = 0
   AND cp1.user_id != cp2.user_id  -- Ensure different users
 LIMIT 1;
 
-
+-- name: GetRoomParticipants :many
+SELECT user_id FROM chat_participants WHERE room_id = ?;

@@ -509,7 +509,7 @@ export class ChatWebSocket {
       return;
     }
 
-    this.ws = new WebSocket(`${WS_BASE_URL}/ws/chat`);
+    this.ws = new WebSocket(`${WS_BASE_URL}/ws/connect`);
 
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
@@ -520,6 +520,18 @@ export class ChatWebSocket {
       try {
         const message: WSMessage = JSON.parse(event.data);
         switch (message.type) {
+          case "private_message":
+            // Parse private message payload
+            if (message.payload) {
+              const msgData = typeof message.payload === 'string'
+                ? JSON.parse(message.payload)
+                : message.payload;
+              this.callbacks.onMessage?.({
+                type: "private_message",
+                data: msgData,
+              });
+            }
+            break;
           case "message":
             this.callbacks.onMessage?.(message);
             break;
@@ -567,14 +579,6 @@ export class ChatWebSocket {
     this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
     this.ws?.close();
     this.ws = null;
-  }
-
-  subscribe(roomId: string) {
-    this.send({ type: "subscribe", room_id: roomId });
-  }
-
-  unsubscribe(roomId: string) {
-    this.send({ type: "unsubscribe", room_id: roomId });
   }
 
   sendMessage(roomId: string, content: string) {

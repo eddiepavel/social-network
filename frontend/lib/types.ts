@@ -197,7 +197,7 @@ export type GroupJoinRequest = {
 };
 
 // WebSocket message types
-export type WSMessageType = "message" | "typing" | "read" | "subscribe" | "unsubscribe";
+export type WSMessageType = "message" | "typing" | "read" | "private_message" | "notification";
 
 export type WSMessage = {
   type: WSMessageType;
@@ -206,6 +206,7 @@ export type WSMessage = {
   sender_id?: string;
   timestamp?: string;
   data?: Record<string, unknown>;
+  payload?: any;
 };
 
 // Group post creation request

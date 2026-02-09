@@ -173,6 +173,33 @@ func (q *Queries) GetRoomMessagesCount(ctx context.Context, targetID []byte) (in
 	return count, err
 }
 
+const getRoomParticipants = `-- name: GetRoomParticipants :many
+SELECT user_id FROM chat_participants WHERE room_id = ?
+`
+
+func (q *Queries) GetRoomParticipants(ctx context.Context, roomID []byte) ([][]byte, error) {
+	rows, err := q.db.QueryContext(ctx, getRoomParticipants, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items [][]byte
+	for rows.Next() {
+		var user_id []byte
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserChatList = `-- name: GetUserChatList :many
 SELECT
     cr.room_id,

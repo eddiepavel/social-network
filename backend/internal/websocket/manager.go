@@ -275,3 +275,9 @@ func checkOrigin(r *http.Request) bool {
 
 	return false
 }
+
+// GetClient returns a client by user ID (must be called with RLock held)
+func (m *Manager) GetClient(userID string) (*Client, bool) {
+	client, ok := m.clients[userID]
+	return client, ok
+}
