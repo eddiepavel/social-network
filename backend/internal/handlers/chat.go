@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/helpers"
@@ -198,7 +197,7 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 		})
 
 		if err != nil {
-			app.Logger.Error("could not mark room as read ", err.Error())
+			app.Logger.Error("could not mark room as read ", "err", err.Error())
 		}
 
 		utils.OK(w, response)
@@ -341,8 +340,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		}
 
 		if roomExists != nil {
-			roomID, _ := helpers.GenerateFromBytes(roomExists)
-			utils.Internal(w, errors.New(fmt.Sprintf("room already exists, ID: %v", roomID)))
+			utils.Internal(w, errors.New("Internal"))
 			return
 		}
 

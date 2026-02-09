@@ -847,7 +847,7 @@ func CreateComment(app *app.App) http.HandlerFunc {
 		}
 
 		// Create notification for comment or reply
-		if parentCommentID != nil && len(parentCommentID) > 0 {
+		if parentCommentID != nil {
 			// This is a reply to a comment - notify the comment author
 			parentCommentData, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), parentCommentID)
 			if err == nil && string(currentUserID) != string(parentCommentData.AuthorID) {
