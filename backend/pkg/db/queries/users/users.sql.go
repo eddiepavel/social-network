@@ -138,24 +138,16 @@ SELECT
     u.nickname
 FROM users u
 WHERE (
-    EXISTS (
-        SELECT 1
-        FROM followers f
-        WHERE 
-            (f.follower_id = ?1 AND f.followee_id = u.user_id)
-         OR (f.follower_id = u.user_id AND f.followee_id = ?1)
-    )
-    OR u.is_public = 1
-)
-AND (
-    LOWER(u.first_name || ' ' || u.last_name) LIKE LOWER('%' || ?2 || '%')
-    OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ?2 || '%')
+    LOWER(u.first_name || '') LIKE LOWER('%' || ? || '%')
+    OR LOWER(u.last_name || '') LIKE LOWER('%' || ? || '%')
+    OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ? || '%')
 )
 `
 
 type QueryUsersParams struct {
-	FollowerID []byte
-	Column2    sql.NullString
+	Column1 sql.NullString
+	Column2 sql.NullString
+	Column3 sql.NullString
 }
 
 type QueryUsersRow struct {
@@ -166,7 +158,7 @@ type QueryUsersRow struct {
 }
 
 func (q *Queries) QueryUsers(ctx context.Context, arg QueryUsersParams) ([]QueryUsersRow, error) {
-	rows, err := q.db.QueryContext(ctx, queryUsers, arg.FollowerID, arg.Column2)
+	rows, err := q.db.QueryContext(ctx, queryUsers, arg.Column1, arg.Column2, arg.Column3)
 	if err != nil {
 		return nil, err
 	}

@@ -32,16 +32,7 @@ SELECT
     u.nickname
 FROM users u
 WHERE (
-    EXISTS (
-        SELECT 1
-        FROM followers f
-        WHERE 
-            (f.follower_id = ?1 AND f.followee_id = u.user_id)
-         OR (f.follower_id = u.user_id AND f.followee_id = ?1)
-    )
-    OR u.is_public = 1
-)
-AND (
-    LOWER(u.first_name || ' ' || u.last_name) LIKE LOWER('%' || ?2 || '%')
-    OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ?2 || '%')
+    LOWER(u.first_name || '') LIKE LOWER('%' || ? || '%')
+    OR LOWER(u.last_name || '') LIKE LOWER('%' || ? || '%')
+    OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ? || '%')
 )

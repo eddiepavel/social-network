@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -282,7 +283,7 @@ func GetUserPosts(app *app.App) http.HandlerFunc {
 
 func SearchUsers(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, ok := middleware.GetUserIDFromContext(r.Context())
+		user_id, ok := middleware.GetUserIDFromContext(r.Context())
 
 		if !ok {
 			utils.Unauthorized(w, "no user id found")
@@ -294,8 +295,7 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 		users := []models.UserResponse{}
 
 		searchUsers, err := sqlite.NewQuery(app.DB).Users.QueryUsers(r.Context(), db_users.QueryUsersParams{
-			FollowerID: userId,
-			Column2:    sql.NullString{Valid: true, String: searchParams},
+			Column2: sql.NullString{Valid: true, String: searchParams},
 		})
 
 		if err != nil {
@@ -309,6 +309,9 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 
 		for _, user := range searchUsers {
 			userID, _ := helpers.GenerateFromBytes(user.UserID)
+			if bytes.Equal(user.UserID, user_id) {
+				continue
+			}
 			users = append(users, models.UserResponse{
 				UserID:    userID,
 				FirstName: user.FirstName,
