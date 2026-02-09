@@ -340,6 +340,27 @@ func (cgev CreateGroupEventValidator) Build(r *http.Request, app *app.App) map[s
 	}
 }
 
+type CreateNotificationValidator struct{}
+
+func (cn CreateNotificationValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"receiver_id": {"required", "string"},
+		"type": {"required", "string", func(v interface{}) error {
+			notifType := v.(string)
+			validTypes := []string{"follow_request", "group_invitation", "group_request", "group_event", "message"}
+			for _, t := range validTypes {
+				if notifType == t {
+					return nil
+				}
+			}
+			return errors.New("invalid notification type")
+		}},
+		"from_id":  {"required", "string"},
+		"group_id": {"sometimes", "string"},
+		"event_id": {"sometimes", "string"},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister             ValidationRuleBuilder = RegisterValidator{}
@@ -358,4 +379,5 @@ var (
 	ValidateMessage              ValidationRuleBuilder = MessageValidator{}
 	ValidateFirstMessage         ValidationRuleBuilder = FirstMessageValidator{}
 	ValidateEventCreate          ValidationRuleBuilder = CreateGroupEventValidator{}
+	ValidateCreateNotification ValidationRuleBuilder = CreateNotificationValidator{}
 )

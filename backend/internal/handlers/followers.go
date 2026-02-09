@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"social-network/app"
+	"social-network/internal/constants"
 	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
@@ -117,8 +118,14 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
+
 				// Create notification for follow request
-				_ = helpers.CreateNotification(app.DB, r.Context(), user.UserID, "follow_request", currentUserID, nil, nil)
+				err = helpers.CreateNotification(app, user.UserID, constants.NotificationFollowRequest, currentUserID, nil, nil)
+				if err != nil {
+					app.Logger.Error("failed to create follow request notification", "err", err)
+					// Don't fail the request if notification fails
+				}
+
 				utils.OK(w, "Follow requested successfully")
 				return
 			} else {
@@ -222,6 +229,13 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 			if err != nil {
 				utils.Internal(w, errors.New("internal server error"))
 				return
+			}
+
+			// Create notification for follow accepted
+			err = helpers.CreateNotification(app, request.FollowerID, constants.NotificationFollowAccepted, currentUserID, nil, nil)
+			if err != nil {
+				app.Logger.Error("failed to create follow accepted notification", "err", err)
+				// Don't fail the request if notification fails
 			}
 
 			utils.OK(w, "Follow request accepted")

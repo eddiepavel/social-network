@@ -10,9 +10,22 @@ import (
 	"database/sql"
 )
 
-const createNotification = `-- name: CreateNotification :exec
-INSERT INTO notifications (notif_id, receiver_id, type, from_id, group_id, event_id)
-VALUES (?, ?, ?, ?, ?, ?)
+const countUnseenNotifications = `-- name: CountUnseenNotifications :one
+SELECT COUNT(*) FROM notifications
+WHERE receiver_id = ? AND is_seen = 0
+`
+
+func (q *Queries) CountUnseenNotifications(ctx context.Context, receiverID []byte) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUnseenNotifications, receiverID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createNotification = `-- name: CreateNotification :one
+INSERT INTO notifications (notif_id, receiver_id, type, from_id, group_id, event_id, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+RETURNING notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at
 `
 
 type CreateNotificationParams struct {
@@ -22,31 +35,19 @@ type CreateNotificationParams struct {
 	FromID     []byte
 	GroupID    []byte
 	EventID    []byte
+	CreatedAt  sql.NullTime
 }
 
-func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) error {
-	_, err := q.db.ExecContext(ctx, createNotification,
+func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
+	row := q.db.QueryRowContext(ctx, createNotification,
 		arg.NotifID,
 		arg.ReceiverID,
 		arg.Type,
 		arg.FromID,
 		arg.GroupID,
 		arg.EventID,
+		arg.CreatedAt,
 	)
-	return err
-}
-
-const getNotificationByID = `-- name: GetNotificationByID :one
-SELECT notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at FROM notifications WHERE notif_id = ? AND receiver_id = ?
-`
-
-type GetNotificationByIDParams struct {
-	NotifID    string
-	ReceiverID []byte
-}
-
-func (q *Queries) GetNotificationByID(ctx context.Context, arg GetNotificationByIDParams) (Notification, error) {
-	row := q.db.QueryRowContext(ctx, getNotificationByID, arg.NotifID, arg.ReceiverID)
 	var i Notification
 	err := row.Scan(
 		&i.NotifID,
@@ -61,28 +62,65 @@ func (q *Queries) GetNotificationByID(ctx context.Context, arg GetNotificationBy
 	return i, err
 }
 
-const getNotifications = `-- name: GetNotifications :many
-SELECT n.notif_id, n.receiver_id, n.type, n.is_seen, n.from_id, n.group_id, n.event_id, n.created_at,
-       u.first_name as from_first_name,
-       u.last_name as from_last_name,
-       g.group_name,
-       e.title as event_title
-FROM notifications n
-LEFT JOIN users u ON n.from_id = u.user_id
-LEFT JOIN groups g ON n.group_id = g.group_id
-LEFT JOIN group_events e ON n.event_id = e.event_id
-WHERE n.receiver_id = ?
-ORDER BY n.created_at DESC
-LIMIT ? OFFSET ?
+const deleteNotification = `-- name: DeleteNotification :exec
+DELETE FROM notifications WHERE notif_id = ?
 `
 
-type GetNotificationsParams struct {
-	ReceiverID []byte
-	Limit      int64
-	Offset     int64
+func (q *Queries) DeleteNotification(ctx context.Context, notifID string) error {
+	_, err := q.db.ExecContext(ctx, deleteNotification, notifID)
+	return err
 }
 
-type GetNotificationsRow struct {
+const deleteNotificationsByReceiverId = `-- name: DeleteNotificationsByReceiverId :exec
+DELETE FROM notifications WHERE receiver_id = ?
+`
+
+func (q *Queries) DeleteNotificationsByReceiverId(ctx context.Context, receiverID []byte) error {
+	_, err := q.db.ExecContext(ctx, deleteNotificationsByReceiverId, receiverID)
+	return err
+}
+
+const getNotificationById = `-- name: GetNotificationById :one
+SELECT notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at FROM notifications WHERE notif_id = ? LIMIT 1
+`
+
+func (q *Queries) GetNotificationById(ctx context.Context, notifID string) (Notification, error) {
+	row := q.db.QueryRowContext(ctx, getNotificationById, notifID)
+	var i Notification
+	err := row.Scan(
+		&i.NotifID,
+		&i.ReceiverID,
+		&i.Type,
+		&i.IsSeen,
+		&i.FromID,
+		&i.GroupID,
+		&i.EventID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getNotificationWithUserDetails = `-- name: GetNotificationWithUserDetails :many
+SELECT
+    n.notif_id,
+    n.receiver_id,
+    n.type,
+    n.is_seen,
+    n.from_id,
+    n.group_id,
+    n.event_id,
+    n.created_at,
+    u.first_name as from_first_name,
+    u.last_name as from_last_name,
+    u.avatar as from_avatar,
+    u.nickname as from_nickname
+FROM notifications n
+JOIN users u ON n.from_id = u.user_id
+WHERE n.receiver_id = ?
+ORDER BY n.created_at DESC
+`
+
+type GetNotificationWithUserDetailsRow struct {
 	NotifID       string
 	ReceiverID    []byte
 	Type          string
@@ -91,21 +129,21 @@ type GetNotificationsRow struct {
 	GroupID       []byte
 	EventID       []byte
 	CreatedAt     sql.NullTime
-	FromFirstName sql.NullString
-	FromLastName  sql.NullString
-	GroupName     sql.NullString
-	EventTitle    sql.NullString
+	FromFirstName string
+	FromLastName  string
+	FromAvatar    sql.NullString
+	FromNickname  sql.NullString
 }
 
-func (q *Queries) GetNotifications(ctx context.Context, arg GetNotificationsParams) ([]GetNotificationsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getNotifications, arg.ReceiverID, arg.Limit, arg.Offset)
+func (q *Queries) GetNotificationWithUserDetails(ctx context.Context, receiverID []byte) ([]GetNotificationWithUserDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getNotificationWithUserDetails, receiverID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetNotificationsRow
+	var items []GetNotificationWithUserDetailsRow
 	for rows.Next() {
-		var i GetNotificationsRow
+		var i GetNotificationWithUserDetailsRow
 		if err := rows.Scan(
 			&i.NotifID,
 			&i.ReceiverID,
@@ -117,8 +155,8 @@ func (q *Queries) GetNotifications(ctx context.Context, arg GetNotificationsPara
 			&i.CreatedAt,
 			&i.FromFirstName,
 			&i.FromLastName,
-			&i.GroupName,
-			&i.EventTitle,
+			&i.FromAvatar,
+			&i.FromNickname,
 		); err != nil {
 			return nil, err
 		}
@@ -133,36 +171,143 @@ func (q *Queries) GetNotifications(ctx context.Context, arg GetNotificationsPara
 	return items, nil
 }
 
-const getUnreadCount = `-- name: GetUnreadCount :one
-SELECT COUNT(*) FROM notifications WHERE receiver_id = ? AND is_seen = 0
+const getNotificationsByReceiverId = `-- name: GetNotificationsByReceiverId :many
+SELECT notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at FROM notifications
+WHERE receiver_id = ?
+ORDER BY created_at DESC
 `
 
-func (q *Queries) GetUnreadCount(ctx context.Context, receiverID []byte) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getUnreadCount, receiverID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+func (q *Queries) GetNotificationsByReceiverId(ctx context.Context, receiverID []byte) ([]Notification, error) {
+	rows, err := q.db.QueryContext(ctx, getNotificationsByReceiverId, receiverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Notification
+	for rows.Next() {
+		var i Notification
+		if err := rows.Scan(
+			&i.NotifID,
+			&i.ReceiverID,
+			&i.Type,
+			&i.IsSeen,
+			&i.FromID,
+			&i.GroupID,
+			&i.EventID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const markAllAsRead = `-- name: MarkAllAsRead :exec
-UPDATE notifications SET is_seen = 1 WHERE receiver_id = ?
+const getNotificationsByType = `-- name: GetNotificationsByType :many
+SELECT notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at FROM notifications
+WHERE receiver_id = ? AND type = ?
+ORDER BY created_at DESC
 `
 
-func (q *Queries) MarkAllAsRead(ctx context.Context, receiverID []byte) error {
-	_, err := q.db.ExecContext(ctx, markAllAsRead, receiverID)
+type GetNotificationsByTypeParams struct {
+	ReceiverID []byte
+	Type       string
+}
+
+func (q *Queries) GetNotificationsByType(ctx context.Context, arg GetNotificationsByTypeParams) ([]Notification, error) {
+	rows, err := q.db.QueryContext(ctx, getNotificationsByType, arg.ReceiverID, arg.Type)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Notification
+	for rows.Next() {
+		var i Notification
+		if err := rows.Scan(
+			&i.NotifID,
+			&i.ReceiverID,
+			&i.Type,
+			&i.IsSeen,
+			&i.FromID,
+			&i.GroupID,
+			&i.EventID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnseenNotificationsByReceiverId = `-- name: GetUnseenNotificationsByReceiverId :many
+SELECT notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at FROM notifications
+WHERE receiver_id = ? AND is_seen = 0
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetUnseenNotificationsByReceiverId(ctx context.Context, receiverID []byte) ([]Notification, error) {
+	rows, err := q.db.QueryContext(ctx, getUnseenNotificationsByReceiverId, receiverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Notification
+	for rows.Next() {
+		var i Notification
+		if err := rows.Scan(
+			&i.NotifID,
+			&i.ReceiverID,
+			&i.Type,
+			&i.IsSeen,
+			&i.FromID,
+			&i.GroupID,
+			&i.EventID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markAllNotificationsAsSeenForUser = `-- name: MarkAllNotificationsAsSeenForUser :exec
+UPDATE notifications
+SET is_seen = 1
+WHERE receiver_id = ? AND is_seen = 0
+`
+
+func (q *Queries) MarkAllNotificationsAsSeenForUser(ctx context.Context, receiverID []byte) error {
+	_, err := q.db.ExecContext(ctx, markAllNotificationsAsSeenForUser, receiverID)
 	return err
 }
 
-const markAsRead = `-- name: MarkAsRead :exec
-UPDATE notifications SET is_seen = 1 WHERE notif_id = ? AND receiver_id = ?
+const markNotificationAsSeen = `-- name: MarkNotificationAsSeen :exec
+UPDATE notifications
+SET is_seen = 1
+WHERE notif_id = ?
 `
 
-type MarkAsReadParams struct {
-	NotifID    string
-	ReceiverID []byte
-}
-
-func (q *Queries) MarkAsRead(ctx context.Context, arg MarkAsReadParams) error {
-	_, err := q.db.ExecContext(ctx, markAsRead, arg.NotifID, arg.ReceiverID)
+func (q *Queries) MarkNotificationAsSeen(ctx context.Context, notifID string) error {
+	_, err := q.db.ExecContext(ctx, markNotificationAsSeen, notifID)
 	return err
 }

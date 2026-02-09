@@ -124,29 +124,26 @@ func (h *Handler) storageRoutes() *http.ServeMux {
 	return mux
 }
 
-func (h *Handler) eventsRoutes() *http.ServeMux {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("POST /{eventId}/rsvp", handlers.RSVPToEvent(h.App))
-	mux.HandleFunc("POST /{groupId}/create", handlers.CreateGroupEvent(h.App))
-
-	return mux
-}
-
 func (h *Handler) notificationsRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
+	// Read-only endpoints for frontend
 	mux.HandleFunc("GET /", handlers.GetNotifications(h.App))
-	mux.HandleFunc("POST /{id}/read", handlers.MarkNotificationAsRead(h.App))
-	mux.HandleFunc("POST /read-all", handlers.MarkAllNotificationsAsRead(h.App))
+	mux.HandleFunc("GET /unseen", handlers.GetUnseenNotifications(h.App))
+	mux.HandleFunc("GET /details", handlers.GetNotificationsWithUserDetails(h.App))
+	mux.HandleFunc("GET /unseen/count", handlers.GetUnseenNotificationCount(h.App))
+	mux.HandleFunc("PUT /{notificationId}/seen", handlers.MarkNotificationAsSeen(h.App))
+	mux.HandleFunc("PUT /seen/all", handlers.MarkAllNotificationsAsSeen(h.App))
+	mux.HandleFunc("DELETE /{notificationId}", handlers.DeleteNotification(h.App))
 
 	return mux
 }
 
-func (h *Handler) websocketRoutes() *http.ServeMux {
+func (h *Handler) wsRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /chat", handlers.WebSocketHandler(h.App, h.App.Hub))
+	// WebSocket connection endpoint
+	mux.HandleFunc("GET /connect", handlers.ConnectWebSocket(h.App))
 
 	return mux
 }

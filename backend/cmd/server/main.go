@@ -10,6 +10,7 @@ import (
 	"social-network/app"
 	"social-network/internal/routes"
 	"social-network/internal/services"
+	"social-network/internal/websocket"
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/environment"
 )
@@ -33,15 +34,16 @@ func main() {
 	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
 	file.StartCleanUp()
 
-	// Initialize WebSocket Hub
-	hub := services.NewHub(logger)
-	go hub.Run()
+	// Initialize WebSocket manager
+	wsManager := websocket.NewManager(db.DB, logger)
+	wsManager.Start()
+	defer wsManager.Shutdown()
 
 	app := &app.App{
 		DB:     db.DB,
 		Logger: logger,
 		File:   file,
-		Hub:    hub,
+		WsManager: wsManager,
 	}
 
 	defer func() {
@@ -52,7 +54,7 @@ func main() {
 	// Set up routes
 	mux := routes.Setup(app)
 
-	//start server
+	// Start server
 	port := os.Getenv("PORT")
 
 	log.Printf("Server starting on port %s...", port)

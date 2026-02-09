@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"social-network/app"
+	"social-network/internal/constants"
 	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
@@ -373,6 +374,15 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		// Create notifications AFTER transaction commits (to avoid DB lock)
+		for i := range users {
+			err = helpers.CreateNotification(app, users[i], constants.NotificationGroupInvitation, userId, groupID, nil)
+			if err != nil {
+				app.Logger.Error("failed to create group invitation notification", "err", err, "user", users[i])
+				// Don't fail the request if notification fails
+			}
+		}
+
 		utils.OK(w, map[string]interface{}{"message": "Invitations sent successfully", "invited": len(users)})
 
 	}
@@ -445,8 +455,13 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 					return
 				}
 
-				// Create notification for group creator about join request
-				_ = helpers.CreateNotification(app.DB, r.Context(), getGroup.CreatorID, "group_request", userId, groupID, nil)
+				// Create notification for group join request
+				groupCreator := getGroup.CreatorID
+				err = helpers.CreateNotification(app, groupCreator, constants.NotificationGroupRequest, userId, groupID, nil)
+				if err != nil {
+					app.Logger.Error("failed to create group request notification", "err", err)
+					// Don't fail the request if notification fails
+				}
 
 				utils.OK(w, map[string]string{"message": "created"})
 				return
@@ -638,6 +653,13 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 				return
 			}
 
+			// Create notification for group join rejection
+			err = helpers.CreateNotification(app, groupMem.UserID, constants.NotificationGroupJoinRejected, currentUser, groupId, nil)
+			if err != nil {
+				app.Logger.Error("failed to create group join rejected notification", "err", err)
+				// Don't fail the request if notification fails
+			}
+
 		case "approve":
 			if err := query.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
 				Status: "joined",
@@ -646,6 +668,13 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 				app.Logger.Error("failed to update group member status", "err", err)
 				utils.Internal(w, errors.New("internal server error"))
 				return
+			}
+
+			// Create notification for group join approval
+			err = helpers.CreateNotification(app, groupMem.UserID, constants.NotificationGroupJoinApproved, currentUser, groupId, nil)
+			if err != nil {
+				app.Logger.Error("failed to create group join approved notification", "err", err)
+				// Don't fail the request if notification fails
 			}
 		}
 
