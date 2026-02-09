@@ -1,6 +1,39 @@
+"use client";
+
 import Link from "next/link";
+import useSession from "@/hooks/useSession";
 
 export default function LandingPage() {
+  const { data: session, isLoading } = useSession();
+
+  if (isLoading) {
+    return (
+      <div className="page">
+        <main className="container hero">
+          <p>Loading...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (session) {
+    return (
+      <div className="page">
+        <main className="container hero">
+          <h1>Welcome back!</h1>
+          <p>
+            You're already logged in. Continue to your feed to see what's happening.
+          </p>
+          <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
+            <Link className="button" href="/feed">
+              Go to boards
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <main className="container hero">
