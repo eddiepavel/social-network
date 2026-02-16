@@ -9,6 +9,7 @@ import (
 	"social-network/internal/middleware"
 	"social-network/internal/models"
 	"social-network/internal/utils"
+	ws "social-network/internal/websocket"
 	db_chat "social-network/pkg/db/queries/chat"
 	db_followers "social-network/pkg/db/queries/followers"
 	"social-network/pkg/db/sqlite"
@@ -165,11 +166,18 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 		for _, message := range chatMessages {
 			messageID, _ := helpers.GenerateFromBytes(message.MessageID)
 			senderID, _ := helpers.GenerateFromBytes(message.SenderID)
+			senderAvatar := ""
+			if message.SenderAvatar.Valid {
+				senderAvatar = message.SenderAvatar.String
+			}
 			messages = append(messages, models.ChatMessages{
-				MessageID: messageID,
-				Content:   message.Content,
-				SenderID:  senderID,
-				CreatedAt: message.CreatedAt.Time,
+				MessageID:       messageID,
+				Content:         message.Content,
+				SenderID:        senderID,
+				CreatedAt:       message.CreatedAt.Time,
+				SenderFirstName: message.SenderFirstName,
+				SenderLastName:  message.SenderLastName,
+				SenderAvatar:    senderAvatar,
 			})
 			lastMessageTime = message.CreatedAt.Time
 			lastMessageID = message.MessageID
@@ -262,6 +270,36 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 		if err != nil {
 			utils.Internal(w, err)
 			return
+		}
+
+		// Broadcast to room participants via WebSocket
+		if app.WsManager != nil {
+			messageUUID, _ := helpers.GenerateFromBytes(messageID)
+			roomUUID, _ := helpers.GenerateFromBytes(roomID)
+			senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
+
+			senderFirstName := ""
+			senderLastName := ""
+			senderAvatar := ""
+			senderInfo, sErr := sqlite.NewQuery(app.DB).Chat.GetUserBasicInfo(r.Context(), currentUserID)
+			if sErr == nil {
+				senderFirstName = senderInfo.FirstName
+				senderLastName = senderInfo.LastName
+				if senderInfo.Avatar.Valid {
+					senderAvatar = senderInfo.Avatar.String
+				}
+			}
+
+			app.WsManager.BroadcastChatMessage(roomID, ws.ChatMessageEvent{
+				MessageID:       messageUUID,
+				RoomID:          roomUUID,
+				SenderID:        senderUUID,
+				Content:         req.Content,
+				CreatedAt:       time.Now(),
+				SenderFirstName: senderFirstName,
+				SenderLastName:  senderLastName,
+				SenderAvatar:    senderAvatar,
+			})
 		}
 
 		utils.OK(w, "message sent successfully")
@@ -391,6 +429,36 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		}
 
 		roomUUID, _ := helpers.GenerateFromBytes(roomID)
+
+		// Broadcast to room participants via WebSocket
+		if app.WsManager != nil {
+			messageUUID, _ := helpers.GenerateFromBytes(messageID)
+			senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
+
+			senderFirstName := ""
+			senderLastName := ""
+			senderAvatar := ""
+			senderInfo, sErr := sqlite.NewQuery(app.DB).Chat.GetUserBasicInfo(r.Context(), currentUserID)
+			if sErr == nil {
+				senderFirstName = senderInfo.FirstName
+				senderLastName = senderInfo.LastName
+				if senderInfo.Avatar.Valid {
+					senderAvatar = senderInfo.Avatar.String
+				}
+			}
+
+			app.WsManager.BroadcastChatMessage(roomID, ws.ChatMessageEvent{
+				MessageID:       messageUUID,
+				RoomID:          roomUUID,
+				SenderID:        senderUUID,
+				Content:         req.Content,
+				CreatedAt:       time.Now(),
+				SenderFirstName: senderFirstName,
+				SenderLastName:  senderLastName,
+				SenderAvatar:    senderAvatar,
+			})
+		}
+
 		utils.OK(w, map[string]string{"room_id": roomUUID})
 	}
 }

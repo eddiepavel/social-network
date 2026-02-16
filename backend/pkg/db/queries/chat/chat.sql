@@ -64,8 +64,12 @@ SELECT
     cm.content,
     cm.sender_id,
     cm.target_id,
-    cm.created_at
+    cm.created_at,
+    u.first_name AS sender_first_name,
+    u.last_name AS sender_last_name,
+    u.avatar AS sender_avatar
 FROM chat_messages cm
+JOIN users u ON cm.sender_id = u.user_id
 WHERE cm.target_id = ?
   AND (? IS NULL OR cm.created_at <= ?)
   AND (? IS NULL OR cm.message_id != ?)
@@ -99,3 +103,6 @@ LIMIT 1;
 
 -- name: GetRoomParticipants :many
 SELECT user_id FROM chat_participants WHERE room_id = ?;
+
+-- name: GetUserBasicInfo :one
+SELECT first_name, last_name, avatar FROM users WHERE user_id = ?;

@@ -108,8 +108,12 @@ SELECT
     cm.content,
     cm.sender_id,
     cm.target_id,
-    cm.created_at
+    cm.created_at,
+    u.first_name AS sender_first_name,
+    u.last_name AS sender_last_name,
+    u.avatar AS sender_avatar
 FROM chat_messages cm
+JOIN users u ON cm.sender_id = u.user_id
 WHERE cm.target_id = ?
   AND (? IS NULL OR cm.created_at <= ?)
   AND (? IS NULL OR cm.message_id != ?)
@@ -126,7 +130,18 @@ type GetRoomMessagesParams struct {
 	Limit     int64
 }
 
-func (q *Queries) GetRoomMessages(ctx context.Context, arg GetRoomMessagesParams) ([]ChatMessage, error) {
+type GetRoomMessagesRow struct {
+	MessageID       []byte
+	Content         string
+	SenderID        []byte
+	TargetID        []byte
+	CreatedAt       sql.NullTime
+	SenderFirstName string
+	SenderLastName  string
+	SenderAvatar    sql.NullString
+}
+
+func (q *Queries) GetRoomMessages(ctx context.Context, arg GetRoomMessagesParams) ([]GetRoomMessagesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getRoomMessages,
 		arg.TargetID,
 		arg.Column2,
@@ -139,15 +154,18 @@ func (q *Queries) GetRoomMessages(ctx context.Context, arg GetRoomMessagesParams
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ChatMessage
+	var items []GetRoomMessagesRow
 	for rows.Next() {
-		var i ChatMessage
+		var i GetRoomMessagesRow
 		if err := rows.Scan(
 			&i.MessageID,
 			&i.Content,
 			&i.SenderID,
 			&i.TargetID,
 			&i.CreatedAt,
+			&i.SenderFirstName,
+			&i.SenderLastName,
+			&i.SenderAvatar,
 		); err != nil {
 			return nil, err
 		}
@@ -198,6 +216,23 @@ func (q *Queries) GetRoomParticipants(ctx context.Context, roomID []byte) ([][]b
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserBasicInfo = `-- name: GetUserBasicInfo :one
+SELECT first_name, last_name, avatar FROM users WHERE user_id = ?
+`
+
+type GetUserBasicInfoRow struct {
+	FirstName string
+	LastName  string
+	Avatar    sql.NullString
+}
+
+func (q *Queries) GetUserBasicInfo(ctx context.Context, userID []byte) (GetUserBasicInfoRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserBasicInfo, userID)
+	var i GetUserBasicInfoRow
+	err := row.Scan(&i.FirstName, &i.LastName, &i.Avatar)
+	return i, err
 }
 
 const getUserChatList = `-- name: GetUserChatList :many

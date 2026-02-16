@@ -54,7 +54,7 @@ func NewManager(db *sql.DB, l *slog.Logger) *Manager {
 // Add your custom handlers here!
 func (m *Manager) setupEventHandlers() {
 	m.handlers[EventPrivateMessage] = PrivateMessageHandler
-	m.handlers[EventTypingIndicator] = TypingIndicatorHandler
+	m.handlers[EventSendMessage] = SendMessageHandler
 }
 
 // routeEvent routes incoming events to the appropriate handler
@@ -253,6 +253,47 @@ func (m *Manager) cleanupSentNotifications() {
 	}
 }
 
+// BroadcastChatMessage sends a chat message to all participants in a room
+func (m *Manager) BroadcastChatMessage(roomID []byte, msg ChatMessageEvent) {
+	participants, err := sqlite.NewQuery(m.DB).Chat.GetRoomParticipants(context.Background(), roomID)
+	if err != nil {
+		m.Logger.Error("failed to get room participants for broadcast", "err", err)
+		return
+	}
+
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		m.Logger.Error("failed to marshal chat message event", "err", err)
+		return
+	}
+
+	event := Event{
+		Type:    EventChatMessage,
+		Payload: payload,
+	}
+
+	for _, participantIDBytes := range participants {
+		uid, err := uuid.FromBytes(participantIDBytes)
+		if err != nil {
+			continue
+		}
+		userIDStr := uid.String()
+
+		m.RLock()
+		client, ok := m.clients[userIDStr]
+		m.RUnlock()
+
+		if ok {
+			select {
+			case client.egress <- event:
+				m.Logger.Info("Chat message broadcast to participant", "userID", userIDStr, "room", msg.RoomID)
+			default:
+				m.Logger.Warn("Client egress channel full during broadcast", "userID", userIDStr)
+			}
+		}
+	}
+}
+
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 
@@ -274,10 +315,4 @@ func checkOrigin(r *http.Request) bool {
 	}
 
 	return false
-}
-
-// GetClient returns a client by user ID (must be called with RLock held)
-func (m *Manager) GetClient(userID string) (*Client, bool) {
-	client, ok := m.clients[userID]
-	return client, ok
 }

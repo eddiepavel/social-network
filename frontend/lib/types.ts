@@ -199,7 +199,7 @@ export type GroupJoinRequest = {
 };
 
 // WebSocket message types
-export type WSMessageType = "message" | "typing" | "read" | "private_message" | "notification";
+export type WSMessageType = "message" | "typing" | "read" | "private_message" | "notification" | "chat_message" | "send_message";
 
 export type WSMessage = {
   type: WSMessageType;

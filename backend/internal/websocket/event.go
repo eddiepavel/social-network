@@ -18,10 +18,13 @@ const (
 	// Server -> Client events (outgoing)
 	EventNotification = "notification"
 	EventError        = "error"
+	EventChatMessage  = "chat_message"
 
 	// Client -> Server events (incoming)
 	EventPrivateMessage  = "private_message"
 	EventTypingIndicator = "typing_indicator"
+	EventGroupMessage    = "group_message"
+	EventSendMessage     = "send_message"
 )
 
 // NotificationEvent represents a notification pushed to the client
@@ -54,4 +57,22 @@ type TypingIndicatorEvent struct {
 	From     string `json:"from_user"`
 	To       string `json:"to_user"`
 	IsTyping bool   `json:"is_typing"`
+}
+
+// ChatMessageEvent represents a chat message broadcast to room participants
+type ChatMessageEvent struct {
+	MessageID       string    `json:"message_id"`
+	RoomID          string    `json:"room_id"`
+	SenderID        string    `json:"sender_id"`
+	Content         string    `json:"content"`
+	CreatedAt       time.Time `json:"created_at"`
+	SenderFirstName string    `json:"sender_first_name"`
+	SenderLastName  string    `json:"sender_last_name"`
+	SenderAvatar    string    `json:"sender_avatar,omitempty"`
+}
+
+// SendMessageEvent represents an incoming message from a WebSocket client
+type SendMessageEvent struct {
+	RoomID  string `json:"room_id"`
+	Content string `json:"content"`
 }

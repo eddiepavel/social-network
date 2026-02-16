@@ -531,19 +531,26 @@ export class ChatWebSocket {
 
     this.ws.onmessage = (event) => {
       try {
-        const message: WSMessage = JSON.parse(event.data);
+        const message = JSON.parse(event.data);
+        // The backend sends { type, payload } where payload is the actual data
+        const payload = message.payload
+          ? typeof message.payload === 'string'
+            ? JSON.parse(message.payload)
+            : message.payload
+          : message.data;
+
         switch (message.type) {
+          case "chat_message":
+            this.callbacks.onMessage?.({
+              type: "chat_message",
+              data: payload,
+            });
+            break;
           case "private_message":
-            // Parse private message payload
-            if (message.payload) {
-              const msgData = typeof message.payload === 'string'
-                ? JSON.parse(message.payload)
-                : message.payload;
-              this.callbacks.onMessage?.({
-                type: "private_message",
-                data: msgData,
-              });
-            }
+            this.callbacks.onMessage?.({
+              type: "private_message",
+              data: payload,
+            });
             break;
           case "message":
             this.callbacks.onMessage?.(message);
@@ -553,6 +560,13 @@ export class ChatWebSocket {
             break;
           case "read":
             this.callbacks.onRead?.(message);
+            break;
+          case "notification":
+            // Forward notification events
+            this.callbacks.onMessage?.({
+              type: "notification",
+              data: payload,
+            });
             break;
         }
       } catch (err) {
@@ -595,7 +609,15 @@ export class ChatWebSocket {
   }
 
   sendMessage(roomId: string, content: string) {
-    this.send({ type: "message", room_id: roomId, content });
+    // Send as a proper Event { type, payload } matching backend format
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: "send_message",
+        payload: JSON.stringify({ room_id: roomId, content }),
+      }));
+    } else {
+      console.warn("WebSocket is not connected");
+    }
   }
 
   sendTyping(roomId: string) {

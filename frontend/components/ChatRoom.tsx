@@ -40,10 +40,34 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
         setWsConnected(false);
       },
       onMessage: (wsMessage: WSMessage) => {
-        // Handle incoming private messages for this room
+        // Handle incoming chat messages for this room
+        if (wsMessage.type === "chat_message") {
+          const msgData = wsMessage.data as any;
+          if (msgData && msgData.room_id === roomId) {
+            queryClient.setQueryData(["chat-messages", roomId], (old: ChatMessage[] | undefined) => {
+              if (!old) return [msgData];
+              const newMsg: ChatMessage = {
+                message_id: msgData.message_id,
+                room_id: roomId,
+                content: msgData.content,
+                sender_id: msgData.sender_id,
+                sender_first_name: msgData.sender_first_name,
+                sender_last_name: msgData.sender_last_name,
+                sender_avatar: msgData.sender_avatar,
+                created_at: msgData.created_at || new Date().toISOString(),
+              };
+              // Avoid duplicates
+              const exists = old.some((m) => m.message_id === newMsg.message_id);
+              if (exists) return old;
+              return [newMsg, ...old];
+            });
+            // Also refresh the chat list to update last message preview
+            queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+          }
+        }
+        // Also handle legacy private_message format
         if (wsMessage.type === "private_message") {
           const msgData = wsMessage.data as any;
-          // Only add message if it's for this room
           if (msgData && msgData.room_id === roomId) {
             queryClient.setQueryData(["chat-messages", roomId], (old: ChatMessage[] | undefined) => {
               if (!old) return old;
@@ -54,7 +78,6 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
                 sender_id: msgData.sender_id,
                 created_at: msgData.created_at || new Date().toISOString(),
               };
-              // Avoid duplicates
               const exists = old.some((m) => m.message_id === newMsg.message_id);
               if (exists) return old;
               return [newMsg, ...old];
@@ -73,7 +96,8 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
     mutationFn: () => sendMessage(roomId, newMessage),
     onSuccess: () => {
       setNewMessage("");
-      // Invalidate to refetch and ensure consistency
+      // The backend broadcasts the message via WebSocket to all participants,
+      // so we just invalidate queries for consistency
       queryClient.invalidateQueries({ queryKey: ["chat-messages", roomId] });
       queryClient.invalidateQueries({ queryKey: ["chat-list"] });
     },

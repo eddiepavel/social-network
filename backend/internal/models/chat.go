@@ -16,10 +16,13 @@ type ChatList struct {
 }
 
 type ChatMessages struct {
-	MessageID string    `json:"message_id"`
-	Content   string    `json:"content"`
-	SenderID  string    `json:"sender_id"`
-	CreatedAt time.Time `json:"created_at"`
+	MessageID       string    `json:"message_id"`
+	Content         string    `json:"content"`
+	SenderID        string    `json:"sender_id"`
+	CreatedAt       time.Time `json:"created_at"`
+	SenderFirstName string    `json:"sender_first_name,omitempty"`
+	SenderLastName  string    `json:"sender_last_name,omitempty"`
+	SenderAvatar    string    `json:"sender_avatar,omitempty"`
 }
 
 type ChatMessageResponse struct {

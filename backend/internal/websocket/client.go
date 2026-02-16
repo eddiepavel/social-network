@@ -106,8 +106,3 @@ func (c *Client) writeMessages() {
 		}
 	}
 }
-
-// GetEgress returns the egress channel for sending events to this client
-func (c *Client) GetEgress() chan Event {
-	return c.egress
-}
