@@ -1703,6 +1703,8 @@ button {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   transition: background 0.2s;
+  flex-wrap: wrap;
+  position: relative;
 }
 
 .notification-item:last-child {
@@ -1711,6 +1713,17 @@ button {
 
 .notification-item:hover {
   background: var(--bg);
+}
+
+.notification-item.unread {
+  background: var(--paper);
+}
+
+.notification-content-link {
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
 }
 
 .notification-content {
@@ -1730,6 +1743,19 @@ button {
 
 .notification-icon {
   font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.notification-actions .button {
+  font-size: 0.85rem;
+  padding: 6px 12px;
 }
 
 .notifications-list {

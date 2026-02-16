@@ -799,7 +799,6 @@ WHERE p.author_id = ?
     OR (p.visibility = 'private' AND (
         p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions vp WHERE vp.user_id = ? AND vp.post_id = p.post_id)
     ))
-    OR p.author_id = ?
   )
 ORDER BY p.created_at DESC
 LIMIT ? OFFSET ?
@@ -811,7 +810,6 @@ type GetUserPostsParams struct {
 	FollowerID []byte
 	AuthorID_3 []byte
 	UserID     []byte
-	AuthorID_4 []byte
 	Limit      int64
 	Offset     int64
 }
@@ -843,7 +841,6 @@ func (q *Queries) GetUserPosts(ctx context.Context, arg GetUserPostsParams) ([]G
 		arg.FollowerID,
 		arg.AuthorID_3,
 		arg.UserID,
-		arg.AuthorID_4,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -884,6 +881,24 @@ func (q *Queries) GetUserPosts(ctx context.Context, arg GetUserPostsParams) ([]G
 		return nil, err
 	}
 	return items, nil
+}
+
+const grantViewingPermissionsToFollower = `-- name: GrantViewingPermissionsToFollower :exec
+INSERT OR IGNORE INTO viewing_permissions (user_id, post_id)
+SELECT ?, post_id
+FROM posts
+WHERE author_id = ?
+  AND visibility = 'private'
+`
+
+type GrantViewingPermissionsToFollowerParams struct {
+	UserID   []byte
+	AuthorID []byte
+}
+
+func (q *Queries) GrantViewingPermissionsToFollower(ctx context.Context, arg GrantViewingPermissionsToFollowerParams) error {
+	_, err := q.db.ExecContext(ctx, grantViewingPermissionsToFollower, arg.UserID, arg.AuthorID)
+	return err
 }
 
 const hasUserReacted = `-- name: HasUserReacted :one

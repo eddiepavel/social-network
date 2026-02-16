@@ -2,24 +2,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { getFollowRequests, getChatList } from "@/lib/api";
+import { getUnseenNotificationCount } from "@/lib/api";
 
 export default function NotificationBadge() {
-  const { data: followRequests } = useQuery({
-    queryKey: ["follow-requests"],
-    queryFn: getFollowRequests,
+  const { data: unseenCount } = useQuery({
+    queryKey: ["unseen-count"],
+    queryFn: getUnseenNotificationCount,
     refetchInterval: 30000,
   });
 
-  const { data: chatList } = useQuery({
-    queryKey: ["chat-list"],
-    queryFn: getChatList,
-    refetchInterval: 10000,
-  });
-
-  const followRequestCount = followRequests?.length ?? 0;
-  const unreadMessages = chatList?.reduce((sum, thread) => sum + thread.unread_count, 0) ?? 0;
-  const totalCount = followRequestCount + unreadMessages;
+  const totalCount = unseenCount?.count ?? 0;
 
   return (
     <Link href="/notifications" className="notification-badge-link">

@@ -221,9 +221,8 @@ func GetUserPosts(app *app.App) http.HandlerFunc {
 			AuthorID:   currentUserID, // for user_reacted check
 			AuthorID_2: targetUserID,  // whose posts to fetch
 			FollowerID: currentUserID, // for semi-private visibility check
-			AuthorID_3: currentUserID, // for private visibility OR author check
+			AuthorID_3: currentUserID, // for private visibility - check if viewing own posts
 			UserID:     currentUserID, // for viewing_permissions check
-			AuthorID_4: currentUserID, // OR author owns post
 			Limit:      limit,
 			Offset:     offset,
 		})

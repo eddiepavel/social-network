@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -70,6 +69,18 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
+
+				// Grant viewing permissions to all private posts from the followee
+				err = sqlite.NewQuery(app.DB).Posts.GrantViewingPermissionsToFollower(r.Context(), db_posts.GrantViewingPermissionsToFollowerParams{
+					UserID:   currentUserID,
+					AuthorID: user.UserID,
+				})
+				if err != nil {
+					app.Logger.Error("failed to grant viewing permissions on follow", "err", err)
+				} else {
+					app.Logger.Info("granted viewing permissions on follow", "follower", currentUserID, "followee", user.UserID)
+				}
+
 				utils.OK(w, "Followed successfully")
 				return
 			} else {
@@ -229,6 +240,17 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 			if err != nil {
 				utils.Internal(w, errors.New("internal server error"))
 				return
+			}
+
+			// Grant viewing permissions to all private posts from the followee
+			err = sqlite.NewQuery(app.DB).Posts.GrantViewingPermissionsToFollower(r.Context(), db_posts.GrantViewingPermissionsToFollowerParams{
+				UserID:   request.FollowerID,
+				AuthorID: request.FolloweeID,
+			})
+			if err != nil {
+				app.Logger.Error("failed to grant viewing permissions on accept", "err", err, "follower", request.FollowerID, "followee", request.FolloweeID)
+			} else {
+				app.Logger.Info("granted viewing permissions on accept", "follower", request.FollowerID, "followee", request.FolloweeID)
 			}
 
 			// Create notification for follow accepted
@@ -515,12 +537,33 @@ func GetFollowRequests(app *app.App) http.HandlerFunc {
 		var response []models.FollowRequestsResponse
 
 		for _, request := range requests {
-			user, _ := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), request.FollowerID)
+			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), request.FollowerID)
+			if err != nil {
+				app.Logger.Error("Failed to fetch user for follow request", "error", err)
+				continue
+			}
+
+			followerUUID, _ := helpers.GenerateFromBytes(request.FollowerID)
+			requestID := strconv.FormatInt(request.ID, 10)
+
 			response = append(response, models.FollowRequestsResponse{
-				ID:           request.ID,
-				FollowerID:   hex.EncodeToString(request.FollowerID),
-				FollowerName: user.FirstName + " " + user.LastName,
-				CreatedAt:    request.CreatedAt,
+				RequestID: requestID,
+				UserID:    followerUUID,
+				FirstName: user.FirstName,
+				LastName:  user.LastName,
+				Nickname: func() *string {
+					if user.Nickname.Valid {
+						return &user.Nickname.String
+					}
+					return nil
+				}(),
+				Avatar: func() *string {
+					if user.Avatar.Valid {
+						return &user.Avatar.String
+					}
+					return nil
+				}(),
+				CreatedAt: request.CreatedAt.Format(time.RFC3339),
 			})
 		}
 

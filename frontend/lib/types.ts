@@ -176,20 +176,16 @@ export type GroupEvent = {
 
 export type Notification = {
   notif_id: string;
-  type: "follow_request" | "group_invitation" | "group_request" | "group_event" | "message";
+  receiver_id: string;
+  type: "follow_request" | "follow_accepted" | "group_invitation" | "group_request" | "group_join_approved" | "group_join_rejected" | "group_event" | "post_comment" | "comment_reply" | "post_reaction" | "comment_reaction" | "message";
   is_seen: boolean;
   from_id: string;
-  from_name?: string;
+  from_name: string;
+  from_avatar?: string;
+  from_nickname?: string;
   group_id?: string;
-  group_name?: string;
   event_id?: string;
-  event_title?: string;
   created_at: string;
-};
-
-export type NotificationsResponse = {
-  notifications: Notification[];
-  unread_count: number;
 };
 
 export type GroupJoinRequest = {

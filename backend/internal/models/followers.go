@@ -13,10 +13,13 @@ type FollowerResponse struct {
 }
 
 type FollowRequestsResponse struct {
-	ID           int64     `json:"id"`
-	FollowerID   string    `json:"follower_id"`
-	FollowerName string    `json:"follower_name"`
-	CreatedAt    time.Time `json:"created_at"`
+	RequestID string  `json:"request_id"`
+	UserID    string  `json:"user_id"`
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Nickname  *string `json:"nickname,omitempty"`
+	Avatar    *string `json:"avatar,omitempty"`
+	CreatedAt string  `json:"created_at"`
 }
 
 // FollowStatusResponse represents the follow status between two users

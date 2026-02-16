@@ -14,7 +14,6 @@ import type {
   GroupEvent,
   GroupJoinRequest,
   Notification,
-  NotificationsResponse,
   Post,
   PostWithDetails,
   RSVPRequest,
@@ -422,19 +421,33 @@ export function getUserPosts(userId: string, page = 1, size = 10) {
 // NOTIFICATIONS API
 // ============================================
 
-export function getNotifications(page = 1, size = 20) {
-  return apiFetch<NotificationsResponse>(`/api/notifications/?page=${page}&size=${size}`);
+export function getNotifications() {
+  return apiFetch<Notification[]>(`/api/notifications/details`);
 }
 
-export function markNotificationRead(notifId: string) {
-  return apiFetch<{ message: string }>(`/api/notifications/${notifId}/read`, {
-    method: "POST",
+export function getUnseenNotifications() {
+  return apiFetch<Notification[]>(`/api/notifications/unseen`);
+}
+
+export function getUnseenNotificationCount() {
+  return apiFetch<{ count: number }>(`/api/notifications/unseen/count`);
+}
+
+export function markNotificationAsSeen(notifId: string) {
+  return apiFetch<{ message: string }>(`/api/notifications/${notifId}/seen`, {
+    method: "PUT",
   });
 }
 
-export function markAllNotificationsRead() {
-  return apiFetch<{ message: string }>("/api/notifications/read-all", {
-    method: "POST",
+export function markAllNotificationsAsSeen() {
+  return apiFetch<{ message: string }>("/api/notifications/seen/all", {
+    method: "PUT",
+  });
+}
+
+export function deleteNotification(notifId: string) {
+  return apiFetch<{ message: string }>(`/api/notifications/${notifId}`, {
+    method: "DELETE",
   });
 }
 

@@ -122,6 +122,13 @@ SELECT ?, ?
 -- name: RemovePrivatePostViewingPermission :exec
 DELETE FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 
+-- name: GrantViewingPermissionsToFollower :exec
+INSERT OR IGNORE INTO viewing_permissions (user_id, post_id)
+SELECT ?, post_id
+FROM posts
+WHERE author_id = ?
+  AND visibility = 'private';
+
 -- name: GetPostComments :many
 SELECT
     c.*,
@@ -261,7 +268,6 @@ WHERE p.author_id = ?
     OR (p.visibility = 'private' AND (
         p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions vp WHERE vp.user_id = ? AND vp.post_id = p.post_id)
     ))
-    OR p.author_id = ?
   )
 ORDER BY p.created_at DESC
 LIMIT ? OFFSET ?;
