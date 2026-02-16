@@ -17,8 +17,8 @@ export default function FollowRequestsList() {
   });
 
   const respond = useMutation({
-    mutationFn: ({ requestId, accept }: { requestId: string; accept: boolean }) =>
-      respondToFollowRequest(requestId, accept),
+    mutationFn: ({ requestId, status }: { requestId: string; status: "accepted" | "rejected" }) =>
+      respondToFollowRequest(requestId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["follow-requests"] });
       queryClient.invalidateQueries({ queryKey: ["followers"] });
@@ -56,14 +56,14 @@ export default function FollowRequestsList() {
           </Link>
           <div className="request-actions">
             <Button
-              onClick={() => respond.mutate({ requestId: request.request_id, accept: true })}
+              onClick={() => respond.mutate({ requestId: request.request_id, status: "accepted" })}
               disabled={respond.isPending}
             >
               Accept
             </Button>
             <Button
               variant="ghost"
-              onClick={() => respond.mutate({ requestId: request.request_id, accept: false })}
+              onClick={() => respond.mutate({ requestId: request.request_id, status: "rejected" })}
               disabled={respond.isPending}
             >
               Decline

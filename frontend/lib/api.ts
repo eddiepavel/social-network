@@ -222,10 +222,10 @@ export function getFollowRequests() {
   return apiFetch<FollowRequest[]>("/api/followers/requests");
 }
 
-export function respondToFollowRequest(requestId: string, accept: boolean) {
+export function respondToFollowRequest(requestId: string, status: "accepted" | "rejected") {
   return apiFetch<string>(`/api/followers/requests/${requestId}/respond`, {
     method: "POST",
-    body: JSON.stringify({ accept }),
+    body: JSON.stringify({ status }),
   });
 }
 

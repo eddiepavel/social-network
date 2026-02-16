@@ -13,7 +13,8 @@ import FollowersList from "@/components/FollowersList";
 import FollowRequestsList from "@/components/FollowRequestsList";
 import Tabs from "@/components/Tabs";
 import ImageUpload from "@/components/ImageUpload";
-import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing, ApiError } from "@/lib/api";
+import PostCard from "@/components/PostCard";
+import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing, getUserPosts, ApiError } from "@/lib/api";
 import useSession from "@/hooks/useSession";
 
 export default function ProfilePage() {
@@ -41,7 +42,15 @@ export default function ProfilePage() {
   });
 
   const isSelf = useMemo(() => session?.user_id === userId, [session?.user_id, userId]);
-  const [activeTab, setActiveTab] = useState("followers");
+
+  const { data: userPosts, isLoading: postsLoading, isError: postsError } = useQuery({
+    queryKey: ["userPosts", userId],
+    queryFn: () => getUserPosts(userId, 1, 20),
+    enabled: !!userId && !isSelf, // Only fetch posts for other users, not own profile
+    retry: false, // Don't retry if unauthorized
+  });
+
+  const [activeTab, setActiveTab] = useState(isSelf ? "followers" : "posts");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -63,6 +72,11 @@ export default function ProfilePage() {
       avatar: data.avatar || "",
     });
   }, [data]);
+
+  // Update active tab when switching between own and other profiles
+  useEffect(() => {
+    setActiveTab(isSelf ? "followers" : "posts");
+  }, [isSelf]);
 
   const saveProfile = useMutation({
     mutationFn: updateProfile,
@@ -145,6 +159,7 @@ export default function ProfilePage() {
       <section className="surface card">
         <Tabs
           tabs={[
+            ...(!isSelf ? [{ id: "posts", label: `Posts (${userPosts?.length ?? 0})` }] : []),
             { id: "followers", label: `Followers (${followersCount})` },
             { id: "following", label: `Following (${followingCount})` },
             ...(isSelf ? [{ id: "requests", label: "Requests" }] : []),
@@ -152,6 +167,23 @@ export default function ProfilePage() {
           activeTab={activeTab}
           onChange={setActiveTab}
         />
+        {activeTab === "posts" && !isSelf && (
+          <div style={{ marginTop: 16 }}>
+            {postsLoading ? (
+              <p>Loading posts...</p>
+            ) : userPosts && userPosts.length > 0 ? (
+              userPosts.map((post) => (
+                <PostCard key={post.post_id} post={post} currentUserId={session?.user_id} />
+              ))
+            ) : (
+              <p style={{ textAlign: "center", color: "var(--muted)", padding: "2rem" }}>
+                {data?.is_public === false 
+                  ? "This user's profile is private. Follow them to see their posts."
+                  : "No posts yet."}
+              </p>
+            )}
+          </div>
+        )}
         {activeTab === "followers" && <FollowersList userId={userId} type="followers" />}
         {activeTab === "following" && <FollowersList userId={userId} type="following" />}
         {activeTab === "requests" && isSelf && <FollowRequestsList />}

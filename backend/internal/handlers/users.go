@@ -22,14 +22,14 @@ import (
 // Returns user profile respecting privacy settings
 func GetUserProfile(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get current user from context
-		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		// Get current user from context (for authentication check)
+		_, ok := middleware.GetUserIDFromContext(r.Context())
 		if !ok {
 			utils.Unauthorized(w, "Unauthorized")
 			return
 		}
 
-		// Extract user ID from URL path: /api/users/:id
+		// Extract target user ID from URL path: /api/users/:id
 		targetUserIDHex := r.PathValue("id")
 		if targetUserIDHex == "" {
 			utils.BadRequest(w, errors.New("user ID required"))
@@ -48,21 +48,8 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		// Check if user can view this profile
-		access, err := helpers.AccessToProfile(currentUserID, user, app, r)
-
-		if !access && errors.Is(err, sql.ErrNoRows) {
-			app.Logger.Error("Error checking profile access", "error", err)
-			utils.Unauthorized(w, "you have no access to view this user profile")
-			return
-		}
-
-		if err != nil {
-			app.Logger.Error("Error checking profile access", "error", err)
-			utils.Internal(w, err)
-			return
-		}
-		// Return user response
+		// Allow viewing any profile - access control for posts is handled separately
+		// This allows users to see profiles and send follow requests to private accounts
 		response := helpers.UserToResponse(user)
 
 		utils.OK(w, response)

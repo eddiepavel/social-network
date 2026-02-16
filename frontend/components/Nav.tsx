@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import useSession from "@/hooks/useSession";
 import { logoutUser } from "@/lib/api";
 import Button from "@/components/Button";
+import Avatar from "@/components/Avatar";
 import SearchBar from "@/components/SearchBar";
 import NotificationDropdown from "@/components/NotificationDropdown";
 
@@ -43,15 +44,30 @@ export default function Nav() {
           <Link href="/login">Login</Link>
         )}
       </div>
-      <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {session?.user_id ? (
-          <Button
-            variant="ghost"
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-          >
-            Sign out
-          </Button>
+          <>
+            <Link 
+              href={`/profile/${session.user_id}`} 
+              style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "inherit" }}
+            >
+              <Avatar 
+                src={session.avatar} 
+                name={`${session.first_name} ${session.last_name}`}
+                size={32}
+              />
+              <span style={{ fontWeight: 500 }}>
+                {session.first_name} {session.last_name}
+              </span>
+            </Link>
+            <Button
+              variant="ghost"
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
+            >
+              Sign out
+            </Button>
+          </>
         ) : (
           <Link className="button" href="/register">
             Join
