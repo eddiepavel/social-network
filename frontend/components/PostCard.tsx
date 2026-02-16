@@ -9,18 +9,16 @@ import PostActions from "@/components/PostActions";
 import Avatar from "@/components/Avatar";
 
 type PostCardProps = {
-  post: FeedPost & {
-    author_first_name?: string;
-    author_last_name?: string;
-    author_avatar?: string;
-  };
+  post: FeedPost;
   currentUserId?: string;
   showFullComments?: boolean;
 };
 
 export default function PostCard({ post, currentUserId, showFullComments = false }: PostCardProps) {
   const isOwner = currentUserId === post.author_id;
-  const authorName = post.author_first_name && post.author_last_name
+  const authorName = post.author_nickname
+    ? post.author_nickname
+    : post.author_first_name && post.author_last_name
     ? `${post.author_first_name} ${post.author_last_name}`
     : "User";
 
@@ -45,6 +43,7 @@ export default function PostCard({ post, currentUserId, showFullComments = false
             content={post.content}
             visibility={post.visibility}
             isOwner={isOwner}
+            imageUrl={post.image_url}
           />
         </div>
       </div>

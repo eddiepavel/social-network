@@ -242,8 +242,43 @@ type UpdatePostValidator struct{}
 
 func (upv UpdatePostValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
-		"content":  {"required", "string", "min:1", "max:500"},
-		"image_id": {"sometimes", "string"},
+		"content": {"required", "string", "min:1", "max:500"},
+		"image_id": {"sometimes", func(v interface{}) error {
+			// Handle pointer type
+			imageIdPtr, ok := v.(*string)
+			if !ok || imageIdPtr == nil {
+				// Field not provided, keep existing image
+				return nil
+			}
+
+			uuId := *imageIdPtr
+
+			// Empty string is allowed (to remove image)
+			if uuId == "" {
+				return nil
+			}
+
+			getImage, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), uuId)
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("image not found")
+				}
+				return errors.New("something went wrong")
+			}
+
+			if !bytes.Equal(getImage.PosterID, user) {
+				return errors.New("image does not belong to you")
+			}
+
+			if getImage.ExpiresAt.Valid == false {
+				return errors.New("image already assigned")
+			}
+
+			return nil
+		}},
 	}
 }
 
@@ -275,8 +310,35 @@ func (ccv CreateCommentValidator) Build(r *http.Request, app *app.App) map[strin
 	return map[string][]interface{}{
 		"content":   {"required", "string", "min:1", "max:500"},
 		"parent_id": {"sometimes", "string"},
-		// TODO: Add image validation when image service is ready
-		"image_id": {"sometimes", "string"},
+		"image_id": {"sometimes", func(v interface{}) error {
+			uuId := v.(string)
+
+			// Empty string is allowed (no image)
+			if uuId == "" {
+				return nil
+			}
+
+			getImage, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), uuId)
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("image not found")
+				}
+				return errors.New("something went wrong")
+			}
+
+			if !bytes.Equal(getImage.PosterID, user) {
+				return errors.New("image does not belong to you")
+			}
+
+			if getImage.ExpiresAt.Valid == false {
+				return errors.New("image already assigned")
+			}
+
+			return nil
+		}},
 	}
 }
 
@@ -285,6 +347,42 @@ type UpdateCommentValidator struct{}
 func (ucv UpdateCommentValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
 	return map[string][]interface{}{
 		"content": {"required", "string", "min:1", "max:500"},
+		"image_id": {"sometimes", func(v interface{}) error {
+			// Handle pointer type
+			imageIdPtr, ok := v.(*string)
+			if !ok || imageIdPtr == nil {
+				// Field not provided, keep existing image
+				return nil
+			}
+
+			uuId := *imageIdPtr
+
+			// Empty string is allowed (to remove image)
+			if uuId == "" {
+				return nil
+			}
+
+			getImage, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), uuId)
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("image not found")
+				}
+				return errors.New("something went wrong")
+			}
+
+			if !bytes.Equal(getImage.PosterID, user) {
+				return errors.New("image does not belong to you")
+			}
+
+			if getImage.ExpiresAt.Valid == false {
+				return errors.New("image already assigned")
+			}
+
+			return nil
+		}},
 	}
 }
 
@@ -379,5 +477,5 @@ var (
 	ValidateMessage              ValidationRuleBuilder = MessageValidator{}
 	ValidateFirstMessage         ValidationRuleBuilder = FirstMessageValidator{}
 	ValidateEventCreate          ValidationRuleBuilder = CreateGroupEventValidator{}
-	ValidateCreateNotification ValidationRuleBuilder = CreateNotificationValidator{}
+	ValidateCreateNotification   ValidationRuleBuilder = CreateNotificationValidator{}
 )

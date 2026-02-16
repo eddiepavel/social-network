@@ -86,15 +86,11 @@ export default function ProfilePage() {
       setForm((prev) => ({ ...prev, [key]: event.target.value }));
     };
 
-  const handleAvatarSelect = (file: File | null) => {
+  const handleAvatarSelect = (file: File) => {
     setAvatarFile(file);
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setAvatarPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setAvatarPreview(null);
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => setAvatarPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleSaveProfile = async () => {
@@ -171,7 +167,7 @@ export default function ProfilePage() {
               size={80}
             />
             <ImageUpload
-              onFileSelect={handleAvatarSelect}
+              onImageSelect={handleAvatarSelect}
               accept="image/*"
               maxSizeMB={5}
               label="Change avatar"

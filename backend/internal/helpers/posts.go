@@ -28,16 +28,16 @@ func FetchPostBasicInfo(app *app.App, postID []byte, ctx context.Context, w http
 }
 
 // FetchPost fetches a complete post with reactions and comments
-func FetchPost(app *app.App, postID []byte, ctx context.Context, w http.ResponseWriter) db_posts.Post {
+func FetchPost(app *app.App, postID []byte, ctx context.Context, w http.ResponseWriter) db_posts.GetPostByIDRow {
 	post, err := sqlite.NewQuery(app.DB).Posts.GetPostByID(ctx, postID)
 	if err == sql.ErrNoRows {
 		utils.NotFound(w)
-		return db_posts.Post{}
+		return db_posts.GetPostByIDRow{}
 	}
 	if err != nil {
 		app.Logger.Error("Failed to fetch post", "error", err.Error())
 		utils.Internal(w, err)
-		return db_posts.Post{}
+		return db_posts.GetPostByIDRow{}
 	}
 
 	return post

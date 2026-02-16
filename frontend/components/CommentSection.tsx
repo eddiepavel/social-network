@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import CommentCard from "@/components/CommentCard";
 import Button from "@/components/Button";
-import { getComments, createComment, ApiError } from "@/lib/api";
+import ImageUpload from "@/components/ImageUpload";
+import { getComments, createComment, uploadFile, ApiError } from "@/lib/api";
 
 type CommentSectionProps = {
   postId: string;
@@ -22,6 +23,9 @@ export default function CommentSection({
   const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
   const [newComment, setNewComment] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: comments, isLoading } = useQuery({
     queryKey: ["comments", postId],
@@ -29,15 +33,46 @@ export default function CommentSection({
     enabled: isExpanded,
   });
 
+  const handleImageSelect = (file: File) => {
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const addComment = useMutation({
-    mutationFn: () => createComment(postId, { content: newComment }),
+    mutationFn: async () => {
+      let image_id: string | undefined = undefined;
+
+      if (imageFile) {
+        setIsUploading(true);
+        try {
+          const uploadedImage = await uploadFile(imageFile);
+          image_id = uploadedImage.file_id;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
+      return createComment(postId, {
+        content: newComment,
+        ...(image_id && { image_id })
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", postId] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
       setNewComment("");
+      setImageFile(null);
+      setImagePreview(null);
     },
-    onError: () => {},
+    onError: () => {
+      setIsUploading(false);
+    },
   });
 
   if (!isExpanded) {
@@ -55,27 +90,70 @@ export default function CommentSection({
       </button>
 
       {currentUserId && (
-        <div className="comment-input-wrapper">
-          <textarea
-            className="comment-input"
-            placeholder="Write a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            rows={2}
-          />
-          <Button
-            onClick={() => addComment.mutate()}
-            disabled={addComment.isPending || !newComment.trim()}
-          >
-            Post
-          </Button>
-          {addComment.isError ? (
-            <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
-              {addComment.error instanceof ApiError && typeof addComment.error.details === 'string'
-                ? addComment.error.details
+        <div className="comment-form">
+          <div className="comment-form-container">
+            <div className="comment-form-input-area">
+              <div className="comment-form-content">
+                <textarea
+                  className="comment-input"
+                  placeholder="Write a comment..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  rows={2}
+                />
+
+                {imagePreview && (
+                  <div className="comment-image-preview">
+                    <img src={imagePreview} alt="Preview" />
+                    <button
+                      type="button"
+                      className="remove-image-btn"
+                      onClick={handleRemoveImage}
+                      aria-label="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {!newComment.trim() && addComment.isError && (
+                <div className="comment-form-error">
+                  Please enter a comment
+                </div>
+              )}
+
+              <div className="comment-form-actions">
+                {!imagePreview && (
+                  <ImageUpload
+                    onImageSelect={handleImageSelect}
+                    label="📎 Add Image"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="comment-form-button">
+              <Button
+                onClick={() => addComment.mutate()}
+                disabled={addComment.isPending || isUploading || !newComment.trim()}
+              >
+                {isUploading ? "Uploading..." : addComment.isPending ? "Posting..." : "Post"}
+              </Button>
+            </div>
+          </div>
+
+          {addComment.isError && (
+            <div className="comment-form-error">
+              {addComment.error instanceof ApiError && addComment.error.details
+                ? typeof addComment.error.details === 'object' && !Array.isArray(addComment.error.details)
+                  ? Object.values(addComment.error.details)[0]
+                  : typeof addComment.error.details === 'string'
+                  ? addComment.error.details
+                  : addComment.error.message
                 : addComment.error.message}
-            </p>
-          ) : null}
+            </div>
+          )}
         </div>
       )}
 

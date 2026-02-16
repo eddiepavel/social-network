@@ -1124,10 +1124,11 @@ func GetGroupPosts(app *app.App) http.HandlerFunc {
 					}
 					return time.Time{}
 				}(),
-				UserReacted:   p.UserReacted != 0,
-				ReactionCount: p.ReactionCount,
-				CommentCount:  p.CommentCount,
-				AuthorName:    p.FirstName + " " + p.LastName,
+				UserReacted:     p.UserReacted != 0,
+				ReactionCount:   p.ReactionCount,
+				CommentCount:    p.CommentCount,
+				AuthorFirstName: p.FirstName,
+				AuthorLastName:  p.LastName,
 				AuthorAvatar: func() *string {
 					if p.Avatar.Valid {
 						return &p.Avatar.String

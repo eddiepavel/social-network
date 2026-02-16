@@ -35,15 +35,16 @@ export default function PostComposer() {
     },
   });
 
-  const handleImageSelect = (file: File | null) => {
+  const handleImageSelect = (file: File) => {
     setImageFile(file);
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setImagePreview(null);
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handlePost = async () => {
@@ -89,7 +90,7 @@ export default function PostComposer() {
           <img src={imagePreview} alt="Preview" />
           <button
             className="remove-preview"
-            onClick={() => handleImageSelect(null)}
+            onClick={handleRemoveImage}
             type="button"
           >
             Remove
@@ -112,13 +113,15 @@ export default function PostComposer() {
         </label>
 
         <div className="composer-actions">
-          <ImageUpload
-            onFileSelect={handleImageSelect}
-            accept="image/*"
-            maxSizeMB={5}
-            label="Add photo"
-            compact
-          />
+          {!imagePreview && (
+            <ImageUpload
+              onImageSelect={handleImageSelect}
+              accept="image/*"
+              maxSizeMB={5}
+              label="Add photo"
+              compact
+            />
+          )}
           <Button
             onClick={handlePost}
             disabled={!content.trim() || isPosting}

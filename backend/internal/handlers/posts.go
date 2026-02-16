@@ -178,6 +178,20 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 					}
 					return ""
 				}(),
+				AuthorFirstName: post.FirstName,
+				AuthorLastName:  post.LastName,
+				AuthorNickname: func() *string {
+					if post.Nickname.Valid {
+						return &post.Nickname.String
+					}
+					return nil
+				}(),
+				AuthorAvatar: func() *string {
+					if post.Avatar.Valid {
+						return &post.Avatar.String
+					}
+					return nil
+				}(),
 				Visibility: post.Visibility,
 				CreatedAt: func() time.Time {
 					if post.CreatedAt.Valid {
@@ -286,9 +300,30 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 			comments = append(comments, models.Comment{
 				CommentID:       commentID,
 				AuthorID:        commentAuthorID,
+				AuthorFirstName: comment.FirstName,
+				AuthorLastName:  comment.LastName,
+				AuthorNickname: func() *string {
+					if comment.Nickname.Valid {
+						return &comment.Nickname.String
+					}
+					return nil
+				}(),
+				AuthorAvatar: func() *string {
+					if comment.Avatar.Valid {
+						return &comment.Avatar.String
+					}
+					return nil
+				}(),
 				Content:         comment.Content,
 				ParentCommentID: &parentID,
 				ImageID:         &comment.ImageID.String,
+				ImageUrl: func() string {
+					if comment.ImageID.Valid && comment.FileName.Valid {
+						path := app.File.GenerateSignImage(comment.FileName.String, currentUserID, time.Now().Add(15*time.Minute))
+						return path
+					}
+					return ""
+				}(),
 				CreatedAt: func() time.Time {
 					if comment.CreatedAt.Valid {
 						return comment.CreatedAt.Time
@@ -302,10 +337,36 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 
 		authorUuid, _ := helpers.GenerateFromBytes(post.AuthorID)
 		response := models.PostWithCommentsReactionsResponse{
-			PostID:     postIDHex,
-			AuthorID:   authorUuid,
-			Content:    post.Content,
-			ImageID:    &post.ImageID.String,
+			PostID:  postIDHex,
+			Content: post.Content,
+			ImageID: func() *string {
+				if post.ImageID.Valid {
+					return &post.ImageID.String
+				}
+				return nil
+			}(),
+			ImageUrl: func() string {
+				if post.ImageID.Valid && post.FileName.Valid {
+					path := app.File.GenerateSignImage(post.FileName.String, currentUserID, time.Now().Add(15*time.Minute))
+					return path
+				}
+				return ""
+			}(),
+			AuthorID:        authorUuid,
+			AuthorFirstName: post.FirstName,
+			AuthorLastName:  post.LastName,
+			AuthorNickname: func() *string {
+				if post.Nickname.Valid {
+					return &post.Nickname.String
+				}
+				return nil
+			}(),
+			AuthorAvatar: func() *string {
+				if post.Avatar.Valid {
+					return &post.Avatar.String
+				}
+				return nil
+			}(),
 			Visibility: post.Visibility,
 			CreatedAt: func() time.Time {
 				if post.CreatedAt.Valid {
@@ -353,14 +414,73 @@ func EditPost(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		var image sql.NullString
-		if req.ImageID != "" {
-			image = sql.NullString{String: req.ImageID, Valid: true}
-		} else {
-			image = sql.NullString{String: "", Valid: false}
+		// Fetch existing post to check current image
+		query := sqlite.NewQuery(app.DB)
+		existingPost, err := query.Posts.GetPostByID(r.Context(), postID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			app.Logger.Error("failed to fetch post", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
 		}
 
-		err = sqlite.NewQuery(app.DB).Posts.UpdatePost(r.Context(), db_posts.UpdatePostParams{
+		var image sql.NullString
+
+		if req.ImageID != nil {
+			// ImageID field was provided
+			if *req.ImageID != "" {
+				// New image provided
+				if existingPost.ImageID.Valid && *req.ImageID != existingPost.ImageID.String {
+					// Old image exists and is different from new one - remove old and assign new
+					err := app.File.RemoveImage(existingPost.ImageID.String)
+					if err != nil {
+						app.Logger.Error("failed to remove old image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+
+					err = app.File.AssignImage(*req.ImageID)
+					if err != nil {
+						app.Logger.Error("failed to assign new image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+				} else if !existingPost.ImageID.Valid {
+					// No old image - just assign new one
+					err = app.File.AssignImage(*req.ImageID)
+					if err != nil {
+						app.Logger.Error("failed to assign image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+				}
+
+				image = sql.NullString{Valid: true, String: *req.ImageID}
+			} else {
+				// Empty string provided - user wants to remove the image
+				if existingPost.ImageID.Valid {
+					err := app.File.RemoveImage(existingPost.ImageID.String)
+					if err != nil {
+						app.Logger.Error("failed to remove image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+				}
+				image = sql.NullString{Valid: false, String: ""}
+			}
+		} else {
+			// ImageID field not provided - keep existing image
+			if existingPost.ImageID.Valid {
+				image = sql.NullString{Valid: true, String: existingPost.ImageID.String}
+			} else {
+				image = sql.NullString{Valid: false, String: ""}
+			}
+		}
+
+		err = query.Posts.UpdatePost(r.Context(), db_posts.UpdatePostParams{
 			Content:  req.Content,
 			ImageID:  image,
 			PostID:   postID,
@@ -707,9 +827,31 @@ func GetComments(app *app.App) http.HandlerFunc {
 			authorUUID, _ := helpers.GenerateFromBytes(comment.AuthorID)
 
 			commentData := models.Comment{
-				CommentID:   commentUUID,
-				AuthorID:    authorUUID,
-				Content:     comment.Content,
+				CommentID:       commentUUID,
+				AuthorID:        authorUUID,
+				AuthorFirstName: comment.FirstName,
+				AuthorLastName:  comment.LastName,
+				AuthorNickname: func() *string {
+					if comment.Nickname.Valid {
+						return &comment.Nickname.String
+					}
+					return nil
+				}(),
+				AuthorAvatar: func() *string {
+					if comment.Avatar.Valid {
+						return &comment.Avatar.String
+					}
+					return nil
+				}(),
+				Content: comment.Content,
+				ImageID: &comment.ImageID.String,
+				ImageUrl: func() string {
+					if comment.ImageID.Valid && comment.FileName.Valid {
+						path := app.File.GenerateSignImage(comment.FileName.String, currentUserID, time.Now().Add(15*time.Minute))
+						return path
+					}
+					return ""
+				}(),
 				CreatedAt:   comment.CreatedAt.Time,
 				Reactions:   int(comment.ReactionCount),
 				UserReacted: comment.UserReacted != 0,
@@ -721,11 +863,6 @@ func GetComments(app *app.App) http.HandlerFunc {
 					commentData.ParentCommentID = &parentUUID
 				}
 			}
-
-			// TODO: Add image support
-			// if comment.ImageID.Valid {
-			// 	commentData.ImageID = &comment.ImageID.String
-			// }
 
 			commentsList = append(commentsList, commentData)
 		}
@@ -815,11 +952,17 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		// TODO: Handle image ID when image service is ready
+		// Handle image ID
 		var imageID sql.NullString
-		// if req.ImageID != nil && *req.ImageID != "" {
-		// 	imageID = sql.NullString{String: *req.ImageID, Valid: true}
-		// }
+		if req.ImageID != nil && *req.ImageID != "" {
+			imageID = sql.NullString{String: *req.ImageID, Valid: true}
+			err = app.File.AssignImage(*req.ImageID)
+			if err != nil {
+				app.Logger.Error("failed to assign image", "error", err.Error())
+				utils.Internal(w, errors.New("failed to assign image"))
+				return
+			}
+		}
 
 		// Create comment with visibility check
 		rowsAffected, err := sqlite.NewQuery(app.DB).Posts.CreateComment(r.Context(), db_posts.CreateCommentParams{
@@ -881,6 +1024,15 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			response.ParentCommentID = req.ParentID
 		}
 
+		// Add image information to response if image was uploaded
+		if imageID.Valid {
+			response.ImageID = &imageID.String
+			image, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), imageID.String)
+			if err == nil {
+				response.ImageUrl = app.File.GenerateSignImage(image.FileName, currentUserID, time.Now().Add(15*time.Minute))
+			}
+		}
+
 		utils.OK(w, response)
 	}
 }
@@ -916,9 +1068,82 @@ func EditComment(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		// Fetch existing comment to check current image
+		query := sqlite.NewQuery(app.DB)
+		existingComment, err := query.Posts.GetCommentById(r.Context(), commentID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			app.Logger.Error("failed to fetch comment", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		// Check ownership
+		if string(existingComment.AuthorID) != string(currentUserID) {
+			utils.Forbidden(w)
+			return
+		}
+
+		var image sql.NullString
+
+		if req.ImageID != nil {
+			// ImageID field was provided
+			if *req.ImageID != "" {
+				// New image provided
+				if existingComment.ImageID.Valid && *req.ImageID != existingComment.ImageID.String {
+					// Old image exists and is different from new one - remove old and assign new
+					err := app.File.RemoveImage(existingComment.ImageID.String)
+					if err != nil {
+						app.Logger.Error("failed to remove old image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+
+					err = app.File.AssignImage(*req.ImageID)
+					if err != nil {
+						app.Logger.Error("failed to assign new image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+				} else if !existingComment.ImageID.Valid {
+					// No old image - just assign new one
+					err = app.File.AssignImage(*req.ImageID)
+					if err != nil {
+						app.Logger.Error("failed to assign image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+				}
+
+				image = sql.NullString{Valid: true, String: *req.ImageID}
+			} else {
+				// Empty string provided - user wants to remove the image
+				if existingComment.ImageID.Valid {
+					err := app.File.RemoveImage(existingComment.ImageID.String)
+					if err != nil {
+						app.Logger.Error("failed to remove image", "error", err.Error())
+						utils.Internal(w, errors.New("failed to update something went wrong"))
+						return
+					}
+				}
+				image = sql.NullString{Valid: false, String: ""}
+			}
+		} else {
+			// ImageID field not provided - keep existing image
+			if existingComment.ImageID.Valid {
+				image = sql.NullString{Valid: true, String: existingComment.ImageID.String}
+			} else {
+				image = sql.NullString{Valid: false, String: ""}
+			}
+		}
+
 		// Update comment (only owner can edit)
-		err = sqlite.NewQuery(app.DB).Posts.EditComment(r.Context(), db_posts.EditCommentParams{
+		err = query.Posts.EditComment(r.Context(), db_posts.EditCommentParams{
 			Content:   req.Content,
+			ImageID:   image,
 			CommentID: commentID,
 			AuthorID:  currentUserID,
 		})

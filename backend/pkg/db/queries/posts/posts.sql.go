@@ -284,17 +284,23 @@ func (q *Queries) DeleteReaction(ctx context.Context, arg DeleteReactionParams) 
 }
 
 const editComment = `-- name: EditComment :exec
-UPDATE comments SET content = ? WHERE comment_id = ? AND author_id = ?
+UPDATE comments SET content = ?, image_id = ? WHERE comment_id = ? AND author_id = ?
 `
 
 type EditCommentParams struct {
 	Content   string
+	ImageID   sql.NullString
 	CommentID []byte
 	AuthorID  []byte
 }
 
 func (q *Queries) EditComment(ctx context.Context, arg EditCommentParams) error {
-	_, err := q.db.ExecContext(ctx, editComment, arg.Content, arg.CommentID, arg.AuthorID)
+	_, err := q.db.ExecContext(ctx, editComment,
+		arg.Content,
+		arg.ImageID,
+		arg.CommentID,
+		arg.AuthorID,
+	)
 	return err
 }
 
@@ -387,7 +393,7 @@ func (q *Queries) GetFeedPostsCount(ctx context.Context, arg GetFeedPostsCountPa
 
 const getGroupPosts = `-- name: GetGroupPosts :many
 SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
-       u.first_name, u.last_name, u.avatar,
+       u.first_name, u.last_name, u.nickname, u.avatar,
        i.image_id as post_image_id,
        i.image_path,
        i.file_name,
@@ -419,6 +425,7 @@ type GetGroupPostsRow struct {
 	GroupID       []byte
 	FirstName     string
 	LastName      string
+	Nickname      sql.NullString
 	Avatar        sql.NullString
 	PostImageID   sql.NullString
 	ImagePath     sql.NullString
@@ -452,6 +459,7 @@ func (q *Queries) GetGroupPosts(ctx context.Context, arg GetGroupPostsParams) ([
 			&i.GroupID,
 			&i.FirstName,
 			&i.LastName,
+			&i.Nickname,
 			&i.Avatar,
 			&i.PostImageID,
 			&i.ImagePath,
@@ -491,12 +499,31 @@ func (q *Queries) GetPostBasicInfo(ctx context.Context, postID []byte) (GetPostB
 }
 
 const getPostByID = `-- name: GetPostByID :one
-SELECT post_id, author_id, content, image_id, visibility, created_at, group_id FROM posts WHERE post_id = ?
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id, u.first_name, u.last_name, u.nickname, u.avatar, i.file_name
+FROM posts p
+JOIN users u ON p.author_id = u.user_id
+LEFT JOIN images i ON p.image_id = i.image_id
+WHERE p.post_id = ?
 `
 
-func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (Post, error) {
+type GetPostByIDRow struct {
+	PostID     []byte
+	AuthorID   []byte
+	Content    string
+	ImageID    sql.NullString
+	Visibility string
+	CreatedAt  sql.NullTime
+	GroupID    []byte
+	FirstName  string
+	LastName   string
+	Nickname   sql.NullString
+	Avatar     sql.NullString
+	FileName   sql.NullString
+}
+
+func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (GetPostByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getPostByID, postID)
-	var i Post
+	var i GetPostByIDRow
 	err := row.Scan(
 		&i.PostID,
 		&i.AuthorID,
@@ -505,6 +532,11 @@ func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (Post, error) 
 		&i.Visibility,
 		&i.CreatedAt,
 		&i.GroupID,
+		&i.FirstName,
+		&i.LastName,
+		&i.Nickname,
+		&i.Avatar,
+		&i.FileName,
 	)
 	return i, err
 }
@@ -512,6 +544,8 @@ func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (Post, error) 
 const getPostComments = `-- name: GetPostComments :many
 SELECT
     c.comment_id, c.post_id, c.author_id, c.parent_comment_id, c.content, c.image_id, c.created_at,
+    u.first_name, u.last_name, u.nickname, u.avatar,
+    i.file_name,
     COUNT(r.reaction_id) as reaction_count,
     EXISTS(
         SELECT 1 FROM reactions r
@@ -520,9 +554,12 @@ SELECT
           AND r.author_id = ?
     ) as user_reacted
 FROM comments c
+         JOIN users u ON c.author_id = u.user_id
+         LEFT JOIN images i ON c.image_id = i.image_id
          LEFT JOIN reactions r ON r.target_type = 'comment' AND r.target_id = c.comment_id
 WHERE c.post_id = ?
 GROUP BY c.comment_id
+ORDER BY c.created_at ASC
 `
 
 type GetPostCommentsParams struct {
@@ -538,6 +575,11 @@ type GetPostCommentsRow struct {
 	Content         string
 	ImageID         sql.NullString
 	CreatedAt       sql.NullTime
+	FirstName       string
+	LastName        string
+	Nickname        sql.NullString
+	Avatar          sql.NullString
+	FileName        sql.NullString
 	ReactionCount   int64
 	UserReacted     int64
 }
@@ -559,6 +601,11 @@ func (q *Queries) GetPostComments(ctx context.Context, arg GetPostCommentsParams
 			&i.Content,
 			&i.ImageID,
 			&i.CreatedAt,
+			&i.FirstName,
+			&i.LastName,
+			&i.Nickname,
+			&i.Avatar,
+			&i.FileName,
 			&i.ReactionCount,
 			&i.UserReacted,
 		); err != nil {
@@ -599,7 +646,8 @@ func (q *Queries) GetPostVisibility(ctx context.Context, postID []byte) (string,
 
 const getPostsForFeed = `-- name: GetPostsForFeed :many
 SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
-       i.image_id,
+       u.first_name, u.last_name, u.nickname, u.avatar,
+       i.image_id as post_image_id,
        i.image_path,
        i.file_name,
        (SELECT COUNT(*)
@@ -655,7 +703,11 @@ type GetPostsForFeedRow struct {
 	Visibility    string
 	CreatedAt     sql.NullTime
 	GroupID       []byte
-	ImageID_2     sql.NullString
+	FirstName     string
+	LastName      string
+	Nickname      sql.NullString
+	Avatar        sql.NullString
+	PostImageID   sql.NullString
 	ImagePath     sql.NullString
 	FileName      sql.NullString
 	ReactionCount int64
@@ -687,7 +739,11 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 			&i.Visibility,
 			&i.CreatedAt,
 			&i.GroupID,
-			&i.ImageID_2,
+			&i.FirstName,
+			&i.LastName,
+			&i.Nickname,
+			&i.Avatar,
+			&i.PostImageID,
 			&i.ImagePath,
 			&i.FileName,
 			&i.ReactionCount,
@@ -709,7 +765,8 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 
 const getUserPosts = `-- name: GetUserPosts :many
 SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
-       i.image_id,
+       u.first_name, u.last_name, u.nickname, u.avatar,
+       i.image_id as post_image_id,
        i.image_path,
        i.file_name,
        (SELECT COUNT(*)
@@ -725,6 +782,7 @@ SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at
                 AND r.target_id = p.post_id
                 AND r.author_id = ?) as user_reacted
 FROM posts p
+JOIN users u ON p.author_id = u.user_id
 LEFT JOIN images i ON p.image_id = i.image_id
 WHERE p.author_id = ?
   AND (
@@ -733,7 +791,7 @@ WHERE p.author_id = ?
         SELECT 1 FROM followers WHERE follower_id = ? AND followee_id = p.author_id
     ))
     OR (p.visibility = 'private' AND (
-        p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions WHERE user_id = ? AND post_id = p.post_id)
+        p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions vp WHERE vp.user_id = ? AND vp.post_id = p.post_id)
     ))
     OR p.author_id = ?
   )
@@ -760,7 +818,11 @@ type GetUserPostsRow struct {
 	Visibility    string
 	CreatedAt     sql.NullTime
 	GroupID       []byte
-	ImageID_2     sql.NullString
+	FirstName     string
+	LastName      string
+	Nickname      sql.NullString
+	Avatar        sql.NullString
+	PostImageID   sql.NullString
 	ImagePath     sql.NullString
 	FileName      sql.NullString
 	ReactionCount int64
@@ -794,7 +856,11 @@ func (q *Queries) GetUserPosts(ctx context.Context, arg GetUserPostsParams) ([]G
 			&i.Visibility,
 			&i.CreatedAt,
 			&i.GroupID,
-			&i.ImageID_2,
+			&i.FirstName,
+			&i.LastName,
+			&i.Nickname,
+			&i.Avatar,
+			&i.PostImageID,
 			&i.ImagePath,
 			&i.FileName,
 			&i.ReactionCount,

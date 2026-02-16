@@ -41,7 +41,9 @@ export type FeedPost = {
   image_url?: string;
   visibility: string;
   author_id: string;
-  author_name?: string;
+  author_first_name?: string;
+  author_last_name?: string;
+  author_nickname?: string;
   author_avatar?: string;
   created_at: string;
   reaction_count: number;
@@ -144,7 +146,10 @@ export type Comment = {
   created_at: string;
   author_first_name?: string;
   author_last_name?: string;
+  author_nickname?: string;
   author_avatar?: string;
+  image_id?: string | null;
+  image_url?: string;
   reaction_count?: number;
   user_reacted?: boolean;
 };
@@ -152,6 +157,7 @@ export type Comment = {
 export type PostWithDetails = FeedPost & {
   author_first_name?: string;
   author_last_name?: string;
+  author_nickname?: string;
   author_avatar?: string;
   comments?: Comment[];
   allowed_viewers?: string[];

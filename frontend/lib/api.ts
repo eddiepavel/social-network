@@ -242,7 +242,7 @@ export function getPost(postId: string) {
   return apiFetch<PostWithDetails>(`/api/posts/id/${postId}`);
 }
 
-export function editPost(postId: string, input: { content?: string; visibility?: string }) {
+export function editPost(postId: string, input: { content?: string; visibility?: string; image_id?: string }) {
   return apiFetch<Post>(`/api/posts/id/${postId}`, {
     method: "PUT",
     body: JSON.stringify(input),
@@ -288,7 +288,7 @@ export function getComments(postId: string) {
   return apiFetch<Comment[]>(`/api/posts/id/${postId}/comment`);
 }
 
-export function createComment(postId: string, input: { content: string }) {
+export function createComment(postId: string, input: { content: string; image_id?: string }) {
   return apiFetch<Comment>(`/api/posts/id/${postId}/comment`, {
     method: "POST",
     body: JSON.stringify(input),
@@ -296,7 +296,7 @@ export function createComment(postId: string, input: { content: string }) {
 }
 
 // Note: Backend requires postId in path for comment operations
-export function editComment(postId: string, commentId: string, input: { content: string }) {
+export function editComment(postId: string, commentId: string, input: { content: string; image_id?: string }) {
   return apiFetch<Comment>(`/api/posts/id/${postId}/comment/${commentId}`, {
     method: "PUT",
     body: JSON.stringify(input),

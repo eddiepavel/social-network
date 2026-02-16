@@ -264,6 +264,14 @@ func GetUserPosts(app *app.App) http.HandlerFunc {
 					}
 					return ""
 				}(),
+				AuthorFirstName: post.FirstName,
+				AuthorLastName:  post.LastName,
+				AuthorAvatar: func() *string {
+					if post.Avatar.Valid {
+						return &post.Avatar.String
+					}
+					return nil
+				}(),
 				Visibility: post.Visibility,
 				CreatedAt: func() time.Time {
 					if post.CreatedAt.Valid {

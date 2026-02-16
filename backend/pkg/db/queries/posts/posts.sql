@@ -1,5 +1,9 @@
 -- name: GetPostByID :one
-SELECT * FROM posts WHERE post_id = ?;
+SELECT p.*, u.first_name, u.last_name, u.nickname, u.avatar, i.file_name
+FROM posts p
+JOIN users u ON p.author_id = u.user_id
+LEFT JOIN images i ON p.image_id = i.image_id
+WHERE p.post_id = ?;
 
 -- name: GetPostVisibility :one
 SELECT visibility FROM posts WHERE post_id = ?;
@@ -34,7 +38,8 @@ WHERE
 
 -- name: GetPostsForFeed :many
 SELECT p.*,
-       i.image_id,
+       u.first_name, u.last_name, u.nickname, u.avatar,
+       i.image_id as post_image_id,
        i.image_path,
        i.file_name,
        (SELECT COUNT(*)
@@ -120,6 +125,8 @@ DELETE FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 -- name: GetPostComments :many
 SELECT
     c.*,
+    u.first_name, u.last_name, u.nickname, u.avatar,
+    i.file_name,
     COUNT(r.reaction_id) as reaction_count,
     EXISTS(
         SELECT 1 FROM reactions r
@@ -128,9 +135,12 @@ SELECT
           AND r.author_id = ?
     ) as user_reacted
 FROM comments c
+         JOIN users u ON c.author_id = u.user_id
+         LEFT JOIN images i ON c.image_id = i.image_id
          LEFT JOIN reactions r ON r.target_type = 'comment' AND r.target_id = c.comment_id
 WHERE c.post_id = ?
-GROUP BY c.comment_id;
+GROUP BY c.comment_id
+ORDER BY c.created_at ASC;
 
 -- name: GetPostReactions :one
 SELECT COUNT(*) FROM reactions WHERE target_type = 'post' AND target_id = ?;
@@ -160,7 +170,7 @@ SELECT ?, ?, ?, ?, ?, ?
 DELETE FROM comments WHERE comment_id = ? AND author_id = ?;
 
 -- name: EditComment :exec
-UPDATE comments SET content = ? WHERE comment_id = ? AND author_id = ?;
+UPDATE comments SET content = ?, image_id = ? WHERE comment_id = ? AND author_id = ?;
 
 -- name: CreateReaction :execrows
 INSERT INTO reactions (reaction_id, target_type, target_id, author_id)
@@ -205,7 +215,7 @@ RETURNING *;
 
 -- name: GetGroupPosts :many
 SELECT p.*,
-       u.first_name, u.last_name, u.avatar,
+       u.first_name, u.last_name, u.nickname, u.avatar,
        i.image_id as post_image_id,
        i.image_path,
        i.file_name,
@@ -221,7 +231,8 @@ LIMIT ? OFFSET ?;
 
 -- name: GetUserPosts :many
 SELECT p.*,
-       i.image_id,
+       u.first_name, u.last_name, u.nickname, u.avatar,
+       i.image_id as post_image_id,
        i.image_path,
        i.file_name,
        (SELECT COUNT(*)
@@ -237,6 +248,7 @@ SELECT p.*,
                 AND r.target_id = p.post_id
                 AND r.author_id = ?) as user_reacted
 FROM posts p
+JOIN users u ON p.author_id = u.user_id
 LEFT JOIN images i ON p.image_id = i.image_id
 WHERE p.author_id = ?
   AND (
@@ -245,7 +257,7 @@ WHERE p.author_id = ?
         SELECT 1 FROM followers WHERE follower_id = ? AND followee_id = p.author_id
     ))
     OR (p.visibility = 'private' AND (
-        p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions WHERE user_id = ? AND post_id = p.post_id)
+        p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions vp WHERE vp.user_id = ? AND vp.post_id = p.post_id)
     ))
     OR p.author_id = ?
   )

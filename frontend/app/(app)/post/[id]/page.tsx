@@ -22,7 +22,7 @@ export default function PostDetailPage() {
   if (!post) return <p>Post not found.</p>;
 
   return (
-    <div className="grid" style={{ paddingBottom: 64, maxWidth: 700 }}>
+    <div className="post-detail-container">
       <PostCard
         post={post}
         currentUserId={session?.user_id}
