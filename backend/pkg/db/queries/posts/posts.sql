@@ -153,6 +153,7 @@ SELECT ?, ?, ?, ?, ?, ?
     WHERE p.post_id = ?
       AND (
           p.visibility = 'public'
+          OR p.author_id = ?
           OR EXISTS (
               SELECT 1 FROM followers f
               WHERE f.follower_id = ?
@@ -180,6 +181,7 @@ SELECT ?, ?, ?, ?
     WHERE p.post_id = ?
     AND (
         p.visibility = 'public'
+        OR p.author_id = ?
         OR EXISTS (
             SELECT 1 FROM followers f
             WHERE f.follower_id = ?

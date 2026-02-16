@@ -975,6 +975,7 @@ func CreateComment(app *app.App) http.HandlerFunc {
 			PostID_2:        postID,
 			FollowerID:      currentUserID,
 			AuthorID:        currentUserID,
+			AuthorID_2:      currentUserID,
 		})
 
 		if err != nil {
@@ -1364,6 +1365,7 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 				TargetType: targetType,
 				TargetID:   targetID,
 				AuthorID:   currentUserID,
+				AuthorID_2: currentUserID,
 				PostID:     postID,
 				FollowerID: currentUserID,
 				UserID:     currentUserID,

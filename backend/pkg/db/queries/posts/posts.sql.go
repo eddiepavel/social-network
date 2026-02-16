@@ -80,6 +80,7 @@ SELECT ?, ?, ?, ?, ?, ?
     WHERE p.post_id = ?
       AND (
           p.visibility = 'public'
+          OR p.author_id = ?
           OR EXISTS (
               SELECT 1 FROM followers f
               WHERE f.follower_id = ?
@@ -102,6 +103,7 @@ type CreateCommentParams struct {
 	ParentCommentID []byte
 	ImageID         sql.NullString
 	PostID_2        []byte
+	AuthorID_2      []byte
 	FollowerID      []byte
 	UserID          []byte
 }
@@ -115,6 +117,7 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (i
 		arg.ParentCommentID,
 		arg.ImageID,
 		arg.PostID_2,
+		arg.AuthorID_2,
 		arg.FollowerID,
 		arg.UserID,
 	)
@@ -200,6 +203,7 @@ SELECT ?, ?, ?, ?
     WHERE p.post_id = ?
     AND (
         p.visibility = 'public'
+        OR p.author_id = ?
         OR EXISTS (
             SELECT 1 FROM followers f
             WHERE f.follower_id = ?
@@ -220,6 +224,7 @@ type CreateReactionParams struct {
 	TargetID   []byte
 	AuthorID   []byte
 	PostID     []byte
+	AuthorID_2 []byte
 	FollowerID []byte
 	UserID     []byte
 }
@@ -231,6 +236,7 @@ func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) 
 		arg.TargetID,
 		arg.AuthorID,
 		arg.PostID,
+		arg.AuthorID_2,
 		arg.FollowerID,
 		arg.UserID,
 	)
