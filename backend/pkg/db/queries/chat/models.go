@@ -27,7 +27,7 @@ type ChatParticipant struct {
 type ChatRoom struct {
 	RoomID    []byte
 	Name      sql.NullString
-	IsGroup   int64
+	GroupID   []byte
 	CreatedAt sql.NullTime
 }
 

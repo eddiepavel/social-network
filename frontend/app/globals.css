@@ -185,6 +185,12 @@ button {
   transform: translateY(-1px);
 }
 
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #ccc; /* or a muted color */
+}
+
 .button.ghost {
   background: transparent;
   color: var(--ink);

@@ -12,7 +12,7 @@ import useSession from "@/hooks/useSession";
 export default function PostComposer() {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
-  const [visibility, setVisibility] = useState("public");
+  const [visibility, setVisibility] = useState("");
   const [selectedFollowers, setSelectedFollowers] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -104,10 +104,14 @@ export default function PostComposer() {
         const uploaded = await uploadFile(imageFile);
         imageId = uploaded.file_id;
       }
+      let postVisibility = visibility;
+      if (!visibility) {
+        postVisibility = session?.is_public ? 'public' : 'semi-private'
+      }
       create.mutate({
         content,
         image_id: imageId,
-        visibility,
+        visibility: postVisibility,
         allowed_users: visibility === "private" ? selectedFollowers : undefined,
       });
     } catch (error) {
@@ -158,8 +162,8 @@ export default function PostComposer() {
             value={visibility}
             onChange={(event) => setVisibility(event.target.value)}
           >
-            <option value="public">Public - Everyone can see</option>
-            <option value="semi-private">Almost Private - Only followers</option>
+            <option disabled={!session?.is_public} value="public">Public - Everyone can see</option>
+            <option disabled={session?.is_public} value="semi-private">Almost Private - Only followers</option>
             <option value="private">Private - Select specific followers</option>
           </select>
         </label>

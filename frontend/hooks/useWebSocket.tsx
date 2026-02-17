@@ -36,7 +36,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
   const isIntentionalCloseRef = useRef(false); // Track intentional disconnection (logout)
 
   const handleNotification = useCallback((notifData: any) => {
@@ -123,7 +123,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const ws = new WebSocket(`${WS_BASE_URL}/ws/connect`);
-    wsRef.current = ws;
+    wsRef.current = ws as WebSocket;
 
     ws.onopen = () => {
       console.log("[WebSocket] Connected");
@@ -175,7 +175,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           // Re-call connection function - use ref to get latest version
           if (session?.user_id && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
             const newWs = new WebSocket(`${WS_BASE_URL}/ws/connect`);
-            wsRef.current = newWs;
+            wsRef.current = newWs as WebSocket;
             // Copy the handlers
             newWs.onopen = ws.onopen;
             newWs.onmessage = ws.onmessage;
