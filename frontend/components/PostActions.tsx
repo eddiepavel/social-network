@@ -129,17 +129,6 @@ export default function PostActions({ postId, content, visibility, isOwner, imag
           )}
 
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-            <label className="form-field" style={{ flex: 1 }}>
-              <span>Visibility</span>
-              <select
-                value={editVisibility}
-                onChange={(e) => setEditVisibility(e.target.value)}
-              >
-                <option value="public">Public</option>
-                <option value="semi-private">Semi-private</option>
-                <option value="private">Private</option>
-              </select>
-            </label>
             {!(imagePreview || (imageUrl && !shouldRemoveImage)) && (
               <div style={{ paddingTop: "1.5rem" }}>
                 <ImageUpload
