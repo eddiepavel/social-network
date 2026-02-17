@@ -97,9 +97,10 @@ type PostWithCommentsReactionsResponse struct {
 	AuthorNickname  *string   `json:"author_nickname,omitempty"`
 	AuthorAvatar    *string   `json:"author_avatar,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
-	Reactions       int       `json:"reactions"`
+	Reactions       int       `json:"reaction_count"`
 	UserReacted     bool      `json:"user_reacted"`
 	Comments        []Comment `json:"comments"`
+	CommentCount    int64     `json:"comment_count"`
 }
 
 type CreateCommentRequest struct {

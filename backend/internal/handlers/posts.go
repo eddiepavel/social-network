@@ -320,7 +320,9 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 		})
 
 		var comments []models.Comment
+		var commentCount int64
 		for _, comment := range postComments {
+			commentCount++
 			commentAuthorID, _ := helpers.GenerateFromBytes(comment.AuthorID)
 			commentID, _ := helpers.GenerateFromBytes(comment.CommentID)
 			var parentID string
@@ -404,9 +406,10 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 				}
 				return time.Time{}
 			}(),
-			Reactions:   int(reactions),
-			UserReacted: hasUserReacted != 0,
-			Comments:    comments,
+			Reactions:    int(reactions),
+			UserReacted:  hasUserReacted != 0,
+			Comments:     comments,
+			CommentCount: commentCount,
 		}
 
 		utils.OK(w, response)
