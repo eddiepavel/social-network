@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -21,6 +22,63 @@ import (
 
 	"github.com/google/uuid"
 )
+
+func findGroupChatRoomID(ctx context.Context, db *sql.DB, groupID []byte) ([]byte, error) {
+	var roomID []byte
+	err := db.QueryRowContext(ctx, `
+		SELECT cr.room_id
+		FROM chat_rooms cr
+		INNER JOIN groups g ON g.group_name = cr.name
+		WHERE cr.is_group = 1 AND g.group_id = ?
+		LIMIT 1
+	`, groupID).Scan(&roomID)
+	if err != nil {
+		return nil, err
+	}
+	return roomID, nil
+}
+
+func addUserToGroupChat(ctx context.Context, db *sql.DB, tx *sql.Tx, groupID []byte, userID []byte) error {
+	roomID, err := findGroupChatRoomID(ctx, db, groupID)
+	if err != nil {
+		return err
+	}
+
+	params := db_chat.AddRoomParticipantParams{
+		RoomID: roomID,
+		UserID: userID,
+	}
+
+	if tx != nil {
+		err = sqlite.NewQuery(db).Chat.WithTx(tx).AddRoomParticipant(ctx, params)
+	} else {
+		err = sqlite.NewQuery(db).Chat.AddRoomParticipant(ctx, params)
+	}
+
+	if err != nil {
+		if sqlite.CheckUniqueConstraint(err) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
+}
+
+func removeUserFromGroupChat(ctx context.Context, db *sql.DB, groupID []byte, userID []byte) error {
+	roomID, err := findGroupChatRoomID(ctx, db, groupID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+
+	return sqlite.NewQuery(db).Chat.RemoveRoomParticipant(ctx, db_chat.RemoveRoomParticipantParams{
+		UserID: userID,
+		RoomID: roomID,
+	})
+}
 
 // CreateGroup handles POST /api/groups
 // Creates a new group and automatically adds creator as member with status 'joined'
@@ -534,11 +592,30 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 			switch isInviteeMember.Status == "joined" {
 
 			case p.Action == "accept_invite":
-				err := sqlite.NewQuery(app.DB).Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
-					Status: "joined",
-					UserID: userId,
-				})
+				tx, err := app.DB.Begin()
 				if err != nil {
+					utils.Internal(w, errors.New("internal"))
+					return
+				}
+				defer tx.Rollback()
+
+				_, err = tx.ExecContext(r.Context(), `
+					UPDATE group_members
+					SET status = 'joined'
+					WHERE user_id = ? AND group_id = ?
+				`, userId, groupID)
+				if err != nil {
+					utils.Internal(w, errors.New("internal"))
+					return
+				}
+
+				err = addUserToGroupChat(r.Context(), app.DB, tx, groupID, userId)
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+					utils.Internal(w, errors.New("internal"))
+					return
+				}
+
+				if err := tx.Commit(); err != nil {
 					utils.Internal(w, errors.New("internal"))
 					return
 				}
@@ -733,20 +810,43 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 			}
 
 		case "approve":
-			if err := query.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
-				Status: "joined",
-				UserID: groupMem.UserID,
-			}); err != nil {
+			tx, err := app.DB.Begin()
+			if err != nil {
+				app.Logger.Error("failed to begin transaction", "err", err)
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+			defer tx.Rollback()
+
+			_, err = tx.ExecContext(r.Context(), `
+				UPDATE group_members
+				SET status = 'joined'
+				WHERE user_id = ? AND group_id = ?
+			`, groupMem.UserID, groupMem.GroupID)
+			if err != nil {
 				app.Logger.Error("failed to update group member status", "err", err)
 				utils.Internal(w, errors.New("internal server error"))
 				return
 			}
 
+			err = addUserToGroupChat(r.Context(), app.DB, tx, groupMem.GroupID, groupMem.UserID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				app.Logger.Error("failed to add user to group chat participants", "err", err)
+				utils.Internal(w, errors.New("internal server error"))
+				return
+			}
+
 			// Create notification for group join approval
-			err = helpers.CreateNotification(app, groupMem.UserID, constants.NotificationGroupJoinApproved, currentUser, groupId, nil, nil)
+			err = helpers.CreateNotification(app, groupMem.UserID, constants.NotificationGroupJoinApproved, currentUser, groupId, nil, tx)
 			if err != nil {
 				app.Logger.Error("failed to create group join approved notification", "err", err)
 				// Don't fail the request if notification fails
+			}
+
+			if err := tx.Commit(); err != nil {
+				app.Logger.Error("failed to commit transaction", "err", err)
+				utils.Internal(w, errors.New("internal server error"))
+				return
 			}
 		}
 
@@ -827,6 +927,12 @@ func RemoveMember(app *app.App) http.HandlerFunc {
 				UserID:  getMember.UserID,
 				GroupID: getMember.GroupID,
 			}); err != nil {
+				utils.Internal(w, errors.New("something went wrong"))
+				return
+			}
+
+			if err := removeUserFromGroupChat(r.Context(), app.DB, getMember.GroupID, getMember.UserID); err != nil {
+				app.Logger.Error("failed to remove user from group chat participants", "err", err)
 				utils.Internal(w, errors.New("something went wrong"))
 				return
 			}
