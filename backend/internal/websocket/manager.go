@@ -55,6 +55,8 @@ func NewManager(db *sql.DB, l *slog.Logger) *Manager {
 func (m *Manager) setupEventHandlers() {
 	m.handlers[EventPrivateMessage] = PrivateMessageHandler
 	m.handlers[EventSendMessage] = SendMessageHandler
+	m.handlers[EventEnterChat] = EnterChatHandler
+	m.handlers[EventLeaveChat] = LeaveChatHandler
 }
 
 // routeEvent routes incoming events to the appropriate handler
@@ -120,6 +122,17 @@ func (m *Manager) removeClient(client *Client) {
 	}
 }
 
+// IsUserInRoom checks if a user is currently viewing a specific chat room
+func (m *Manager) IsUserInRoom(userID string, roomID string) bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	if client, ok := m.clients[userID]; ok {
+		return client.activeRoom == roomID
+	}
+	return false
+}
+
 func (m *Manager) StartNotificationWorker() {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
@@ -158,7 +171,8 @@ func (m *Manager) checkAndSendNotifications() {
 			continue
 		}
 
-		notifications, err := sqlite.NewQuery(m.DB).Notifications.GetUnseenNotificationsByReceiverId(context.Background(), userIDBytes)
+		// Use the new query that includes user details
+		notifications, err := sqlite.NewQuery(m.DB).Notifications.GetUnseenNotificationsWithUserDetails(context.Background(), userIDBytes)
 		if err != nil {
 			m.Logger.Error("failed to get unseen notifications", "userID", userIDStr, "err", err)
 			continue
@@ -200,15 +214,31 @@ func (m *Manager) checkAndSendNotifications() {
 				}
 			}
 
+			// Build from_name from first_name and last_name
+			fromName := notif.FromFirstName + " " + notif.FromLastName
+
+			// Get optional fields
+			fromAvatar := ""
+			if notif.FromAvatar.Valid {
+				fromAvatar = notif.FromAvatar.String
+			}
+			fromNickname := ""
+			if notif.FromNickname.Valid {
+				fromNickname = notif.FromNickname.String
+			}
+
 			notifEvent := NotificationEvent{
-				NotifID:    notif.NotifID,
-				ReceiverID: userIDStr,
-				Type:       notif.Type,
-				FromID:     fromIDStr,
-				GroupID:    groupIDStr,
-				EventID:    eventIDStr,
-				CreatedAt:  notif.CreatedAt.Time,
-				IsSeen:     notif.IsSeen.Bool,
+				NotifID:      notif.NotifID,
+				ReceiverID:   userIDStr,
+				Type:         notif.Type,
+				FromID:       fromIDStr,
+				FromName:     fromName,
+				FromAvatar:   fromAvatar,
+				FromNickname: fromNickname,
+				GroupID:      groupIDStr,
+				EventID:      eventIDStr,
+				CreatedAt:    notif.CreatedAt.Time,
+				IsSeen:       notif.IsSeen.Bool,
 			}
 
 			payload, err := json.Marshal(notifEvent)

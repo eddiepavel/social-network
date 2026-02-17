@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"net/http"
 	"social-network/app"
+	"social-network/internal/constants"
 	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
@@ -12,6 +14,7 @@ import (
 	ws "social-network/internal/websocket"
 	db_chat "social-network/pkg/db/queries/chat"
 	db_followers "social-network/pkg/db/queries/followers"
+	db_notifications "social-network/pkg/db/queries/notifications"
 	"social-network/pkg/db/sqlite"
 	"time"
 
@@ -272,6 +275,40 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		// Create notification for room participants (except sender)
+		// Only if they're not currently viewing the chat and haven't been notified recently
+		participants, err := sqlite.NewQuery(app.DB).Chat.GetRoomParticipants(r.Context(), roomID)
+		if err == nil {
+			roomUUIDStr, _ := helpers.GenerateFromBytes(roomID)
+			senderUUIDStr, _ := helpers.GenerateFromBytes(currentUserID)
+			notifCooldown := 5 * time.Minute
+
+			for _, participantID := range participants {
+				if bytes.Equal(participantID, currentUserID) {
+					continue
+				}
+
+				participantUUIDStr, _ := helpers.GenerateFromBytes(participantID)
+
+				// Skip if user is currently viewing this chat room
+				if app.WsManager != nil && app.WsManager.IsUserInRoom(participantUUIDStr, roomUUIDStr) {
+					continue
+				}
+
+				// Check cooldown - don't spam notifications
+				lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastMessageNotification(r.Context(), db_notifications.GetLastMessageNotificationParams{
+					ReceiverID: participantID,
+					FromID:     currentUserID,
+				})
+				if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+					app.Logger.Info("Skipping message notification due to cooldown", "from", senderUUIDStr, "to", participantUUIDStr)
+					continue
+				}
+
+				_ = helpers.CreateNotification(app, participantID, constants.NotificationMessage, currentUserID, nil, nil, nil)
+			}
+		}
+
 		// Broadcast to room participants via WebSocket
 		if app.WsManager != nil {
 			messageUUID, _ := helpers.GenerateFromBytes(messageID)
@@ -426,6 +463,36 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		if err != nil {
 			utils.Internal(w, err)
 			return
+		}
+
+		// Create notification for the target user only if they're not viewing the chat
+		// and haven't been notified recently
+		roomUUIDStr, _ := helpers.GenerateFromBytes(roomID)
+		targetUUIDStr, _ := helpers.GenerateFromBytes(targetID)
+		senderUUIDStr, _ := helpers.GenerateFromBytes(currentUserID)
+		notifCooldown := 5 * time.Minute
+
+		shouldNotify := true
+
+		// Skip if user is currently viewing this chat room
+		if app.WsManager != nil && app.WsManager.IsUserInRoom(targetUUIDStr, roomUUIDStr) {
+			shouldNotify = false
+		}
+
+		// Check cooldown - don't spam notifications
+		if shouldNotify {
+			lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastMessageNotification(r.Context(), db_notifications.GetLastMessageNotificationParams{
+				ReceiverID: targetID,
+				FromID:     currentUserID,
+			})
+			if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+				app.Logger.Info("Skipping message notification due to cooldown", "from", senderUUIDStr, "to", targetUUIDStr)
+				shouldNotify = false
+			}
+		}
+
+		if shouldNotify {
+			_ = helpers.CreateNotification(app, targetID, constants.NotificationMessage, currentUserID, nil, nil, nil)
 		}
 
 		roomUUID, _ := helpers.GenerateFromBytes(roomID)

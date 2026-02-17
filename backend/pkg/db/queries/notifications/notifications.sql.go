@@ -80,6 +80,25 @@ func (q *Queries) DeleteNotificationsByReceiverId(ctx context.Context, receiverI
 	return err
 }
 
+const getLastMessageNotification = `-- name: GetLastMessageNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'message'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastMessageNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastMessageNotification(ctx context.Context, arg GetLastMessageNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastMessageNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
 const getNotificationById = `-- name: GetNotificationById :one
 SELECT notif_id, receiver_id, type, is_seen, from_id, group_id, event_id, created_at FROM notifications WHERE notif_id = ? LIMIT 1
 `
@@ -276,6 +295,77 @@ func (q *Queries) GetUnseenNotificationsByReceiverId(ctx context.Context, receiv
 			&i.GroupID,
 			&i.EventID,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnseenNotificationsWithUserDetails = `-- name: GetUnseenNotificationsWithUserDetails :many
+SELECT
+    n.notif_id,
+    n.receiver_id,
+    n.type,
+    n.is_seen,
+    n.from_id,
+    n.group_id,
+    n.event_id,
+    n.created_at,
+    u.first_name as from_first_name,
+    u.last_name as from_last_name,
+    u.avatar as from_avatar,
+    u.nickname as from_nickname
+FROM notifications n
+JOIN users u ON n.from_id = u.user_id
+WHERE n.receiver_id = ? AND n.is_seen = 0
+ORDER BY n.created_at DESC
+`
+
+type GetUnseenNotificationsWithUserDetailsRow struct {
+	NotifID       string
+	ReceiverID    []byte
+	Type          string
+	IsSeen        sql.NullBool
+	FromID        []byte
+	GroupID       []byte
+	EventID       []byte
+	CreatedAt     sql.NullTime
+	FromFirstName string
+	FromLastName  string
+	FromAvatar    sql.NullString
+	FromNickname  sql.NullString
+}
+
+func (q *Queries) GetUnseenNotificationsWithUserDetails(ctx context.Context, receiverID []byte) ([]GetUnseenNotificationsWithUserDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUnseenNotificationsWithUserDetails, receiverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnseenNotificationsWithUserDetailsRow
+	for rows.Next() {
+		var i GetUnseenNotificationsWithUserDetailsRow
+		if err := rows.Scan(
+			&i.NotifID,
+			&i.ReceiverID,
+			&i.Type,
+			&i.IsSeen,
+			&i.FromID,
+			&i.GroupID,
+			&i.EventID,
+			&i.CreatedAt,
+			&i.FromFirstName,
+			&i.FromLastName,
+			&i.FromAvatar,
+			&i.FromNickname,
 		); err != nil {
 			return nil, err
 		}

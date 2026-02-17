@@ -1,35 +1,51 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import SectionHeader from "@/components/SectionHeader";
 import Tabs from "@/components/Tabs";
 import FollowRequestsList from "@/components/FollowRequestsList";
 import NotificationItem from "@/components/NotificationItem";
 import EmptyState from "@/components/EmptyState";
-import { getFollowRequests, getChatList, getNotifications, getUnseenNotificationCount } from "@/lib/api";
+import Button from "@/components/Button";
+import { getFollowRequests, getChatList, getNotifications, getUnseenNotificationCount, markAllNotificationsAsSeen } from "@/lib/api";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { useState, useMemo } from "react";
 
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState("all");
+  const queryClient = useQueryClient();
+  const { isConnected } = useWebSocket();
 
-  const { data: notifications } = useQuery({
+  const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: getNotifications,
+    staleTime: Infinity, // Real-time updates via WebSocket
   });
 
   const { data: followRequests } = useQuery({
     queryKey: ["follow-requests"],
     queryFn: getFollowRequests,
+    staleTime: Infinity,
   });
 
   const { data: chatList } = useQuery({
     queryKey: ["chat-list"],
     queryFn: getChatList,
+    staleTime: Infinity,
   });
 
   const { data: unseenCount } = useQuery({
     queryKey: ["unseen-count"],
     queryFn: getUnseenNotificationCount,
+    staleTime: Infinity,
+  });
+
+  const markAllSeen = useMutation({
+    mutationFn: markAllNotificationsAsSeen,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.setQueryData(["unseen-count"], { count: 0 });
+    },
   });
 
   // Filter notifications by type
@@ -73,7 +89,26 @@ export default function NotificationsPage() {
   return (
     <div className="grid" style={{ paddingBottom: 64 }}>
       <section className="surface card">
-        <SectionHeader title="Notifications" />
+        <div className="notification-page-header">
+          <SectionHeader title="Notifications" />
+          <div className="notification-page-actions">
+            {isConnected && (
+              <span className="ws-indicator">
+                <span className="ws-dot" /> Live
+              </span>
+            )}
+            {totalUnseenCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllSeen.mutate()}
+                disabled={markAllSeen.isPending}
+              >
+                Mark all as read
+              </Button>
+            )}
+          </div>
+        </div>
         <Tabs
           tabs={[
             { id: "all", label: `All ${totalUnseenCount > 0 ? `(${totalUnseenCount})` : ""}` },
@@ -88,7 +123,9 @@ export default function NotificationsPage() {
 
         {activeTab === "all" && (
           <div className="notifications-list">
-            {notifications && notifications.length > 0 ? (
+            {isLoading ? (
+              <EmptyState title="Loading..." body="Fetching your notifications" />
+            ) : notifications && notifications.length > 0 ? (
               notifications.map((notification) => (
                 <NotificationItem
                   key={notification.notif_id}

@@ -59,3 +59,28 @@ FROM notifications n
 JOIN users u ON n.from_id = u.user_id
 WHERE n.receiver_id = ?
 ORDER BY n.created_at DESC;
+
+-- name: GetUnseenNotificationsWithUserDetails :many
+SELECT
+    n.notif_id,
+    n.receiver_id,
+    n.type,
+    n.is_seen,
+    n.from_id,
+    n.group_id,
+    n.event_id,
+    n.created_at,
+    u.first_name as from_first_name,
+    u.last_name as from_last_name,
+    u.avatar as from_avatar,
+    u.nickname as from_nickname
+FROM notifications n
+JOIN users u ON n.from_id = u.user_id
+WHERE n.receiver_id = ? AND n.is_seen = 0
+ORDER BY n.created_at DESC;
+
+-- name: GetLastMessageNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'message'
+ORDER BY created_at DESC
+LIMIT 1;

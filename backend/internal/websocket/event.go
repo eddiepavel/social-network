@@ -25,18 +25,23 @@ const (
 	EventTypingIndicator = "typing_indicator"
 	EventGroupMessage    = "group_message"
 	EventSendMessage     = "send_message"
+	EventEnterChat       = "enter_chat"
+	EventLeaveChat       = "leave_chat"
 )
 
 // NotificationEvent represents a notification pushed to the client
 type NotificationEvent struct {
-	NotifID    string    `json:"notif_id"`
-	ReceiverID string    `json:"receiver_id"`
-	Type       string    `json:"type"`
-	FromID     string    `json:"from_id"`
-	GroupID    string    `json:"group_id,omitempty"`
-	EventID    string    `json:"event_id,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	IsSeen     bool      `json:"is_seen"`
+	NotifID      string    `json:"notif_id"`
+	ReceiverID   string    `json:"receiver_id"`
+	Type         string    `json:"type"`
+	FromID       string    `json:"from_id"`
+	FromName     string    `json:"from_name"`
+	FromAvatar   string    `json:"from_avatar,omitempty"`
+	FromNickname string    `json:"from_nickname,omitempty"`
+	GroupID      string    `json:"group_id,omitempty"`
+	EventID      string    `json:"event_id,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	IsSeen       bool      `json:"is_seen"`
 }
 
 // ErrorEvent represents an error message sent to the client
@@ -75,4 +80,9 @@ type ChatMessageEvent struct {
 type SendMessageEvent struct {
 	RoomID  string `json:"room_id"`
 	Content string `json:"content"`
+}
+
+// EnterChatEvent represents a user entering a chat room
+type EnterChatEvent struct {
+	RoomID string `json:"room_id"`
 }

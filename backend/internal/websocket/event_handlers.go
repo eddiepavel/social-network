@@ -148,3 +148,22 @@ func SendMessageHandler(event Event, c *Client, db *sql.DB) error {
 	c.manager.Logger.Info("Chat message stored and broadcast", "from", c.userID, "room", msg.RoomID)
 	return nil
 }
+
+// EnterChatHandler handles when a user opens a chat room
+func EnterChatHandler(event Event, c *Client, db *sql.DB) error {
+	var msg EnterChatEvent
+	if err := json.Unmarshal(event.Payload, &msg); err != nil {
+		return fmt.Errorf("failed to unmarshal enter_chat: %w", err)
+	}
+
+	c.activeRoom = msg.RoomID
+	c.manager.Logger.Info("User entered chat room", "userID", c.userID, "roomID", msg.RoomID)
+	return nil
+}
+
+// LeaveChatHandler handles when a user leaves/closes a chat room
+func LeaveChatHandler(event Event, c *Client, db *sql.DB) error {
+	c.manager.Logger.Info("User left chat room", "userID", c.userID, "roomID", c.activeRoom)
+	c.activeRoom = ""
+	return nil
+}

@@ -13,6 +13,7 @@ type Client struct {
 	manager    *Manager
 	userID     string
 	egress     chan Event
+	activeRoom string // tracks which chat room the user is currently viewing
 }
 
 func NewClient(conn *websocket.Conn, manager *Manager, userID string) *Client {
@@ -21,6 +22,7 @@ func NewClient(conn *websocket.Conn, manager *Manager, userID string) *Client {
 		manager:    manager,
 		userID:     userID,
 		egress:     make(chan Event, 16),
+		activeRoom: "",
 	}
 }
 

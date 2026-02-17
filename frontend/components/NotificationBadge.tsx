@@ -3,12 +3,16 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getUnseenNotificationCount } from "@/lib/api";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function NotificationBadge() {
+  const { isConnected } = useWebSocket();
+
+  // Fetch count only on mount - real-time updates come via WebSocket
   const { data: unseenCount } = useQuery({
     queryKey: ["unseen-count"],
     queryFn: getUnseenNotificationCount,
-    refetchInterval: 30000,
+    staleTime: Infinity, // Don't auto-refetch
   });
 
   const totalCount = unseenCount?.count ?? 0;
@@ -20,6 +24,9 @@ export default function NotificationBadge() {
         <span className="notification-count">
           {totalCount > 99 ? "99+" : totalCount}
         </span>
+      )}
+      {isConnected && (
+        <span className="ws-status connected" title="Real-time connected" />
       )}
     </Link>
   );

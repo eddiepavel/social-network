@@ -13,12 +13,14 @@ type NotificationItemProps = {
   notification: Notification;
   compact?: boolean;
   requestId?: string; // For follow_request notifications
+  onAction?: () => void; // Callback for when an action is taken
 };
 
 export default function NotificationItem({
   notification,
   compact = false,
   requestId,
+  onAction,
 }: NotificationItemProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -30,6 +32,11 @@ export default function NotificationItem({
       queryClient.invalidateQueries({ queryKey: ["follow-requests"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["followers"] });
+      queryClient.setQueryData(["unseen-count"], (old: { count: number } | undefined) => {
+        const currentCount = old?.count ?? 0;
+        return { count: Math.max(0, currentCount - 1) };
+      });
+      onAction?.();
     },
   });
 
@@ -37,7 +44,10 @@ export default function NotificationItem({
     mutationFn: () => markNotificationAsSeen(notification.notif_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["unseen-count"] });
+      queryClient.setQueryData(["unseen-count"], (old: { count: number } | undefined) => {
+        const currentCount = old?.count ?? 0;
+        return { count: Math.max(0, currentCount - 1) };
+      });
     },
   });
 
@@ -145,29 +155,33 @@ export default function NotificationItem({
     }
   };
 
+  const hasActions = content.showActions && requestId && notification.type === "follow_request";
+
   return (
     <div
-      className={`notification-item ${!notification.is_seen ? "unread" : ""}`}
-      style={{ opacity: notification.is_seen ? 0.7 : 1 }}
+      className={`notification-item ${!notification.is_seen ? "unread" : ""} ${hasActions ? "has-actions" : ""}`}
     >
-      <Avatar
-        src={notification.from_avatar}
-        name={notification.from_name}
-        size={40}
-      />
-      <Link href={content.href} onClick={handleClick} className="notification-content-link">
-        <div className="notification-content">
-          <p className="notification-text">
-            <strong>{notification.from_nickname || notification.from_name}</strong> {content.text}
-          </p>
-          <span className="notification-time">{formatDate(notification.created_at)}</span>
-        </div>
-      </Link>
-      <span className="notification-icon">{content.icon}</span>
+      <div className="notification-item-main">
+        <Avatar
+          src={notification.from_avatar}
+          name={notification.from_name}
+          size={compact ? 32 : 40}
+        />
+        <Link href={content.href} onClick={handleClick} className="notification-content-link">
+          <div className="notification-content">
+            <p className="notification-text">
+              <strong>{notification.from_nickname || notification.from_name}</strong> {content.text}
+            </p>
+            <span className="notification-time">{formatDate(notification.created_at)}</span>
+          </div>
+        </Link>
+        <span className="notification-icon">{content.icon}</span>
+      </div>
       
-      {content.showActions && requestId && notification.type === "follow_request" && (
+      {hasActions && (
         <div className="notification-actions">
           <Button
+            size="sm"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -175,10 +189,11 @@ export default function NotificationItem({
             }}
             disabled={respond.isPending}
           >
-            Accept
+            {respond.isPending ? "..." : "Accept"}
           </Button>
           <Button
             variant="ghost"
+            size="sm"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -186,7 +201,7 @@ export default function NotificationItem({
             }}
             disabled={respond.isPending}
           >
-            Decline
+            {respond.isPending ? "..." : "Decline"}
           </Button>
         </div>
       )}

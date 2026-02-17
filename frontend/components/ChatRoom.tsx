@@ -5,8 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import MessageBubble from "@/components/MessageBubble";
 import EmojiPicker from "@/components/EmojiPicker";
 import Button from "@/components/Button";
-import { getRoomMessages, sendMessage, getChatWebSocket, ApiError } from "@/lib/api";
-import type { ChatMessage, WSMessage } from "@/lib/types";
+import { getRoomMessages, sendMessage, ApiError } from "@/lib/api";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import type { ChatMessage } from "@/lib/types";
 
 type ChatRoomProps = {
   roomId: string;
@@ -17,9 +18,20 @@ type ChatRoomProps = {
 export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomProps) {
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
-  const [wsConnected, setWsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const wsRef = useRef<ReturnType<typeof getChatWebSocket> | null>(null);
+  const { isConnected, enterChat, leaveChat } = useWebSocket();
+
+  // Notify backend when entering/leaving chat room
+  useEffect(() => {
+    if (isConnected && roomId) {
+      enterChat(roomId);
+    }
+    return () => {
+      if (isConnected) {
+        leaveChat();
+      }
+    };
+  }, [isConnected, roomId, enterChat, leaveChat]);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["chat-messages", roomId],
@@ -27,81 +39,52 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
     enabled: !!roomId,
   });
 
-  // Initialize WebSocket connection
-  useEffect(() => {
-    const ws = getChatWebSocket();
-    wsRef.current = ws;
-
-    ws.connect({
-      onOpen: () => {
-        setWsConnected(true);
-      },
-      onClose: () => {
-        setWsConnected(false);
-      },
-      onMessage: (wsMessage: WSMessage) => {
-        // Handle incoming chat messages for this room
-        if (wsMessage.type === "chat_message") {
-          const msgData = wsMessage.data as any;
-          if (msgData && msgData.room_id === roomId) {
-            queryClient.setQueryData(["chat-messages", roomId], (old: ChatMessage[] | undefined) => {
-              if (!old) return [msgData];
-              const newMsg: ChatMessage = {
-                message_id: msgData.message_id,
-                room_id: roomId,
-                content: msgData.content,
-                sender_id: msgData.sender_id,
-                sender_first_name: msgData.sender_first_name,
-                sender_last_name: msgData.sender_last_name,
-                sender_avatar: msgData.sender_avatar,
-                created_at: msgData.created_at || new Date().toISOString(),
-              };
-              // Avoid duplicates
-              const exists = old.some((m) => m.message_id === newMsg.message_id);
-              if (exists) return old;
-              return [newMsg, ...old];
-            });
-            // Also refresh the chat list to update last message preview
-            queryClient.invalidateQueries({ queryKey: ["chat-list"] });
-          }
-        }
-        // Also handle legacy private_message format
-        if (wsMessage.type === "private_message") {
-          const msgData = wsMessage.data as any;
-          if (msgData && msgData.room_id === roomId) {
-            queryClient.setQueryData(["chat-messages", roomId], (old: ChatMessage[] | undefined) => {
-              if (!old) return old;
-              const newMsg: ChatMessage = {
-                message_id: msgData.message_id,
-                room_id: roomId,
-                content: msgData.content,
-                sender_id: msgData.sender_id,
-                created_at: msgData.created_at || new Date().toISOString(),
-              };
-              const exists = old.some((m) => m.message_id === newMsg.message_id);
-              if (exists) return old;
-              return [newMsg, ...old];
-            });
-          }
-        }
-      },
-    });
-
-    return () => {
-      // Cleanup on unmount
-    };
-  }, [roomId, queryClient]);
+  // The WebSocket provider now handles chat_message events globally
+  // No need for local WebSocket setup - messages are updated via query cache
 
   const send = useMutation({
-    mutationFn: () => sendMessage(roomId, newMessage),
+    mutationFn: async () => {
+      // Always use REST API to send - it's more reliable and the backend
+      // will broadcast the message to all participants via WebSocket
+      return sendMessage(roomId, newMessage);
+    },
+    onMutate: async () => {
+      // Optimistically add the message to the cache
+      const optimisticMsg: ChatMessage = {
+        message_id: `temp-${Date.now()}`,
+        room_id: roomId,
+        content: newMessage,
+        sender_id: currentUserId,
+        created_at: new Date().toISOString(),
+      };
+
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["chat-messages", roomId] });
+
+      // Snapshot previous value
+      const previousMessages = queryClient.getQueryData<ChatMessage[]>(["chat-messages", roomId]);
+
+      // Optimistically update
+      queryClient.setQueryData(["chat-messages", roomId], (old: ChatMessage[] | undefined) => {
+        if (!old) return [optimisticMsg];
+        return [optimisticMsg, ...old];
+      });
+
+      return { previousMessages };
+    },
     onSuccess: () => {
       setNewMessage("");
-      // The backend broadcasts the message via WebSocket to all participants,
-      // so we just invalidate queries for consistency
-      queryClient.invalidateQueries({ queryKey: ["chat-messages", roomId] });
+      // Invalidate chat-list for the preview update
       queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+      // Also invalidate chat-messages to get the real message with proper ID
+      queryClient.invalidateQueries({ queryKey: ["chat-messages", roomId] });
     },
-    onError: () => {},
+    onError: (_err, _vars, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(["chat-messages", roomId], context.previousMessages);
+      }
+    },
   });
 
   const scrollToBottom = () => {
@@ -128,7 +111,7 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
       {roomName && (
         <h3 className="chat-room-title">
           {roomName}
-          {wsConnected && <span style={{ fontSize: "0.75rem", color: "green", marginLeft: "8px" }}>●</span>}
+          {isConnected && <span style={{ fontSize: "0.75rem", color: "green", marginLeft: "8px" }}>●</span>}
         </h3>
       )}
 
