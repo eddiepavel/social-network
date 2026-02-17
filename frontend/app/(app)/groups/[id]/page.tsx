@@ -63,7 +63,7 @@ export default function GroupDetailsPage() {
   if (!data) return <p>Group not found.</p>;
 
   const memberIds = data?.members?.map((m) => m.user_id);
-  console.log((isOwner || isMember))
+
   return (
     <div className="grid" style={{ paddingBottom: 64 }}>
       <section className="surface card">
