@@ -7,7 +7,7 @@ import (
 type ChatList struct {
 	RoomID              string    `json:"room_id"`
 	RoomName            *string   `json:"room_name,omitempty"`
-	IsGroup             bool      `json:"is_group"`
+	GroupID             *string   `json:"group_id,omitempty"`
 	LastMessageID       string    `json:"last_message_id,omitempty"`
 	LastMessageContent  string    `json:"last_message_content,omitempty"`
 	LastMessageTime     time.Time `json:"last_message_time,omitempty"`

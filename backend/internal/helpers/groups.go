@@ -3,8 +3,11 @@ package helpers
 import (
 	"bytes"
 	"context"
+	"database/sql"
+	"errors"
 	"social-network/internal/models"
 	"social-network/internal/services"
+	db_chat "social-network/pkg/db/queries/chat"
 	db_groups "social-network/pkg/db/queries/groups"
 	"social-network/pkg/db/sqlite"
 	"time"
@@ -140,4 +143,54 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 	}
 
 	return group, nil
+}
+
+func findGroupChatRoomID(ctx context.Context, db *sql.DB, groupID []byte) ([]byte, error) {
+	roomID, err := sqlite.NewQuery(db).Chat.GetRoomIdByGroupId(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	return roomID, nil
+}
+
+func AddUserToGroupChat(ctx context.Context, db *sql.DB, tx *sql.Tx, groupID []byte, userID []byte) error {
+	roomID, err := findGroupChatRoomID(ctx, db, groupID)
+	if err != nil {
+		return err
+	}
+
+	params := db_chat.AddRoomParticipantParams{
+		RoomID: roomID,
+		UserID: userID,
+	}
+
+	if tx != nil {
+		err = sqlite.NewQuery(db).Chat.WithTx(tx).AddRoomParticipant(ctx, params)
+	} else {
+		err = sqlite.NewQuery(db).Chat.AddRoomParticipant(ctx, params)
+	}
+
+	if err != nil {
+		if sqlite.CheckUniqueConstraint(err) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
+}
+
+func RemoveUserFromGroupChat(ctx context.Context, db *sql.DB, groupID []byte, userID []byte) error {
+	roomID, err := findGroupChatRoomID(ctx, db, groupID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+
+	return sqlite.NewQuery(db).Chat.RemoveRoomParticipant(ctx, db_chat.RemoveRoomParticipantParams{
+		UserID: userID,
+		RoomID: roomID,
+	})
 }

@@ -2,24 +2,25 @@
 INSERT INTO chat_messages (message_id, content, sender_id, target_id) VALUES (?, ?, ?, ?);
 
 -- name: CreateRoom :exec
-INSERT INTO chat_rooms (room_id, name, is_group) VALUES (?, ?, ?);
+INSERT INTO chat_rooms (room_id, name, group_id) VALUES (?, ?, ?);
 
 -- name: AddRoomParticipant :exec
 INSERT INTO chat_participants (room_id, user_id) VALUES (?, ?);
+
+-- name: GetRoomIdByGroupId :one
+SELECT cr.room_id as room_id FROM chat_rooms cr WHERE cr.group_id = ?;
 
 -- name: GetUserChatList :many
 SELECT
     cr.room_id,
     cr.name AS room_name,
-    cr.is_group,
+    cr.group_id,
     cr.created_at AS room_created_at,
 
     lm.message_id AS last_message_id,
     lm.content AS last_message_content,
     lm.created_at AS last_message_time,
     lm.sender_id AS last_message_sender_id,
-
-    CASE WHEN cr.is_group = 0 THEN other_user.user_id ELSE NULL END AS other_user_id,
 
     CAST(COALESCE(
             (SELECT COUNT(*)
@@ -53,7 +54,6 @@ FROM chat_rooms cr
          LEFT JOIN chat_participants other_cp
                    ON cr.room_id = other_cp.room_id
                        AND other_cp.user_id != ?
-    AND cr.is_group = 0
 LEFT JOIN users other_user ON other_cp.user_id = other_user.user_id
 
 ORDER BY COALESCE(lm.created_at, cr.created_at) DESC;
@@ -97,7 +97,7 @@ FROM chat_rooms cr
          INNER JOIN chat_participants cp2
                     ON cr.room_id = cp2.room_id
                         AND cp2.user_id = ?
-WHERE cr.is_group = 0
+WHERE cr.group_id != null
   AND cp1.user_id != cp2.user_id  -- Ensure different users
 LIMIT 1;
 

@@ -52,6 +52,7 @@ func GetChatList(app *app.App) http.HandlerFunc {
 			roomID, _ := helpers.GenerateFromBytes(chat.RoomID)
 			lastMessageID, _ := helpers.GenerateFromBytes(chat.LastMessageID)
 			lastMessageSenderID, _ := helpers.GenerateFromBytes(chat.LastMessageSenderID)
+			GroupID, _ := helpers.GenerateFromBytes(chat.GroupID)
 			listResponse = append(listResponse, models.ChatList{
 				RoomID: roomID,
 				RoomName: func() *string {
@@ -60,7 +61,7 @@ func GetChatList(app *app.App) http.HandlerFunc {
 					}
 					return nil
 				}(),
-				IsGroup:             chat.IsGroup == 1,
+				GroupID:             &GroupID,
 				LastMessageID:       lastMessageID,
 				LastMessageTime:     chat.LastMessageTime.Time,
 				LastMessageContent:  chat.LastMessageContent,
@@ -369,6 +370,27 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		roomExists, err := sqlite.NewQuery(app.DB).Chat.FindRoomBetweenUsers(r.Context(), db_chat.FindRoomBetweenUsersParams{
+			UserID:   currentUserID,
+			UserID_2: targetID,
+		})
+
+		if roomExists != nil {
+			utils.BadRequest(w, errors.New("room already exists"))
+			return
+		}
+
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			app.Logger.Error("failed to find room between users", "error", err.Error())
+			utils.Internal(w, err)
+			return
+		}
+
+		if roomExists != nil {
+			utils.Internal(w, errors.New("Internal"))
+			return
+		}
+
 		if !targetUser.IsPublic {
 			follower := true
 			followee := true
@@ -403,22 +425,6 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			}
 		}
 
-		roomExists, err := sqlite.NewQuery(app.DB).Chat.FindRoomBetweenUsers(r.Context(), db_chat.FindRoomBetweenUsersParams{
-			UserID:   currentUserID,
-			UserID_2: targetID,
-		})
-
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			app.Logger.Error("failed to find room between users", "error", err.Error())
-			utils.Internal(w, err)
-			return
-		}
-
-		if roomExists != nil {
-			utils.Internal(w, errors.New("Internal"))
-			return
-		}
-
 		roomID, err := uuid.New().MarshalBinary()
 		if err != nil {
 			app.Logger.Error("failed uuid", "error", err.Error())
@@ -435,7 +441,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		err = sqlite.NewQuery(app.DB).Chat.CreateRoom(r.Context(), db_chat.CreateRoomParams{
 			RoomID:  roomID,
 			Name:    sql.NullString{Valid: false, String: ""},
-			IsGroup: 0,
+			GroupID: []byte{},
 		})
 
 		err = sqlite.NewQuery(app.DB).Chat.AddRoomParticipant(r.Context(), db_chat.AddRoomParticipantParams{

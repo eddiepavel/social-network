@@ -40,22 +40,6 @@ func (q *Queries) CheckUserIsParticipant(ctx context.Context, arg CheckUserIsPar
 	return count, err
 }
 
-const checkUserIsParticipantByRoomId = `-- name: CheckUserIsParticipantByRoomId :one
-SELECT COUNT(*) FROM chat_participants WHERE user_id = ? AND room_id = ?
-`
-
-type CheckUserIsParticipantByRoomIdParams struct {
-	UserID []byte
-	RoomID []byte
-}
-
-func (q *Queries) CheckUserIsParticipantByRoomId(ctx context.Context, arg CheckUserIsParticipantByRoomIdParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkUserIsParticipantByRoomId, arg.UserID, arg.RoomID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createMessage = `-- name: CreateMessage :exec
 INSERT INTO chat_messages (message_id, content, sender_id, target_id) VALUES (?, ?, ?, ?)
 `
@@ -78,17 +62,17 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) er
 }
 
 const createRoom = `-- name: CreateRoom :exec
-INSERT INTO chat_rooms (room_id, name, is_group) VALUES (?, ?, ?)
+INSERT INTO chat_rooms (room_id, name, group_id) VALUES (?, ?, ?)
 `
 
 type CreateRoomParams struct {
 	RoomID  []byte
 	Name    sql.NullString
-	IsGroup int64
+	GroupID []byte
 }
 
 func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) error {
-	_, err := q.db.ExecContext(ctx, createRoom, arg.RoomID, arg.Name, arg.IsGroup)
+	_, err := q.db.ExecContext(ctx, createRoom, arg.RoomID, arg.Name, arg.GroupID)
 	return err
 }
 
@@ -101,7 +85,7 @@ FROM chat_rooms cr
          INNER JOIN chat_participants cp2
                     ON cr.room_id = cp2.room_id
                         AND cp2.user_id = ?
-WHERE cr.is_group = 0
+WHERE cr.group_id != null
   AND cp1.user_id != cp2.user_id  -- Ensure different users
 LIMIT 1
 `
@@ -118,12 +102,12 @@ func (q *Queries) FindRoomBetweenUsers(ctx context.Context, arg FindRoomBetweenU
 	return room_id, err
 }
 
-const getGroupChatRoomByName = `-- name: GetGroupChatRoomByName :one
-SELECT room_id FROM chat_rooms WHERE name = ? AND is_group = 1 LIMIT 1
+const getRoomIdByGroupId = `-- name: GetRoomIdByGroupId :one
+SELECT cr.room_id as room_id FROM chat_rooms cr WHERE cr.group_id = ?
 `
 
-func (q *Queries) GetGroupChatRoomByName(ctx context.Context, name sql.NullString) ([]byte, error) {
-	row := q.db.QueryRowContext(ctx, getGroupChatRoomByName, name)
+func (q *Queries) GetRoomIdByGroupId(ctx context.Context, groupID []byte) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, getRoomIdByGroupId, groupID)
 	var room_id []byte
 	err := row.Scan(&room_id)
 	return room_id, err
@@ -266,15 +250,13 @@ const getUserChatList = `-- name: GetUserChatList :many
 SELECT
     cr.room_id,
     cr.name AS room_name,
-    cr.is_group,
+    cr.group_id,
     cr.created_at AS room_created_at,
 
     lm.message_id AS last_message_id,
     lm.content AS last_message_content,
     lm.created_at AS last_message_time,
     lm.sender_id AS last_message_sender_id,
-
-    CASE WHEN cr.is_group = 0 THEN other_user.user_id ELSE NULL END AS other_user_id,
 
     CAST(COALESCE(
             (SELECT COUNT(*)
@@ -308,7 +290,6 @@ FROM chat_rooms cr
          LEFT JOIN chat_participants other_cp
                    ON cr.room_id = other_cp.room_id
                        AND other_cp.user_id != ?
-    AND cr.is_group = 0
 LEFT JOIN users other_user ON other_cp.user_id = other_user.user_id
 
 ORDER BY COALESCE(lm.created_at, cr.created_at) DESC
@@ -323,13 +304,12 @@ type GetUserChatListParams struct {
 type GetUserChatListRow struct {
 	RoomID              []byte
 	RoomName            sql.NullString
-	IsGroup             int64
+	GroupID             []byte
 	RoomCreatedAt       sql.NullTime
 	LastMessageID       []byte
 	LastMessageContent  string
 	LastMessageTime     sql.NullTime
 	LastMessageSenderID []byte
-	OtherUserID         interface{}
 	UnreadCount         int64
 	LastReadAt          sql.NullTime
 	JoinedAt            sql.NullTime
@@ -347,13 +327,12 @@ func (q *Queries) GetUserChatList(ctx context.Context, arg GetUserChatListParams
 		if err := rows.Scan(
 			&i.RoomID,
 			&i.RoomName,
-			&i.IsGroup,
+			&i.GroupID,
 			&i.RoomCreatedAt,
 			&i.LastMessageID,
 			&i.LastMessageContent,
 			&i.LastMessageTime,
 			&i.LastMessageSenderID,
-			&i.OtherUserID,
 			&i.UnreadCount,
 			&i.LastReadAt,
 			&i.JoinedAt,

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -22,63 +21,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-func findGroupChatRoomID(ctx context.Context, db *sql.DB, groupID []byte) ([]byte, error) {
-	var roomID []byte
-	err := db.QueryRowContext(ctx, `
-		SELECT cr.room_id
-		FROM chat_rooms cr
-		INNER JOIN groups g ON g.group_name = cr.name
-		WHERE cr.is_group = 1 AND g.group_id = ?
-		LIMIT 1
-	`, groupID).Scan(&roomID)
-	if err != nil {
-		return nil, err
-	}
-	return roomID, nil
-}
-
-func addUserToGroupChat(ctx context.Context, db *sql.DB, tx *sql.Tx, groupID []byte, userID []byte) error {
-	roomID, err := findGroupChatRoomID(ctx, db, groupID)
-	if err != nil {
-		return err
-	}
-
-	params := db_chat.AddRoomParticipantParams{
-		RoomID: roomID,
-		UserID: userID,
-	}
-
-	if tx != nil {
-		err = sqlite.NewQuery(db).Chat.WithTx(tx).AddRoomParticipant(ctx, params)
-	} else {
-		err = sqlite.NewQuery(db).Chat.AddRoomParticipant(ctx, params)
-	}
-
-	if err != nil {
-		if sqlite.CheckUniqueConstraint(err) {
-			return nil
-		}
-		return err
-	}
-
-	return nil
-}
-
-func removeUserFromGroupChat(ctx context.Context, db *sql.DB, groupID []byte, userID []byte) error {
-	roomID, err := findGroupChatRoomID(ctx, db, groupID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-		return err
-	}
-
-	return sqlite.NewQuery(db).Chat.RemoveRoomParticipant(ctx, db_chat.RemoveRoomParticipantParams{
-		UserID: userID,
-		RoomID: roomID,
-	})
-}
 
 // CreateGroup handles POST /api/groups
 // Creates a new group and automatically adds creator as member with status 'joined'
@@ -157,7 +99,7 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 		err = sqlite.NewQuery(app.DB).Chat.WithTx(tx).CreateRoom(r.Context(), db_chat.CreateRoomParams{
 			RoomID:  chatUUID,
 			Name:    sql.NullString{Valid: true, String: req.GroupName},
-			IsGroup: 1,
+			GroupID: groupUUID,
 		})
 
 		err = sqlite.NewQuery(app.DB).Chat.WithTx(tx).AddRoomParticipant(r.Context(), db_chat.AddRoomParticipantParams{
@@ -597,19 +539,24 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 					utils.Internal(w, errors.New("internal"))
 					return
 				}
-				defer tx.Rollback()
 
-				_, err = tx.ExecContext(r.Context(), `
-					UPDATE group_members
-					SET status = 'joined'
-					WHERE user_id = ? AND group_id = ?
-				`, userId, groupID)
+				defer func() {
+					if err != nil {
+						tx.Rollback()
+					}
+				}()
+
+				err = sqlite.NewQuery(app.DB).Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
+					Status: "joined",
+					UserID: userId,
+				})
+
 				if err != nil {
 					utils.Internal(w, errors.New("internal"))
 					return
 				}
 
-				err = addUserToGroupChat(r.Context(), app.DB, tx, groupID, userId)
+				err = helpers.AddUserToGroupChat(r.Context(), app.DB, tx, groupID, userId)
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					utils.Internal(w, errors.New("internal"))
 					return
@@ -693,10 +640,10 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 		var pendingMembers []models.GroupMemberResponse
 
 		for _, member := range groupMemberRequests {
-			uuid, _ := helpers.GenerateFromBytes(member.UserID)
+			UUID, _ := helpers.GenerateFromBytes(member.UserID)
 
 			pendingMembers = append(pendingMembers, models.GroupMemberResponse{
-				UserID:    uuid,
+				UserID:    UUID,
 				Status:    member.Status,
 				FirstName: &member.MFirstName,
 				LastName:  &member.MLastName,
@@ -816,20 +763,22 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 				utils.Internal(w, errors.New("internal server error"))
 				return
 			}
-			defer tx.Rollback()
+			defer func() {
+				if err != nil {
+					tx.Rollback()
+				}
+			}()
 
-			_, err = tx.ExecContext(r.Context(), `
-				UPDATE group_members
-				SET status = 'joined'
-				WHERE user_id = ? AND group_id = ?
-			`, groupMem.UserID, groupMem.GroupID)
-			if err != nil {
+			if err := query.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
+				Status: "joined",
+				UserID: groupMem.UserID,
+			}); err != nil {
 				app.Logger.Error("failed to update group member status", "err", err)
 				utils.Internal(w, errors.New("internal server error"))
 				return
 			}
 
-			err = addUserToGroupChat(r.Context(), app.DB, tx, groupMem.GroupID, groupMem.UserID)
+			err = helpers.AddUserToGroupChat(r.Context(), app.DB, tx, groupMem.GroupID, groupMem.UserID)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				app.Logger.Error("failed to add user to group chat participants", "err", err)
 				utils.Internal(w, errors.New("internal server error"))
@@ -931,7 +880,7 @@ func RemoveMember(app *app.App) http.HandlerFunc {
 				return
 			}
 
-			if err := removeUserFromGroupChat(r.Context(), app.DB, getMember.GroupID, getMember.UserID); err != nil {
+			if err := helpers.RemoveUserFromGroupChat(r.Context(), app.DB, getMember.GroupID, getMember.UserID); err != nil {
 				app.Logger.Error("failed to remove user from group chat participants", "err", err)
 				utils.Internal(w, errors.New("something went wrong"))
 				return
