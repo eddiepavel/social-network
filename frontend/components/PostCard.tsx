@@ -14,6 +14,21 @@ type PostCardProps = {
   showFullComments?: boolean;
 };
 
+function getVisibilityLabel(visibility: string): string {
+  switch (visibility) {
+    case "public":
+      return "Public";
+    case "semi-private":
+      return "Almost Private";
+    case "private":
+      return "Private";
+    case "group":
+      return "Group";
+    default:
+      return visibility;
+  }
+}
+
 export default function PostCard({ post, currentUserId, showFullComments = false }: PostCardProps) {
   const isOwner = currentUserId === post.author_id;
   const authorName = post.author_nickname
@@ -37,7 +52,7 @@ export default function PostCard({ post, currentUserId, showFullComments = false
           </div>
         </Link>
         <div className="post-header-right">
-          <span className="tag">{post.visibility}</span>
+          <span className="tag">{getVisibilityLabel(post.visibility)}</span>
           <PostActions
             postId={post.post_id}
             content={post.content}

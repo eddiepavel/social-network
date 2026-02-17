@@ -12,9 +12,10 @@ type Post struct {
 }
 
 type CreatePostRequest struct {
-	Content    string `json:"content"`
-	ImageID    string `json:"image_id"`
-	Visibility string `json:"visibility"`
+	Content      string   `json:"content"`
+	ImageID      string   `json:"image_id"`
+	Visibility   string   `json:"visibility"`
+	AllowedUsers []string `json:"allowed_users"` // User IDs who can view private posts
 }
 
 type EditPostRequest struct {

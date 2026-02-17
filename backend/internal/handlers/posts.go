@@ -11,6 +11,7 @@ import (
 	"social-network/internal/middleware"
 	"social-network/internal/models"
 	"social-network/internal/utils"
+	db_followers "social-network/pkg/db/queries/followers"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
 	"strconv"
@@ -79,6 +80,35 @@ func CreatePost(app *app.App) http.HandlerFunc {
 			app.Logger.Error("failed to create post", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
+		}
+
+		// For private posts, add viewing permissions for selected followers
+		if req.Visibility == "private" && len(req.AllowedUsers) > 0 {
+			query := sqlite.NewQuery(app.DB)
+			for _, userIDStr := range req.AllowedUsers {
+				allowedUserID, err := helpers.GenerateFromString(userIDStr)
+				if err != nil {
+					app.Logger.Warn("invalid allowed_user ID", "id", userIDStr, "error", err)
+					continue
+				}
+				// Verify the user is actually a follower
+				_, err = query.Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{
+					FollowerID: allowedUserID,
+					FolloweeID: currentUserID,
+				})
+				if err != nil {
+					app.Logger.Warn("allowed_user is not a follower, skipping", "id", userIDStr)
+					continue
+				}
+				// Add viewing permission
+				err = query.Posts.AddViewingPermission(r.Context(), db_posts.AddViewingPermissionParams{
+					UserID: allowedUserID,
+					PostID: postID,
+				})
+				if err != nil {
+					app.Logger.Warn("failed to add viewing permission", "user", userIDStr, "error", err)
+				}
+			}
 		}
 
 		postTime := post.CreatedAt.Time

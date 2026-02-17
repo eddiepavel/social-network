@@ -122,7 +122,7 @@ export async function getFeed(page = 1, size = 10) {
   };
 }
 
-export function createPost(input: { content: string; image_id?: string; visibility: string }) {
+export function createPost(input: { content: string; image_id?: string; visibility: string; allowed_users?: string[] }) {
   return apiFetch<Post>("/api/posts/create", {
     method: "POST",
     body: JSON.stringify(input),

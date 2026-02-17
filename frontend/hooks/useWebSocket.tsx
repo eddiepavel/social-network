@@ -37,6 +37,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isIntentionalCloseRef = useRef(false); // Track intentional disconnection (logout)
 
   const handleNotification = useCallback((notifData: any) => {
     // Create notification object matching frontend type
@@ -158,6 +159,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     ws.onclose = () => {
       console.log("[WebSocket] Disconnected");
       setIsConnected(false);
+      
+      // Don't try to reconnect if this was an intentional close (logout)
+      if (isIntentionalCloseRef.current) {
+        console.log("[WebSocket] Intentional disconnect, not reconnecting");
+        return;
+      }
+      
       // Use inline reconnect logic to avoid circular dependency
       if (reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
@@ -176,7 +184,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           }
         }, delay);
       } else {
-        console.error("[WebSocket] Max reconnect attempts reached");
+        console.log("[WebSocket] Max reconnect attempts reached");
       }
     };
 
@@ -219,7 +227,11 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   // Connect when user is logged in
   useEffect(() => {
     if (session?.user_id) {
+      isIntentionalCloseRef.current = false; // Reset flag on new connection
       createConnection();
+    } else {
+      // User logged out - mark as intentional close
+      isIntentionalCloseRef.current = true;
     }
 
     return () => {
@@ -227,6 +239,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
+        isIntentionalCloseRef.current = true; // Mark as intentional before closing
         reconnectAttemptsRef.current = maxReconnectAttempts; // Prevent reconnection
         wsRef.current.close();
         wsRef.current = null;

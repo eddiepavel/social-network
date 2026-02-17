@@ -45,6 +45,20 @@ func (q *Queries) AddPrivatePostViewingPermission(ctx context.Context, arg AddPr
 	return result.RowsAffected()
 }
 
+const addViewingPermission = `-- name: AddViewingPermission :exec
+INSERT OR IGNORE INTO viewing_permissions (user_id, post_id) VALUES (?, ?)
+`
+
+type AddViewingPermissionParams struct {
+	UserID []byte
+	PostID []byte
+}
+
+func (q *Queries) AddViewingPermission(ctx context.Context, arg AddViewingPermissionParams) error {
+	_, err := q.db.ExecContext(ctx, addViewingPermission, arg.UserID, arg.PostID)
+	return err
+}
+
 const checkCommentExists = `-- name: CheckCommentExists :one
 SELECT EXISTS(SELECT 1 FROM comments WHERE comment_id = ?)
 `

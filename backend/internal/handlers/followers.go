@@ -70,17 +70,6 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					return
 				}
 
-				// Grant viewing permissions to all private posts from the followee
-				err = sqlite.NewQuery(app.DB).Posts.GrantViewingPermissionsToFollower(r.Context(), db_posts.GrantViewingPermissionsToFollowerParams{
-					UserID:   currentUserID,
-					AuthorID: user.UserID,
-				})
-				if err != nil {
-					app.Logger.Error("failed to grant viewing permissions on follow", "err", err)
-				} else {
-					app.Logger.Info("granted viewing permissions on follow", "follower", currentUserID, "followee", user.UserID)
-				}
-
 				utils.OK(w, "Followed successfully")
 				return
 			} else {
@@ -240,17 +229,6 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 			if err != nil {
 				utils.Internal(w, errors.New("internal server error"))
 				return
-			}
-
-			// Grant viewing permissions to all private posts from the followee
-			err = sqlite.NewQuery(app.DB).Posts.GrantViewingPermissionsToFollower(r.Context(), db_posts.GrantViewingPermissionsToFollowerParams{
-				UserID:   request.FollowerID,
-				AuthorID: request.FolloweeID,
-			})
-			if err != nil {
-				app.Logger.Error("failed to grant viewing permissions on accept", "err", err, "follower", request.FollowerID, "followee", request.FolloweeID)
-			} else {
-				app.Logger.Info("granted viewing permissions on accept", "follower", request.FollowerID, "followee", request.FolloweeID)
 			}
 
 			// Create notification for follow accepted

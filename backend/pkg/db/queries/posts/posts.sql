@@ -122,6 +122,9 @@ SELECT ?, ?
 -- name: RemovePrivatePostViewingPermission :exec
 DELETE FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 
+-- name: AddViewingPermission :exec
+INSERT OR IGNORE INTO viewing_permissions (user_id, post_id) VALUES (?, ?);
+
 -- name: GrantViewingPermissionsToFollower :exec
 INSERT OR IGNORE INTO viewing_permissions (user_id, post_id)
 SELECT ?, post_id

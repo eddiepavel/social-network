@@ -1190,6 +1190,122 @@ button {
   align-items: center;
 }
 
+/* Follower Selector for Private Posts */
+.follower-selector {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.follower-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.follower-selector-title {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.selected-count {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.follower-selector-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.follower-selector-actions .text-button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0;
+}
+
+.follower-selector-actions .text-button:hover {
+  text-decoration: underline;
+}
+
+.follower-selector-actions .divider {
+  color: var(--text-secondary);
+}
+
+.follower-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.follower-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.follower-item:hover {
+  background: var(--surface-hover, var(--bg-hover));
+}
+
+.follower-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.follower-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.follower-nickname {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.empty-followers {
+  text-align: center;
+  padding: 20px;
+}
+
+.validation-hint {
+  color: var(--warning, #c77700);
+  font-size: 0.875rem;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.success-message {
+  color: var(--success, #16a34a);
+  font-size: 0.875rem;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: var(--success-bg, #dcfce7);
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
 /* ============================================
    CHAT COMPONENTS
    ============================================ */
