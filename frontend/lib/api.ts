@@ -167,9 +167,10 @@ export function getGroup(groupId: string) {
   return apiFetch<GroupDetails>(`/api/groups/group/${groupId}`);
 }
 
-export function requestJoinGroup(groupId: string) {
+export function requestJoinGroup(groupId: string, payload: any) {
   return apiFetch<string>(`/api/groups/members/request/${groupId}`, {
     method: "POST",
+    body: JSON.stringify(payload)
   });
 }
 
@@ -376,16 +377,17 @@ export function getGroupRequests(groupId: string) {
   return apiFetch<GroupJoinRequest[]>(`/api/groups/members/requests/${groupId}`);
 }
 
-export function respondToGroupRequest(groupId: string, userId: string, accept: boolean) {
+export function respondToGroupRequest(groupId: string, user_id: string, response: string) {
   return apiFetch<string>(`/api/groups/members/respond/${groupId}`, {
     method: "POST",
-    body: JSON.stringify({ user_id: userId, accept }),
+    body: JSON.stringify({ user_id: user_id, response: response }),
   });
 }
 
-export function leaveGroup(groupId: string) {
+export function leaveGroup(groupId: string, user_id: string) {
   return apiFetch<string>(`/api/groups/members/remove/${groupId}`, {
     method: "POST",
+    body: JSON.stringify({user_id: user_id})
   });
 }
 

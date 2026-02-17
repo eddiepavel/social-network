@@ -22,8 +22,8 @@ export default function GroupRequestsList({ groupId }: GroupRequestsListProps) {
   });
 
   const respond = useMutation({
-    mutationFn: ({ userId, accept }: { userId: string; accept: boolean }) =>
-      respondToGroupRequest(groupId, userId, accept),
+    mutationFn: ({ user_id, response }: { user_id: string; response: string }) =>
+      respondToGroupRequest(groupId, user_id, response),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["group-requests", groupId] });
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
@@ -41,11 +41,11 @@ export default function GroupRequestsList({ groupId }: GroupRequestsListProps) {
       />
     );
   }
-
+  
   return (
     <div className="group-requests-list">
       {data.map((request) => (
-        <div key={request.request_id} className="group-request-item">
+        <div key={request.user_id} className="group-request-item">
           <Link href={`/profile/${request.user_id}`} className="request-user">
             <Avatar
               src={request.avatar}
@@ -61,14 +61,14 @@ export default function GroupRequestsList({ groupId }: GroupRequestsListProps) {
           </Link>
           <div className="request-actions">
             <Button
-              onClick={() => respond.mutate({ userId: request.user_id, accept: true })}
+              onClick={() => respond.mutate({ user_id: request.user_id, response: "approve" })}
               disabled={respond.isPending}
             >
               Accept
             </Button>
             <Button
               variant="ghost"
-              onClick={() => respond.mutate({ userId: request.user_id, accept: false })}
+              onClick={() => respond.mutate({ user_id: request.user_id, response: "reject"})}
               disabled={respond.isPending}
             >
               Decline

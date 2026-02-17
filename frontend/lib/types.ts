@@ -70,6 +70,8 @@ export type Group = {
   created_at?: string;
   member_count?: number;
   is_owner?: boolean;
+  total_members: number;
+  user_status: string;
 };
 
 export type GroupMember = {

@@ -190,7 +190,7 @@ func (up MemberShipGroupValidator) Build(r *http.Request, app *app.App) map[stri
 		"action": {"required", "string", func(v interface{}) error {
 			action := v.(string)
 
-			if action != "request" && action != "remove" {
+			if action != "request" && action != "remove" && action != "accept_invite" && action != "decline_invite" {
 				return errors.New("bad payload")
 			}
 

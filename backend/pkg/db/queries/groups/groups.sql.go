@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+const countMembers = `-- name: CountMembers :one
+SELECT count(*) FROM group_members WHERE group_id = ? AND status = 'joined'
+`
+
+func (q *Queries) CountMembers(ctx context.Context, groupID []byte) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countMembers, groupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups (group_id, group_name, description, image, creator_id, created_at)
 VALUES (?, ?, ?, ?, ?, ?)
@@ -351,7 +362,7 @@ SELECT
     u.last_name AS m_last_name
 FROM group_members gm
 JOIN users u ON gm.user_id = u.user_id
-WHERE group_id = ? AND status = 'requested'
+WHERE group_id = ? AND status = 'requested' AND invited_by IS NULL
 `
 
 type GetGroupJoinRequestsRow struct {

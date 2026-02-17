@@ -5,11 +5,12 @@ import (
 	"context"
 	"social-network/internal/models"
 	"social-network/internal/services"
+	db_groups "social-network/pkg/db/queries/groups"
 	"social-network/pkg/db/sqlite"
 	"time"
 )
 
-func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte, f *services.FileService) (models.GroupDetailsResponse, error) {
+func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte, f *services.FileService, isGroupMember *db_groups.GroupMember) (models.GroupDetailsResponse, error) {
 
 	var group models.GroupDetailsResponse
 	ctx := context.Background()
@@ -22,6 +23,21 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 	groupUUID, _ := GenerateFromBytes(getGroup.GroupID)
 
 	isOwner := bytes.Equal(getGroup.CreatorID, user)
+
+	getCountMembers, _ := t.Groups.CountMembers(ctx, groupId)
+
+	var memberStatus string
+
+	switch {
+	case isGroupMember == nil:
+		memberStatus = "not_member"
+	case isGroupMember.Status == "requested" && isGroupMember.InvitedBy == nil:
+		memberStatus = isGroupMember.Status
+	case isGroupMember.Status == "joined":
+		memberStatus = isGroupMember.Status
+	case isGroupMember.Status == "requested" && len(isGroupMember.InvitedBy) != 0:
+		memberStatus = "invited"
+	}
 
 	group.Group = models.GroupResponse{
 		GroupID:     groupUUID,
@@ -40,8 +56,14 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 			}
 			return ""
 		}(),
-		CreatedAt: getGroup.CreatedAt.Local().String(),
-		IsOwner:   isOwner,
+		CreatedAt:    getGroup.CreatedAt.Local().String(),
+		IsOwner:      isOwner,
+		TotalMembers: getCountMembers,
+		UserStatus:   memberStatus,
+	}
+
+	if isGroupMember == nil || isGroupMember.Status == "requested" {
+		return group, nil
 	}
 	// Get members
 	getMembers, _ := t.Groups.GetGroupMembers(ctx, groupId)

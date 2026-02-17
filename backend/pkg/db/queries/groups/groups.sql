@@ -101,7 +101,7 @@ SELECT
     u.last_name AS m_last_name
 FROM group_members gm
 JOIN users u ON gm.user_id = u.user_id
-WHERE group_id = ? AND status = 'requested';
+WHERE group_id = ? AND status = 'requested' AND invited_by IS NULL;
 
 -- name: DeleteDbGroup :exec
 DELETE FROM groups WHERE group_id = ?;
@@ -136,4 +136,7 @@ SELECT user_id FROM group_members WHERE group_id = ? AND status = 'joined';
 
 -- name: GetEventGroupID :one
 SELECT group_id FROM group_events WHERE event_id = ?;
+
+-- name: CountMembers :one
+SELECT count(*) FROM group_members WHERE group_id = ? AND status = 'joined';
 

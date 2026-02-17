@@ -40,6 +40,22 @@ func (q *Queries) CheckUserIsParticipant(ctx context.Context, arg CheckUserIsPar
 	return count, err
 }
 
+const checkUserIsParticipantByRoomId = `-- name: CheckUserIsParticipantByRoomId :one
+SELECT COUNT(*) FROM chat_participants WHERE user_id = ? AND room_id = ?
+`
+
+type CheckUserIsParticipantByRoomIdParams struct {
+	UserID []byte
+	RoomID []byte
+}
+
+func (q *Queries) CheckUserIsParticipantByRoomId(ctx context.Context, arg CheckUserIsParticipantByRoomIdParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkUserIsParticipantByRoomId, arg.UserID, arg.RoomID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMessage = `-- name: CreateMessage :exec
 INSERT INTO chat_messages (message_id, content, sender_id, target_id) VALUES (?, ?, ?, ?)
 `
@@ -97,6 +113,17 @@ type FindRoomBetweenUsersParams struct {
 
 func (q *Queries) FindRoomBetweenUsers(ctx context.Context, arg FindRoomBetweenUsersParams) ([]byte, error) {
 	row := q.db.QueryRowContext(ctx, findRoomBetweenUsers, arg.UserID, arg.UserID_2)
+	var room_id []byte
+	err := row.Scan(&room_id)
+	return room_id, err
+}
+
+const getGroupChatRoomByName = `-- name: GetGroupChatRoomByName :one
+SELECT room_id FROM chat_rooms WHERE name = ? AND is_group = 1 LIMIT 1
+`
+
+func (q *Queries) GetGroupChatRoomByName(ctx context.Context, name sql.NullString) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, getGroupChatRoomByName, name)
 	var room_id []byte
 	err := row.Scan(&room_id)
 	return room_id, err

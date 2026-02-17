@@ -24,6 +24,7 @@ export default function GroupDetailsPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["group", groupId],
     queryFn: () => getGroup(groupId),
@@ -31,12 +32,12 @@ export default function GroupDetailsPage() {
   });
 
   const requestJoin = useMutation({
-    mutationFn: () => requestJoinGroup(groupId),
+    mutationFn: (payload: any) => requestJoinGroup(groupId, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["group", groupId] }),
   });
 
   const leave = useMutation({
-    mutationFn: () => leaveGroup(groupId),
+    mutationFn: () => leaveGroup(groupId, session?.user_id ?? ""),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
@@ -46,29 +47,23 @@ export default function GroupDetailsPage() {
   const isMember = useMemo(() => {
     if (!session?.user_id || !data?.members) return false;
     return data.members.some(
-      (m) => m.user_id === session.user_id && m.status === "accepted"
+      (m) => m.user_id === session.user_id && m.status === "joined"
     );
   }, [session?.user_id, data?.members]);
 
-  const isPending = useMemo(() => {
-    if (!session?.user_id || !data?.members) return false;
-    return data.members.some(
-      (m) => m.user_id === session.user_id && m.status === "pending"
-    );
-  }, [session?.user_id, data?.members]);
 
   const isOwner = data?.group.is_owner ?? false;
 
   const acceptedMembers = useMemo(() => {
-    return data?.members.filter((m) => m.status === "accepted") ?? [];
+    return data?.members?.filter((m) => m.status === "joined") ?? [];
   }, [data?.members]);
 
   if (isLoading) return <p>Loading group...</p>;
   if (isError) return <p style={{ color: "#b42318" }}>{(error as Error).message}</p>;
   if (!data) return <p>Group not found.</p>;
 
-  const memberIds = data.members.map((m) => m.user_id);
-
+  const memberIds = data?.members?.map((m) => m.user_id);
+  console.log((isOwner || isMember))
   return (
     <div className="grid" style={{ paddingBottom: 64 }}>
       <section className="surface card">
@@ -76,30 +71,52 @@ export default function GroupDetailsPage() {
           title={data.group.group_name}
           action={
             <div style={{ display: "flex", gap: 8 }}>
-              {isOwner && (
+              {(isOwner || data.group.user_status == "joined") && (
                 <>
                   <Button variant="ghost" onClick={() => setIsInviteOpen(true)}>
                     Invite
                   </Button>
-                  <Button variant="ghost" onClick={() => setIsSettingsOpen(true)}>
+                  {isOwner && (<Button variant="ghost" onClick={() => setIsSettingsOpen(true)}>
                     Settings
-                  </Button>
+                  </Button>)}
+
                 </>
               )}
-              {!isMember && !isPending && !isOwner && (
+              {data.group.user_status == "not_member" && (
                 <Button
-                  onClick={() => requestJoin.mutate()}
+                  onClick={() => requestJoin.mutate({ action: "request" })}
                   disabled={requestJoin.isPending}
                 >
                   Request to join
                 </Button>
+
               )}
-              {isPending && (
-                <Button variant="ghost" disabled>
+              {data.group.user_status == "invited" && (
+                <>
+                  <Button
+                    onClick={() => requestJoin.mutate({ action: "accept_invite" })}
+                    disabled={requestJoin.isPending}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => requestJoin.mutate({ action: "decline_invite" })}
+                    disabled={requestJoin.isPending}
+                  >
+                    Decline
+                  </Button>
+                </>
+              )}
+              {data.group.user_status == "requested" && (
+                <Button variant="ghost"
+                  onClick={() => requestJoin.mutate({ action: "remove" })}
+                  disabled={requestJoin.isPending}
+                >
                   Request pending
                 </Button>
               )}
-              {isMember && !isOwner && (
+              {data.group.user_status == "joined" && !isOwner && (
                 <Button
                   variant="ghost"
                   onClick={() => leave.mutate()}
@@ -113,13 +130,13 @@ export default function GroupDetailsPage() {
         />
         <p style={{ color: "var(--muted)" }}>{data.group.description}</p>
         <div className="post-meta">
-          <span>{data.group.member_count ?? acceptedMembers.length} members</span>
+          <span>{data.group.total_members ?? acceptedMembers.length} members</span>
           {isOwner && <span className="tag">Owner</span>}
           {isMember && !isOwner && <span className="tag">Member</span>}
         </div>
       </section>
 
-      <section className="surface card">
+      {acceptedMembers.length != 0 && (<section className="surface card">
         <Tabs
           tabs={[
             { id: "members", label: `Members (${acceptedMembers.length})` },
@@ -146,9 +163,10 @@ export default function GroupDetailsPage() {
         {activeTab === "requests" && isOwner && (
           <GroupRequestsList groupId={groupId} />
         )}
-      </section>
+      </section>)}
 
-      {isOwner && (
+
+      {(isOwner || data.group.user_status == "joined") && (
         <>
           <GroupInviteModal
             isOpen={isInviteOpen}

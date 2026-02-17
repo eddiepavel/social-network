@@ -12,6 +12,7 @@ import (
 	"social-network/internal/middleware"
 	"social-network/internal/models"
 	"social-network/internal/utils"
+	db_chat "social-network/pkg/db/queries/chat"
 	db_groups "social-network/pkg/db/queries/groups"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
@@ -91,6 +92,28 @@ func CreateGroup(app *app.App) http.HandlerFunc {
 			UserID:  userID,
 			GroupID: group.GroupID,
 			Status:  "joined",
+		})
+
+		chatUUID, err := uuid.New().MarshalBinary()
+
+		err = sqlite.NewQuery(app.DB).Chat.WithTx(tx).CreateRoom(r.Context(), db_chat.CreateRoomParams{
+			RoomID:  chatUUID,
+			Name:    sql.NullString{Valid: true, String: req.GroupName},
+			IsGroup: 1,
+		})
+
+		err = sqlite.NewQuery(app.DB).Chat.WithTx(tx).AddRoomParticipant(r.Context(), db_chat.AddRoomParticipantParams{
+			RoomID: chatUUID,
+			UserID: userID,
+		})
+
+		messageId, _ := uuid.New().MarshalBinary()
+
+		err = sqlite.NewQuery(app.DB).Chat.WithTx(tx).CreateMessage(r.Context(), db_chat.CreateMessageParams{
+			MessageID: messageId,
+			Content:   "Welcome to group chat",
+			SenderID:  userID,
+			TargetID:  chatUUID,
 		})
 
 		// Commit transaction
@@ -209,6 +232,8 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		}
 
 		// Check if user is a member with status 'joined'
+		init := sqlite.NewQuery(app.DB)
+
 		isMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
 			GroupID: groupIDHex,
 			UserID:  userID,
@@ -216,7 +241,8 @@ func GetGroup(app *app.App) http.HandlerFunc {
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				utils.Forbidden(w)
+				group, _ := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, nil)
+				utils.OK(w, group)
 				return
 			}
 			app.Logger.Error("error checking is member", "err", err)
@@ -225,14 +251,14 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		}
 
 		if isMember.Status == "requested" {
-			utils.Forbidden(w)
+			group, _ := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, isMember)
+			utils.OK(w, group)
 			return
 		}
 
 		// Fetch group details
-		init := sqlite.NewQuery(app.DB)
 
-		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File)
+		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, isMember)
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -483,6 +509,58 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 			}
 			utils.OK(w, map[string]string{"message": "removed"})
 			return
+		}
+
+		if isMember.Status == "requested" && len(isMember.InvitedBy) > 0 && (p.Action == "accept_invite" || p.Action == "decline_invite") {
+			isInviteeMember, err := sqlite.NewQuery(app.DB).Groups.IsGroupMember(r.Context(), db_groups.IsGroupMemberParams{
+				UserID:  isMember.InvitedBy,
+				GroupID: groupID,
+			})
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					err := db.Groups.RemoveUserFromGroup(r.Context(), db_groups.RemoveUserFromGroupParams{
+						UserID:  userId,
+						GroupID: groupID,
+					})
+
+					if err != nil {
+						utils.Internal(w, errors.New("internal server error"))
+						return
+					}
+				}
+			}
+
+			switch isInviteeMember.Status == "joined" {
+
+			case p.Action == "accept_invite":
+				err := sqlite.NewQuery(app.DB).Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
+					Status: "joined",
+					UserID: userId,
+				})
+				if err != nil {
+					utils.Internal(w, errors.New("internal"))
+					return
+				}
+
+				utils.OK(w, map[string]string{"message": "accepted"})
+				return
+
+			case p.Action == "decline_invite":
+				err := db.Groups.RemoveUserFromGroup(r.Context(), db_groups.RemoveUserFromGroupParams{
+					UserID:  userId,
+					GroupID: groupID,
+				})
+
+				if err != nil {
+					utils.Internal(w, errors.New("internal"))
+					return
+				}
+
+				utils.OK(w, map[string]string{"message": "removed"})
+				return
+			}
+
 		}
 
 		utils.Error(w, http.StatusConflict, "409", "invalid action or state", "invalid action or state")

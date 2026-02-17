@@ -32,15 +32,17 @@ type CreateGroupRequest struct {
 
 // GroupResponse represents a group returned to the client
 type GroupResponse struct {
-	GroupID     string `json:"group_id"`
-	GroupName   string `json:"group_name"`
-	Description string `json:"description"`
-	Image       string `json:"image,omitempty"`
-	ImageUrl    string `json:"image_url,omitempty"`
-	CreatorID   string `json:"creator_id,omitempty"`
-	CreatedAt   string `json:"created_at,omitempty"`
-	MemberCount int64  `json:"member_count,omitempty"`
-	IsOwner     bool   `json:"is_owner,omitempty"`
+	GroupID      string `json:"group_id"`
+	GroupName    string `json:"group_name"`
+	Description  string `json:"description"`
+	Image        string `json:"image,omitempty"`
+	ImageUrl     string `json:"image_url,omitempty"`
+	CreatorID    string `json:"creator_id,omitempty"`
+	CreatedAt    string `json:"created_at,omitempty"`
+	MemberCount  int64  `json:"member_count,omitempty"`
+	IsOwner      bool   `json:"is_owner,omitempty"`
+	TotalMembers int64  `json:"total_members"`
+	UserStatus   string `json:"user_status"`
 }
 
 // GroupMemberResponse represents a group member returned to the client
