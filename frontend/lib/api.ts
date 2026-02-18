@@ -348,6 +348,13 @@ export async function getRoomMessages(roomId: string) {
   return response.messages ?? [];
 }
 
+export async function updateRoomName(roomId: string, room_name: string) {
+  return apiFetch(`/api/chat/${roomId}/name`, {
+    method: "PUT",
+    body: JSON.stringify({ room_name: room_name })
+  })
+}
+
 export function sendMessage(roomId: string, content: string) {
   return apiFetch<ChatMessage>(`/api/chat/${roomId}`, {
     method: "POST",

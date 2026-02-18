@@ -6,6 +6,7 @@ package db_chat
 
 import (
 	"database/sql"
+	"time"
 )
 
 type ChatMessage struct {
@@ -29,6 +30,15 @@ type ChatRoom struct {
 	Name      sql.NullString
 	GroupID   []byte
 	CreatedAt sql.NullTime
+}
+
+type Group struct {
+	GroupID     []byte
+	GroupName   string
+	Description string
+	Image       sql.NullString
+	CreatorID   []byte
+	CreatedAt   time.Time
 }
 
 type User struct {

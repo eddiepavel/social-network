@@ -39,8 +39,10 @@ export default function ChatRoomPage() {
       <section className="surface card chat-room-container">
         <ChatRoom
           roomId={roomId}
+          isGroup={room?.group_id !== ''}
           currentUserId={session.user_id}
-          roomName={room?.room_name || (room?.is_group ? "Group chat" : "Direct chat")}
+          canEdit={room?.can_edit_room_name}
+          roomName={room?.room_name || (room?.group_id !== '' ? "Group chat" : `${room?.other_user?.first_name} ${room?.other_user?.last_name}`)}
         />
       </section>
     </div>

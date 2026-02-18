@@ -462,6 +462,14 @@ func (cn CreateNotificationValidator) Build(r *http.Request, app *app.App) map[s
 	}
 }
 
+type EditRoomNameValidator struct{}
+
+func (ern EditRoomNameValidator) Build(r *http.Request, app *app.App) map[string][]interface{} {
+	return map[string][]interface{}{
+		"room_name": {"required", "string", "min:1", "max:24"},
+	}
+}
+
 // Exported instances
 var (
 	ValidateRegister             ValidationRuleBuilder = RegisterValidator{}
@@ -480,5 +488,6 @@ var (
 	ValidateMessage              ValidationRuleBuilder = MessageValidator{}
 	ValidateFirstMessage         ValidationRuleBuilder = FirstMessageValidator{}
 	ValidateEventCreate          ValidationRuleBuilder = CreateGroupEventValidator{}
+	ValidateRoomNameEdit         ValidationRuleBuilder = EditRoomNameValidator{}
 	ValidateCreateNotification   ValidationRuleBuilder = CreateNotificationValidator{}
 )

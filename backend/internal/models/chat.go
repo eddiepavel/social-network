@@ -7,6 +7,7 @@ import (
 type ChatList struct {
 	RoomID             string       `json:"room_id"`
 	RoomName           *string      `json:"room_name,omitempty"`
+	CanEditName        bool         `json:"can_edit_room_name"`
 	GroupID            *string      `json:"group_id,omitempty"`
 	OtherUser          UserResponse `json:"other_user,omitempty"`
 	LastMessageID      string       `json:"last_message_id,omitempty"`
@@ -44,4 +45,8 @@ type CreateMessageRequest struct {
 type FirstCreateMessageRequest struct {
 	TargetID string `json:"target_id"`
 	Content  string `json:"content"`
+}
+
+type EditRoomNameRequest struct {
+	RoomName string `json:"room_name"`
 }

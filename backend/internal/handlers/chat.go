@@ -14,6 +14,7 @@ import (
 	ws "social-network/internal/websocket"
 	db_chat "social-network/pkg/db/queries/chat"
 	db_followers "social-network/pkg/db/queries/followers"
+	db_groups "social-network/pkg/db/queries/groups"
 	db_notifications "social-network/pkg/db/queries/notifications"
 	"social-network/pkg/db/sqlite"
 	"time"
@@ -53,6 +54,7 @@ func GetChatList(app *app.App) http.HandlerFunc {
 		for _, chat := range list {
 			roomID, _ := helpers.GenerateFromBytes(chat.RoomID)
 			lastMessageID, _ := helpers.GenerateFromBytes(chat.LastMessageID)
+			var canEdit = true
 			participants, _ := sqlite.NewQuery(app.DB).Chat.GetOtherRoomParticipants(r.Context(), db_chat.GetOtherRoomParticipantsParams{
 				RoomID: chat.RoomID,
 				UserID: currentUserID,
@@ -126,6 +128,17 @@ func GetChatList(app *app.App) http.HandlerFunc {
 			}
 
 			GroupID, _ := helpers.GenerateFromBytes(chat.GroupID)
+			if GroupID != "" {
+				isUserCreator, err := sqlite.NewQuery(app.DB).Groups.CheckIsCreator(r.Context(), db_groups.CheckIsCreatorParams{GroupID: chat.GroupID, CreatorID: currentUserID})
+				if err != nil {
+					utils.Internal(w, err)
+					return
+				}
+				if isUserCreator == 0 {
+					canEdit = false
+				}
+			}
+
 			listResponse = append(listResponse, models.ChatList{
 				RoomID: roomID,
 				RoomName: func() *string {
@@ -134,6 +147,7 @@ func GetChatList(app *app.App) http.HandlerFunc {
 					}
 					return nil
 				}(),
+				CanEditName:        canEdit,
 				GroupID:            &GroupID,
 				OtherUser:          otherUser,
 				LastMessageID:      lastMessageID,
@@ -607,5 +621,74 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		}
 
 		utils.OK(w, map[string]string{"room_id": roomUUID})
+	}
+}
+
+func EditRoomName(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		roomIDHex := r.PathValue("roomId")
+		if roomIDHex == "" {
+			utils.BadRequest(w, errors.New("room ID required"))
+			return
+		}
+
+		roomID, err := helpers.GenerateFromString(roomIDHex)
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid room ID format"))
+			return
+		}
+
+		isUserParticipant, err := sqlite.NewQuery(app.DB).Chat.CheckUserIsParticipant(r.Context(), db_chat.CheckUserIsParticipantParams{UserID: currentUserID, RoomID: roomID})
+		if err != nil {
+			utils.Internal(w, err)
+			return
+		}
+
+		if isUserParticipant == 0 {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		roomIsGroup, err := sqlite.NewQuery(app.DB).Chat.CheckIfRoomIsGroup(r.Context(), roomID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			utils.Internal(w, err)
+			return
+		}
+
+		if roomIsGroup != nil {
+			isUserCreator, err := sqlite.NewQuery(app.DB).Groups.CheckIsCreator(r.Context(), db_groups.CheckIsCreatorParams{GroupID: roomIsGroup, CreatorID: currentUserID})
+			if err != nil {
+				utils.Internal(w, err)
+				return
+			}
+			if isUserCreator == 0 {
+				utils.Unauthorized(w, "You are not the creator of this room")
+				return
+			}
+		}
+
+		var req models.EditRoomNameRequest
+
+		inputs := helpers.ValidateRoomNameEdit.Build(r, app)
+
+		ok, errValidation := utils.Validate(r, inputs, &req)
+		if !ok {
+			utils.Error(w, http.StatusUnprocessableEntity, "422", "validation error", errValidation)
+			return
+		}
+
+		err = sqlite.NewQuery(app.DB).Chat.UpdateRoomName(r.Context(), db_chat.UpdateRoomNameParams{Name: sql.NullString{Valid: true, String: req.RoomName}, RoomID: roomID})
+		if err != nil {
+			utils.Internal(w, err)
+			return
+		}
+
+		utils.OK(w, "Room name updated")
 	}
 }

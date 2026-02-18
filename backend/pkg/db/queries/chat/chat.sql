@@ -13,6 +13,9 @@ SELECT cr.room_id as room_id FROM chat_rooms cr WHERE cr.group_id = ?;
 -- name: GetOtherRoomParticipants :many
 SELECT u.user_id, u.first_name, u.last_name, u.avatar FROM users u JOIN chat_participants cp ON cp.user_id = u.user_id WHERE cp.room_id = ? AND cp.user_id != ?;
 
+-- name: CheckIfRoomIsGroup :one
+SELECT cr.group_id FROM chat_rooms cr JOIN groups g on g.group_id = cr.group_id WHERE room_id = ?;
+
 -- name: GetUserChatList :many
 SELECT
     cr.room_id,
@@ -104,3 +107,6 @@ SELECT user_id FROM chat_participants WHERE room_id = ?;
 
 -- name: GetUserBasicInfo :one
 SELECT first_name, last_name, avatar FROM users WHERE user_id = ?;
+
+-- name: UpdateRoomName :exec
+UPDATE chat_rooms SET name = ? WHERE room_id = ?;

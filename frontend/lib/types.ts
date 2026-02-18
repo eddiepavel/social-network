@@ -92,6 +92,7 @@ export type GroupDetails = {
 export type ChatThread = {
   room_id: string;
   room_name?: string;
+  can_edit_room_name: boolean;
   is_group: boolean;
   other_user?: User;
   last_message_id?: string;

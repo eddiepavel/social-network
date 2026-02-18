@@ -50,6 +50,11 @@ FROM groups g
 LEFT JOIN images i ON g.image = i.image_id
 WHERE g.group_id = ?;
 
+-- name: CheckIsCreator :one
+SELECT EXISTS(
+    SELECT 1 FROM groups WHERE creator_id = ? AND group_id = ?
+) AS is_creator;
+
 -- name: GetGroupMembers :many
 SELECT 
     gm.user_id,

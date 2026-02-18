@@ -11,6 +11,24 @@ import (
 	"time"
 )
 
+const checkIsCreator = `-- name: CheckIsCreator :one
+SELECT EXISTS(
+    SELECT 1 FROM groups WHERE creator_id = ? AND group_id = ?
+) AS is_creator
+`
+
+type CheckIsCreatorParams struct {
+	CreatorID []byte
+	GroupID   []byte
+}
+
+func (q *Queries) CheckIsCreator(ctx context.Context, arg CheckIsCreatorParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkIsCreator, arg.CreatorID, arg.GroupID)
+	var is_creator int64
+	err := row.Scan(&is_creator)
+	return is_creator, err
+}
+
 const countMembers = `-- name: CountMembers :one
 SELECT count(*) FROM group_members WHERE group_id = ? AND status = 'joined'
 `

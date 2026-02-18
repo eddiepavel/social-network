@@ -4,10 +4,11 @@ import type { ChatMessage } from "@/lib/types";
 
 type MessageBubbleProps = {
   message: ChatMessage;
+  isGroup: boolean;
   isOwn: boolean;
 };
 
-export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
+export default function MessageBubble({ message, isOwn, isGroup }: MessageBubbleProps) {
   const senderName = message.sender_first_name && message.sender_last_name
     ? `${message.sender_first_name} ${message.sender_last_name}`
     : "User";
@@ -22,7 +23,7 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
         />
       )}
       <div className="message-content">
-        {!isOwn && <span className="message-sender">{senderName}</span>}
+        {!isOwn && isGroup && <span className="message-sender">{senderName}</span>}
         <p className="message-text">{message.content}</p>
         <span className="message-time">{formatDate(message.created_at)}</span>
       </div>

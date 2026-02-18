@@ -24,6 +24,17 @@ func (q *Queries) AddRoomParticipant(ctx context.Context, arg AddRoomParticipant
 	return err
 }
 
+const checkIfRoomIsGroup = `-- name: CheckIfRoomIsGroup :one
+SELECT cr.group_id FROM chat_rooms cr JOIN groups g on g.group_id = cr.group_id WHERE room_id = ?
+`
+
+func (q *Queries) CheckIfRoomIsGroup(ctx context.Context, roomID []byte) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, checkIfRoomIsGroup, roomID)
+	var group_id []byte
+	err := row.Scan(&group_id)
+	return group_id, err
+}
+
 const checkUserIsParticipant = `-- name: CheckUserIsParticipant :one
 SELECT COUNT(*) FROM chat_participants WHERE user_id = ? AND room_id = ?
 `
@@ -413,5 +424,19 @@ type RemoveRoomParticipantParams struct {
 
 func (q *Queries) RemoveRoomParticipant(ctx context.Context, arg RemoveRoomParticipantParams) error {
 	_, err := q.db.ExecContext(ctx, removeRoomParticipant, arg.UserID, arg.RoomID)
+	return err
+}
+
+const updateRoomName = `-- name: UpdateRoomName :exec
+UPDATE chat_rooms SET name = ? WHERE room_id = ?
+`
+
+type UpdateRoomNameParams struct {
+	Name   sql.NullString
+	RoomID []byte
+}
+
+func (q *Queries) UpdateRoomName(ctx context.Context, arg UpdateRoomNameParams) error {
+	_, err := q.db.ExecContext(ctx, updateRoomName, arg.Name, arg.RoomID)
 	return err
 }

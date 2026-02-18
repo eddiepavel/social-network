@@ -5,21 +5,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import MessageBubble from "@/components/MessageBubble";
 import EmojiPicker from "@/components/EmojiPicker";
 import Button from "@/components/Button";
-import { getRoomMessages, sendMessage, ApiError } from "@/lib/api";
+import {getRoomMessages, sendMessage, ApiError, updateGroup, updateRoomName} from "@/lib/api";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import type { ChatMessage } from "@/lib/types";
+import FormField from "@/components/FormField";
 
 type ChatRoomProps = {
   roomId: string;
   currentUserId: string;
+  isGroup: boolean
   roomName?: string;
+  canEdit: boolean;
 };
 
-export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomProps) {
+export default function ChatRoom({ roomId, currentUserId, roomName, isGroup, canEdit }: ChatRoomProps) {
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isConnected, enterChat, leaveChat } = useWebSocket();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editValue, setEditValue] = useState(roomName || "");
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Notify backend when entering/leaving chat room
   useEffect(() => {
@@ -106,13 +112,91 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
     setNewMessage((prev) => prev + emoji);
   };
 
+  const update = useMutation({
+    mutationFn: () => updateRoomName(roomId, editValue),
+    onSuccess: () => {
+      setValidationErrors({});
+      queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+      setEditOpen(false)
+    },
+    onError: (error) => {
+      setValidationErrors({});
+      if (error instanceof ApiError && error.details && typeof error.details === 'object') {
+        setValidationErrors(error.details);
+      }
+    },
+  });
+
+  const closeEditModal = () => {
+    setEditOpen(false)
+    setValidationErrors({})
+  }
+
   return (
     <div className="chat-room">
       {roomName && (
-        <h3 className="chat-room-title">
-          {roomName}
-          {isConnected && <span style={{ fontSize: "0.75rem", color: "green", marginLeft: "8px" }}>●</span>}
-        </h3>
+          <div className="chat-room-title">
+            <div className="chat-room-name">
+              {roomName}
+              {isConnected && <span style={{ fontSize: "0.75rem", color: "green", marginLeft: "8px" }}>●</span>}
+            </div>
+            {canEdit && (
+                <div className="chat-room-title-edit">
+                  <button
+                      aria-label="Edit room name"
+                      className="chat-room-title-edit-btn"
+                      type="button"
+                      onClick={() => {
+                        setEditValue(roomName ?? "");
+                        setEditOpen(true);
+                      }}
+                  >
+                    <span style={{ fontSize: "1.25rem" }}>✏️</span>
+                  </button>
+                </div>
+            )}
+
+            {editOpen && (
+                <div className="edit-roomname-drawer">
+                  <form
+                      onSubmit={e => {
+                        e.preventDefault();
+                        update.mutate()
+                      }}
+                      className="edit-roomname-form"
+                  >
+                    <div className="edit-roomname-field-wrapper">
+                      <FormField
+                          label="Room name"
+                          value={editValue}
+                          name="room_name"
+                          autoFocus
+                          onChange={e => setEditValue(e.target.value)}
+                          placeholder="Edit room name"
+                          className="edit-roomname-input"
+                          error={validationErrors.room_name?.replace('_', ' ')}
+                      />
+                    </div>
+                    <div className="edit-roomname-button-wrapper">
+                      <button
+                          type="submit"
+                          disabled={update.isPending || roomName === editValue}
+                          className="edit-roomname-submit"
+                      >
+                        Save
+                      </button>
+                      <button
+                          type="button"
+                          className="edit-roomname-cancel"
+                          onClick={closeEditModal}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+            )}
+          </div>
       )}
 
       <div className="chat-messages">
@@ -124,6 +208,7 @@ export default function ChatRoom({ roomId, currentUserId, roomName }: ChatRoomPr
           [...messages].reverse().map((message) => (
             <MessageBubble
               key={message.message_id}
+              isGroup={isGroup}
               message={message}
               isOwn={message.sender_id === currentUserId}
             />

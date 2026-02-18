@@ -1584,9 +1584,25 @@ button {
 }
 
 .chat-room-title {
-  margin: 0 0 16px;
   padding-bottom: 12px;
+  display: flex;
+  align-content: center;
+  position: relative;
+  justify-content: space-between;
+  height: 3rem;
   border-bottom: 1px solid var(--border);
+}
+
+.chat-room-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.chat-room-title-edit-btn {
+  border-width: 0;
+  background: transparent;
 }
 
 .chat-messages {
@@ -1624,6 +1640,78 @@ button {
 .chat-input:focus {
   border-color: var(--accent);
 }
+
+/* ============================================
+   EDIT ROOM NAME DRAWER
+   ============================================ */
+
+.edit-roomname-drawer {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 20;
+  background: #fffbf3;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 8px;
+  padding: 16px;
+  min-width: 220px;
+}
+
+.edit-roomname-form {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-roomname-button-wrapper {
+  display: flex;
+  gap: 4px;
+  padding-top: 1.33rem;
+}
+
+.edit-roomname-field-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-roomname-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.edit-roomname-submit {
+  padding: 6px 12px;
+  border-radius: 4px;
+  background-color: #ee692b;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.edit-roomname-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #ccc;
+}
+
+.edit-roomname-cancel {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  color: #555;
+  cursor: pointer;
+}
+
 
 /* ============================================
    MESSAGE BUBBLE
