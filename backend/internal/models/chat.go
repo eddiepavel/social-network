@@ -5,14 +5,15 @@ import (
 )
 
 type ChatList struct {
-	RoomID              string    `json:"room_id"`
-	RoomName            *string   `json:"room_name,omitempty"`
-	GroupID             *string   `json:"group_id,omitempty"`
-	LastMessageID       string    `json:"last_message_id,omitempty"`
-	LastMessageContent  string    `json:"last_message_content,omitempty"`
-	LastMessageTime     time.Time `json:"last_message_time,omitempty"`
-	LastMessageSenderID string    `json:"last_message_sender_id,omitempty"`
-	UnreadCount         int       `json:"unread_count"`
+	RoomID             string       `json:"room_id"`
+	RoomName           *string      `json:"room_name,omitempty"`
+	GroupID            *string      `json:"group_id,omitempty"`
+	OtherUser          UserResponse `json:"other_user,omitempty"`
+	LastMessageID      string       `json:"last_message_id,omitempty"`
+	LastMessageContent string       `json:"last_message_content,omitempty"`
+	LastMessageTime    time.Time    `json:"last_message_time,omitempty"`
+	LastMessageSender  UserResponse `json:"last_message_sender,omitempty"`
+	UnreadCount        int          `json:"unread_count"`
 }
 
 type ChatMessages struct {

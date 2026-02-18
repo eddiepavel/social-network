@@ -102,6 +102,50 @@ func (q *Queries) FindRoomBetweenUsers(ctx context.Context, arg FindRoomBetweenU
 	return room_id, err
 }
 
+const getOtherRoomParticipants = `-- name: GetOtherRoomParticipants :many
+SELECT u.user_id, u.first_name, u.last_name, u.avatar FROM users u JOIN chat_participants cp ON cp.user_id = u.user_id WHERE cp.room_id = ? AND cp.user_id != ?
+`
+
+type GetOtherRoomParticipantsParams struct {
+	RoomID []byte
+	UserID []byte
+}
+
+type GetOtherRoomParticipantsRow struct {
+	UserID    []byte
+	FirstName string
+	LastName  string
+	Avatar    sql.NullString
+}
+
+func (q *Queries) GetOtherRoomParticipants(ctx context.Context, arg GetOtherRoomParticipantsParams) ([]GetOtherRoomParticipantsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOtherRoomParticipants, arg.RoomID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOtherRoomParticipantsRow
+	for rows.Next() {
+		var i GetOtherRoomParticipantsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Avatar,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRoomIdByGroupId = `-- name: GetRoomIdByGroupId :one
 SELECT cr.room_id as room_id FROM chat_rooms cr WHERE cr.group_id = ?
 `

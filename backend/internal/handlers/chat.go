@@ -29,6 +29,9 @@ func GetChatList(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		currentUser := helpers.FetchUser(app, currentUserID, r.Context(), w)
+		currentUserUUID, _ := helpers.GenerateFromBytes(currentUser.UserID)
+
 		list, err := sqlite.NewQuery(app.DB).Chat.GetUserChatList(r.Context(),
 			db_chat.GetUserChatListParams{
 				SenderID: currentUserID,
@@ -50,7 +53,78 @@ func GetChatList(app *app.App) http.HandlerFunc {
 		for _, chat := range list {
 			roomID, _ := helpers.GenerateFromBytes(chat.RoomID)
 			lastMessageID, _ := helpers.GenerateFromBytes(chat.LastMessageID)
-			lastMessageSenderID, _ := helpers.GenerateFromBytes(chat.LastMessageSenderID)
+			participants, _ := sqlite.NewQuery(app.DB).Chat.GetOtherRoomParticipants(r.Context(), db_chat.GetOtherRoomParticipantsParams{
+				RoomID: chat.RoomID,
+				UserID: currentUserID,
+			})
+
+			var otherUser, lastSender models.UserResponse
+			if len(participants) != 0 {
+				if len(participants) == 1 {
+					userID, _ := helpers.GenerateFromBytes(participants[0].UserID)
+					otherUser = models.UserResponse{
+						UserID:    userID,
+						FirstName: participants[0].FirstName,
+						LastName:  participants[0].LastName,
+						Avatar: func() string {
+							if participants[0].Avatar.Valid {
+								return participants[0].Avatar.String
+							}
+							return ""
+						}(),
+					}
+				}
+
+				if !bytes.Equal(currentUserID, chat.LastMessageSenderID) {
+					var idx int
+					for i, user := range participants {
+						if bytes.Equal(user.UserID, chat.LastMessageSenderID) {
+							idx = i
+							break
+						}
+					}
+
+					userID, _ := helpers.GenerateFromBytes(participants[idx].UserID)
+					lastSender = models.UserResponse{
+						UserID:    userID,
+						FirstName: participants[idx].FirstName,
+						LastName:  participants[idx].LastName,
+						Avatar: func() string {
+							if participants[idx].Avatar.Valid {
+								return participants[idx].Avatar.String
+							}
+							return ""
+						}(),
+					}
+				} else {
+					lastSender = models.UserResponse{
+						UserID:    currentUserUUID,
+						FirstName: currentUser.FirstName,
+						LastName:  currentUser.LastName,
+						Avatar: func() string {
+							if currentUser.Avatar.Valid {
+								return currentUser.Avatar.String
+							}
+							return ""
+						}(),
+					}
+				}
+			} else {
+				fetchLast := helpers.FetchUser(app, chat.LastMessageSenderID, r.Context(), w)
+				fetchLastUUID, _ := helpers.GenerateFromBytes(fetchLast.UserID)
+				lastSender = models.UserResponse{
+					UserID:    fetchLastUUID,
+					FirstName: fetchLast.FirstName,
+					LastName:  fetchLast.LastName,
+					Avatar: func() string {
+						if fetchLast.Avatar.Valid {
+							return fetchLast.Avatar.String
+						}
+						return ""
+					}(),
+				}
+			}
+
 			GroupID, _ := helpers.GenerateFromBytes(chat.GroupID)
 			listResponse = append(listResponse, models.ChatList{
 				RoomID: roomID,
@@ -60,12 +134,13 @@ func GetChatList(app *app.App) http.HandlerFunc {
 					}
 					return nil
 				}(),
-				GroupID:             &GroupID,
-				LastMessageID:       lastMessageID,
-				LastMessageTime:     chat.LastMessageTime.Time,
-				LastMessageContent:  chat.LastMessageContent,
-				LastMessageSenderID: lastMessageSenderID,
-				UnreadCount:         int(chat.UnreadCount),
+				GroupID:            &GroupID,
+				OtherUser:          otherUser,
+				LastMessageID:      lastMessageID,
+				LastMessageTime:    chat.LastMessageTime.Time,
+				LastMessageContent: chat.LastMessageContent,
+				LastMessageSender:  lastSender,
+				UnreadCount:        int(chat.UnreadCount),
 			})
 		}
 

@@ -10,6 +10,9 @@ INSERT INTO chat_participants (room_id, user_id) VALUES (?, ?);
 -- name: GetRoomIdByGroupId :one
 SELECT cr.room_id as room_id FROM chat_rooms cr WHERE cr.group_id = ?;
 
+-- name: GetOtherRoomParticipants :many
+SELECT u.user_id, u.first_name, u.last_name, u.avatar FROM users u JOIN chat_participants cp ON cp.user_id = u.user_id WHERE cp.room_id = ? AND cp.user_id != ?;
+
 -- name: GetUserChatList :many
 SELECT
     cr.room_id,

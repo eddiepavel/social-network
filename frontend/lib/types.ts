@@ -93,10 +93,11 @@ export type ChatThread = {
   room_id: string;
   room_name?: string;
   is_group: boolean;
+  other_user?: User;
   last_message_id?: string;
   last_message_content?: string;
   last_message_time?: string;
-  last_message_sender_id?: string;
+  last_message_sender: User;
   unread_count: number;
 };
 
