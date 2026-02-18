@@ -69,7 +69,8 @@ sql:
     schema: [ "/pkg/db/migrations/sqlite/up/000013_create_chat_messages_table.sql",
               "/pkg/db/migrations/sqlite/up/000001_create_users_table.sql",
               "/pkg/db/migrations/sqlite/up/000017_create_chat_rooms_table.sql",
-              "/pkg/db/migrations/sqlite/up/000018_create_chat_participants_table.sql"
+              "/pkg/db/migrations/sqlite/up/000018_create_chat_participants_table.sql",
+              "/pkg/db/migrations/sqlite/up/000009_create_groups_table.sql"
     ]
     gen:
       go:
