@@ -1156,9 +1156,8 @@ func RSVPToEvent(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		eventIDStr, _ := helpers.GenerateFromBytes(eventID)
 		err = sqlite.NewQuery(app.DB).Groups.UpsertRSVP(r.Context(), db_groups.UpsertRSVPParams{
-			EventID: eventIDStr,
+			EventID: eventID,
 			UserID:  userID,
 			Status:  sql.NullString{String: req.Status, Valid: true},
 		})

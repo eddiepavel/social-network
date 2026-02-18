@@ -146,7 +146,7 @@ export default function CreateEventModal({
           </p>
         )}
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: "1rem", paddingBottom: "1rem" }}>
           <Button type="button" variant="ghost" onClick={handleClose}>
             Cancel
           </Button>

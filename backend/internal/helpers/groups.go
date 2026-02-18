@@ -104,6 +104,7 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 
 		// Create event if not exists
 		if _, exists := eventsMap[eventUUID]; !exists {
+			creatorId, _ := GenerateFromBytes(row.CreatorID)
 			eventsMap[eventUUID] = &models.EventResponse{
 				EventID:     eventUUID,
 				EventName:   row.Title,
@@ -112,6 +113,11 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 				CreatedAt:   row.EventCreatedAt.Time,
 				// CreatedAt:   row.EventCreatedAt.String(),
 				RSVPs: []models.RSVPResponse{},
+				Creator: models.UserResponse{
+					UserID:    creatorId,
+					FirstName: row.CreatorFirstName.String,
+					LastName:  row.CreatorLastName.String,
+				},
 			}
 		}
 

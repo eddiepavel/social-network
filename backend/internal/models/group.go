@@ -70,6 +70,7 @@ type EventResponse struct {
 	NotGoingCount int64          `json:"not_going_count"`
 	UserRsvp      *string        `json:"user_rsvp,omitempty"`
 	RSVPs         []RSVPResponse `json:"rsvps,omitempty"`
+	Creator       UserResponse   `json:"creator"`
 }
 
 // CreateEventRequest represents the request body for creating a group event

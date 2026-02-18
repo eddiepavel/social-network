@@ -166,6 +166,15 @@ export type PostWithDetails = FeedPost & {
   allowed_viewers?: string[];
 };
 
+export type EventRsvp = {
+  user_id: string;
+  status: string;
+  first_name: string;
+  last_name: string;
+  avatar?: string;
+  created_at: string;
+};
+
 export type GroupEvent = {
   event_id: string;
   event_name: string;
@@ -175,6 +184,8 @@ export type GroupEvent = {
   going_count: number;
   not_going_count: number;
   user_rsvp?: string | null;
+  rsvps?: EventRsvp[];
+  creator: User
 };
 
 export type Notification = {

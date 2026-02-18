@@ -1,6 +1,8 @@
 import { formatDate } from "@/lib/utils";
 import type { GroupEvent } from "@/lib/types";
 import Button from "@/components/Button";
+import Modal from "@/components/Modal";
+import Tabs from "@/components/Tabs";
 import { rsvpToEvent, ApiError } from "@/lib/api";
 import { useState } from "react";
 
@@ -15,6 +17,16 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
   const [notGoingCount, setNotGoingCount] = useState(event.not_going_count);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("going");
+
+  const goingUsers = event.rsvps?.filter(r => r.status === "going") || [];
+  const notGoingUsers = event.rsvps?.filter(r => r.status === "not going") || [];
+
+  const tabs = [
+    { id: "going", label: `Going (${goingUsers.length})` },
+    { id: "not-going", label: `Not Going (${notGoingUsers.length})` }
+  ];
 
   const handleRsvp = async (status: "going" | "not going") => {
     setIsLoading(true);
@@ -43,42 +55,188 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
   };
 
   return (
-    <div className="event-card surface card" style={{ boxShadow: "none" }}>
-      <div className="event-header">
-        <h4 className="event-title">{event.event_name}</h4>
-        <span className="event-date">{formatDate(event.timestamp)}</span>
-      </div>
+    <div className="event-card surface card" style={{ 
+      boxShadow: "0 2px 8px rgba(0,0,0,0.08)", 
+      borderRadius: "12px",
+      padding: "1.25rem",
+      display: "flex",
+      gap: "1.5rem",
+      alignItems: "stretch"
+    }}>
+      {/* Left Section - Event Details */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <h3 style={{ 
+          margin: 0, 
+          fontSize: "1.25rem", 
+          fontWeight: 600,
+          color: "var(--text-primary)"
+        }}>
+          {event.event_name}
+        </h3>
+        
+        <p style={{ 
+          margin: 0, 
+          color: "var(--text-secondary)", 
+          fontSize: "0.95rem",
+          lineHeight: 1.5,
+          flex: 1
+        }}>
+          {event.description}
+        </p>
+        
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: "0.5rem",
+          color: "var(--text-tertiary)",
+          fontSize: "0.85rem"
+        }}>
+          <span>👤</span>
+          <span>Created by <strong style={{ color: "var(--text-secondary)" }}>{event.creator.first_name} {event.creator.last_name}</strong></span>
+        </div>
 
-      <p className="event-description">{event.description}</p>
-
-      <div className="event-stats">
-        <span className="event-stat">
-          <span className="event-stat-icon">✅</span>
-          {goingCount} going
-        </span>
-        <span className="event-stat">
-          <span className="event-stat-icon">❌</span>
-          {notGoingCount} not going
-        </span>
-      </div>
-
-      {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem" }}>{errorMsg}</p>}
-      <div className="event-actions">
         <Button
-          variant={currentRsvp === "going" ? "solid" : "ghost"}
-          onClick={() => handleRsvp("going")}
-          disabled={isLoading}
+          variant="ghost"
+          onClick={() => setIsModalOpen(true)}
+          style={{ alignSelf: "flex-start", marginTop: "0.5rem" }}
         >
-          Going
-        </Button>
-        <Button
-          variant={currentRsvp === "not going" ? "solid" : "ghost"}
-          onClick={() => handleRsvp("not going")}
-          disabled={isLoading}
-        >
-          Not Going
+          👥 View Attendees
         </Button>
       </div>
+
+      {/* Right Section - Time & RSVP */}
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        alignItems: "flex-end",
+        justifyContent: "space-between",
+        minWidth: "160px",
+        gap: "0.75rem"
+      }}>
+        <div style={{ 
+          background: "var(--bg-tertiary)", 
+          padding: "0.5rem 0.75rem", 
+          borderRadius: "8px",
+          textAlign: "center"
+        }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
+            Event Time
+          </div>
+          <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)" }}>
+            {formatDate(event.timestamp)}
+          </div>
+        </div>
+
+        <div style={{ 
+          display: "flex", 
+          gap: "1rem", 
+          fontSize: "0.85rem",
+          color: "var(--text-secondary)"
+        }}>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <span style={{ color: "#22c55e" }}>✓</span> {goingCount}
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <span style={{ color: "#ef4444" }}>✗</span> {notGoingCount}
+          </span>
+        </div>
+
+        {errorMsg && <p style={{ color: "#b42318", fontSize: "0.8rem", margin: 0 }}>{errorMsg}</p>}
+        
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <Button
+            variant={currentRsvp === "going" ? "solid" : "ghost"}
+            onClick={() => handleRsvp("going")}
+            disabled={isLoading}
+          >
+            Going
+          </Button>
+          <Button
+            variant={currentRsvp === "not going" ? "solid" : "ghost"}
+            onClick={() => handleRsvp("not going")}
+            disabled={isLoading}
+          >
+            Not Going
+          </Button>
+        </div>
+      </div>
+
+      {/* Attendees Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Event Attendees">
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        
+        <div style={{ marginTop: "1rem", minHeight: "150px" }}>
+          {activeTab === "going" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {goingUsers.length === 0 ? (
+                <p style={{ color: "var(--text-tertiary)", textAlign: "center" }}>No one is going yet</p>
+              ) : (
+                goingUsers.map(user => (
+                  <div key={user.user_id} style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "0.75rem",
+                    padding: "0.5rem",
+                    borderRadius: "8px",
+                    background: "var(--bg-tertiary)"
+                  }}>
+                    <div style={{ 
+                      width: "36px", 
+                      height: "36px", 
+                      borderRadius: "50%", 
+                      background: "var(--primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: "0.85rem"
+                    }}>
+                      {user.first_name[0]}{user.last_name[0]}
+                    </div>
+                    <span style={{ fontWeight: 500 }}>{user.first_name} {user.last_name}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          
+          {activeTab === "not-going" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {notGoingUsers.length === 0 ? (
+                <p style={{ color: "var(--text-tertiary)", textAlign: "center" }}>No one has declined yet</p>
+              ) : (
+                notGoingUsers.map(user => (
+                  <div key={user.user_id} style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "0.75rem",
+                    padding: "0.5rem",
+                    borderRadius: "8px",
+                    background: "var(--bg-tertiary)"
+                  }}>
+                    <div style={{ 
+                      width: "36px", 
+                      height: "36px", 
+                      borderRadius: "50%", 
+                      background: "var(--text-tertiary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: "0.85rem"
+                    }}>
+                      {user.first_name[0]}{user.last_name[0]}
+                    </div>
+                    <span style={{ fontWeight: 500 }}>{user.first_name} {user.last_name}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

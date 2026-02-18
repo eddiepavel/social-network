@@ -76,16 +76,21 @@ SELECT
     ge.title,
     ge.description,
     ge.event_timestamp,
+    ge.creator_id,
     ge.created_at as event_created_at,
     gr.user_id as rsvp_user_id,
     gr.status as rsvp_status,
     gr.created_at as rsvp_created_at,
+    cu.first_name as creator_first_name,
+    cu.last_name as creator_last_name,
+    cu.avatar as creator_avatar,
     u.first_name as rsvp_first_name,
     u.last_name as rsvp_last_name,
     u.avatar as rsvp_avatar
 FROM group_events ge
 LEFT JOIN group_rsvp gr ON ge.event_id = gr.event_id
 LEFT JOIN users u ON gr.user_id = u.user_id
+LEFT JOIN users cu ON ge.creator_id = cu.user_id
 WHERE ge.group_id = ?
 ORDER BY ge.event_timestamp DESC;
 
