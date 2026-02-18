@@ -51,11 +51,6 @@ FROM chat_rooms cr
         AND cm1.created_at = cm2.max_time
 ) lm ON cr.room_id = lm.target_id
 
-         LEFT JOIN chat_participants other_cp
-                   ON cr.room_id = other_cp.room_id
-                       AND other_cp.user_id != ?
-LEFT JOIN users other_user ON other_cp.user_id = other_user.user_id
-
 ORDER BY COALESCE(lm.created_at, cr.created_at) DESC;
 
 -- name: GetRoomMessages :many

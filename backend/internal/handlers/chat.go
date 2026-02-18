@@ -33,7 +33,6 @@ func GetChatList(app *app.App) http.HandlerFunc {
 			db_chat.GetUserChatListParams{
 				SenderID: currentUserID,
 				UserID:   currentUserID,
-				UserID_2: currentUserID,
 			})
 
 		if err != nil {
