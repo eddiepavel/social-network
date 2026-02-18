@@ -288,7 +288,7 @@ export function getComments(postId: string) {
   return apiFetch<Comment[]>(`/api/posts/id/${postId}/comment`);
 }
 
-export function createComment(postId: string, input: { content: string; image_id?: string }) {
+export function createComment(postId: string, input: { content: string; image_id?: string, parent_id: string }) {
   return apiFetch<Comment>(`/api/posts/id/${postId}/comment`, {
     method: "POST",
     body: JSON.stringify(input),

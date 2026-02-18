@@ -142,20 +142,26 @@ export type FollowRequest = {
 export type FollowStatus = "none" | "following" | "requested" | "self";
 
 export type Comment = {
-  comment_id: string;
-  post_id: string;
-  author_id: string;
-  content: string;
-  created_at: string;
-  author_first_name?: string;
-  author_last_name?: string;
-  author_nickname?: string;
-  author_avatar?: string;
-  image_id?: string | null;
-  image_url?: string;
-  reaction_count?: number;
-  user_reacted?: boolean;
-};
+  comment_id: string
+  post_id: string
+  author_id: string
+  content: string
+  created_at: string
+  author_first_name?: string
+  author_last_name?: string
+  author_nickname?: string
+  author_avatar?: string
+  image_id?: string | null
+  image_url?: string
+  reaction_count?: number
+  user_reacted?: boolean
+  parent_comment_id?: string | null
+}
+
+// Extended type for threaded comments
+export type CommentWithReplies = Comment & {
+  replies: CommentWithReplies[]
+}
 
 export type PostWithDetails = FeedPost & {
   author_first_name?: string;

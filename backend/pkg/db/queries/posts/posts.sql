@@ -14,6 +14,9 @@ SELECT post_id, author_id, visibility FROM posts WHERE post_id = ?;
 -- name: CheckPrivatePostUserPermit :one
 SELECT * FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
 
+-- name: CheckCommentHasChildren :one
+SELECT COUNT(*) FROM comments WHERE parent_comment_id = ?;
+
 -- name: GetFeedPostsCount :one
 SELECT COUNT(*)
 FROM posts p

@@ -1215,6 +1215,18 @@ func DeleteComment(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		hasChildren, err := sqlite.NewQuery(app.DB).Posts.CheckCommentHasChildren(r.Context(), commentID)
+		if err != nil {
+			app.Logger.Error("failed to check comment has_children", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if hasChildren != 0 {
+			utils.BadRequest(w, errors.New("comment has replies"))
+			return
+		}
+
 		// Delete comment (only owner can delete)
 		err = sqlite.NewQuery(app.DB).Posts.DeleteComment(r.Context(), db_posts.DeleteCommentParams{
 			CommentID: commentID,

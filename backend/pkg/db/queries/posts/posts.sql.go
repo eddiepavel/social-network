@@ -70,6 +70,17 @@ func (q *Queries) CheckCommentExists(ctx context.Context, commentID []byte) (int
 	return column_1, err
 }
 
+const checkCommentHasChildren = `-- name: CheckCommentHasChildren :one
+SELECT COUNT(*) FROM comments WHERE parent_comment_id = ?
+`
+
+func (q *Queries) CheckCommentHasChildren(ctx context.Context, parentCommentID []byte) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkCommentHasChildren, parentCommentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const checkPrivatePostUserPermit = `-- name: CheckPrivatePostUserPermit :one
 SELECT post_id, user_id, created_at FROM viewing_permissions WHERE user_id = ? AND post_id = ?
 `
