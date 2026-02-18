@@ -10,6 +10,8 @@ import MemberCard from "@/components/MemberCard";
 import GroupInviteModal from "@/components/GroupInviteModal";
 import GroupRequestsList from "@/components/GroupRequestsList";
 import GroupSettings from "@/components/GroupSettings";
+import EventsList from "@/components/EventsList";
+import CreateEventModal from "@/components/CreateEventModal";
 import { getGroup, requestJoinGroup, leaveGroup } from "@/lib/api";
 import useSession from "@/hooks/useSession";
 
@@ -23,9 +25,10 @@ export default function GroupDetailsPage() {
   const [activeTab, setActiveTab] = useState("members");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
 
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch: refetchGroup } = useQuery({
     queryKey: ["group", groupId],
     queryFn: () => getGroup(groupId),
     enabled: !!groupId,
@@ -140,6 +143,7 @@ export default function GroupDetailsPage() {
         <Tabs
           tabs={[
             { id: "members", label: `Members (${acceptedMembers.length})` },
+            ...(isMember ? [{ id: "events", label: `Events (${data.events?.length ?? 0})` }] : []),
             ...(isOwner ? [{ id: "requests", label: "Join Requests" }] : []),
           ]}
           activeTab={activeTab}
@@ -157,6 +161,17 @@ export default function GroupDetailsPage() {
                 isCurrentUser={member.user_id === session?.user_id}
               />
             ))}
+          </div>
+        )}
+
+        {activeTab === "events" && isMember && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+              <Button onClick={() => setIsCreateEventOpen(true)}>
+                Create Event
+              </Button>
+            </div>
+            <EventsList events={data.events ?? []} />
           </div>
         )}
 
@@ -178,6 +193,12 @@ export default function GroupDetailsPage() {
             group={data.group}
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
+          />
+          <CreateEventModal
+            isOpen={isCreateEventOpen}
+            onClose={() => setIsCreateEventOpen(false)}
+            groupId={groupId}
+            onEventCreated={() => refetchGroup()}
           />
         </>
       )}

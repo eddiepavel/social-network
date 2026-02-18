@@ -37,7 +37,7 @@ type GroupMember struct {
 }
 
 type GroupRsvp struct {
-	EventID   string
+	EventID   []byte
 	UserID    []byte
 	Status    sql.NullString
 	CreatedAt sql.NullTime

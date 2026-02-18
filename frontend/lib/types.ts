@@ -86,6 +86,7 @@ export type GroupMember = {
 export type GroupDetails = {
   group: Group;
   members: GroupMember[];
+  events: GroupEvent[];
 };
 
 export type ChatThread = {

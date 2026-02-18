@@ -694,7 +694,7 @@ ON CONFLICT(event_id, user_id) DO UPDATE SET status = excluded.status
 `
 
 type UpsertRSVPParams struct {
-	EventID string
+	EventID []byte
 	UserID  []byte
 	Status  sql.NullString
 }

@@ -97,6 +97,7 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 	// Get events with RSVPs and deduplicate
 	eventsWithRSVPs, _ := t.Groups.GetGroupEventsWithRSVPs(ctx, groupId)
 	eventsMap := make(map[string]*models.EventResponse)
+	userUUID, _ := GenerateFromBytes(user)
 
 	for _, row := range eventsWithRSVPs {
 		eventUUID, _ := GenerateFromBytes(row.EventID)
@@ -134,11 +135,27 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 				rsvp.Avatar = &row.RsvpAvatar.String
 			}
 			eventsMap[eventUUID].RSVPs = append(eventsMap[eventUUID].RSVPs, rsvp)
+
+			// Track current user's RSVP
+			if rsvpUserUUID == userUUID {
+				eventsMap[eventUUID].UserRsvp = &rsvp.Status
+			}
 		}
 	}
 
-	// Convert map to slice
+	// Convert map to slice and compute counts
 	for _, event := range eventsMap {
+		var goingCount, notGoingCount int64
+		for _, rsvp := range event.RSVPs {
+			switch rsvp.Status {
+			case "going":
+				goingCount++
+			case "not going":
+				notGoingCount++
+			}
+		}
+		event.GoingCount = goingCount
+		event.NotGoingCount = notGoingCount
 		group.Events = append(group.Events, *event)
 	}
 

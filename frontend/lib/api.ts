@@ -457,12 +457,8 @@ export function deleteNotification(notifId: string) {
 // GROUP EVENTS API
 // ============================================
 
-export function getGroupEvents(groupId: string) {
-  return apiFetch<GroupEvent[]>(`/api/groups/group/${groupId}/events`);
-}
-
 export function createGroupEvent(groupId: string, input: CreateEventRequest) {
-  return apiFetch<GroupEvent>(`/api/groups/group/${groupId}/events`, {
+  return apiFetch<GroupEvent>(`/api/events/${groupId}/create`, {
     method: "POST",
     body: JSON.stringify(input),
   });
