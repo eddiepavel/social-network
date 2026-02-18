@@ -234,6 +234,11 @@ func GetUserPosts(app *app.App) http.HandlerFunc {
 		}
 
 		var userPosts []models.FeedPostResponse
+
+		if len(posts) == 0 {
+			utils.OK(w, userPosts)
+		}
+
 		for _, post := range posts {
 			postUuid, _ := helpers.GenerateFromBytes(post.PostID)
 			authorUuid, _ := helpers.GenerateFromBytes(post.AuthorID)

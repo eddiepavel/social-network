@@ -819,7 +819,7 @@ WHERE p.author_id = ?
   AND (
     p.visibility = 'public'
     OR (p.visibility = 'semi-private' AND EXISTS(
-        SELECT 1 FROM followers WHERE follower_id = ? AND followee_id = p.author_id
+        SELECT 1 FROM followers WHERE follower_id = ? OR followee_id = p.author_id
     ))
     OR (p.visibility = 'private' AND (
         p.author_id = ? OR EXISTS(SELECT 1 FROM viewing_permissions vp WHERE vp.user_id = ? AND vp.post_id = p.post_id)

@@ -46,11 +46,10 @@ export default function ProfilePage() {
   const { data: userPosts, isLoading: postsLoading, isError: postsError } = useQuery({
     queryKey: ["userPosts", userId],
     queryFn: () => getUserPosts(userId, 1, 20),
-    enabled: !!userId && !isSelf, // Only fetch posts for other users, not own profile
     retry: false, // Don't retry if unauthorized
   });
 
-  const [activeTab, setActiveTab] = useState(isSelf ? "followers" : "posts");
+  const [activeTab, setActiveTab] = useState("posts");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -72,11 +71,6 @@ export default function ProfilePage() {
       avatar: data.avatar || "",
     });
   }, [data]);
-
-  // Update active tab when switching between own and other profiles
-  useEffect(() => {
-    setActiveTab(isSelf ? "followers" : "posts");
-  }, [isSelf]);
 
   const saveProfile = useMutation({
     mutationFn: updateProfile,
@@ -159,7 +153,7 @@ export default function ProfilePage() {
       <section className="surface card">
         <Tabs
           tabs={[
-            ...(!isSelf ? [{ id: "posts", label: `Posts (${userPosts?.length ?? 0})` }] : []),
+            { id: "posts", label: `Posts (${userPosts?.length ?? 0})` },
             { id: "followers", label: `Followers (${followersCount})` },
             { id: "following", label: `Following (${followingCount})` },
             ...(isSelf ? [{ id: "requests", label: "Requests" }] : []),
@@ -167,7 +161,7 @@ export default function ProfilePage() {
           activeTab={activeTab}
           onChange={setActiveTab}
         />
-        {activeTab === "posts" && !isSelf && (
+        {activeTab === "posts" && (
           <div style={{ marginTop: 16 }}>
             {postsLoading ? (
               <p>Loading posts...</p>
@@ -177,7 +171,7 @@ export default function ProfilePage() {
               ))
             ) : (
               <p style={{ textAlign: "center", color: "var(--muted)", padding: "2rem" }}>
-                {data?.is_public === false 
+                {data?.is_public === false && !isSelf
                   ? "This user's profile is private. Follow them to see their posts."
                   : "No posts yet."}
               </p>
