@@ -1216,6 +1216,19 @@ func GetGroupPosts(app *app.App) http.HandlerFunc {
 		offset := int64((page - 1) * size)
 		limit := int64(size)
 
+		totalCount, err := sqlite.NewQuery(app.DB).Posts.GetGroupPostsCount(r.Context(), groupID)
+
+		if err != nil {
+			app.Logger.Error("failed to get feed posts count", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
+		if totalCount == 0 {
+			utils.OK(w, []models.FeedPostResponse{})
+			return
+		}
+
 		posts, err := sqlite.NewQuery(app.DB).Posts.GetGroupPosts(r.Context(), db_posts.GetGroupPostsParams{
 			AuthorID: userID,
 			GroupID:  groupID,
@@ -1270,7 +1283,18 @@ func GetGroupPosts(app *app.App) http.HandlerFunc {
 			})
 		}
 
-		utils.OK(w, postsList)
+		totalPages := int(totalCount) / size
+		if int(totalCount)%size != 0 {
+			totalPages++
+		}
+
+		utils.OK(w, utils.WithPagination(postsList, utils.Pagination{
+			Page:       page,
+			Size:       size,
+			Current:    len(postsList),
+			TotalItems: int(totalCount),
+			TotalPages: totalPages,
+		}))
 	}
 }
 

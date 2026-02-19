@@ -14,10 +14,10 @@ import EventsList from "@/components/EventsList";
 import CreateEventModal from "@/components/CreateEventModal";
 import { getGroup, requestJoinGroup, leaveGroup } from "@/lib/api";
 import useSession from "@/hooks/useSession";
+import GroupPosts from "@/components/GroupPosts";
 
 export default function GroupDetailsPage() {
   const params = useParams();
-  const router = useRouter();
   const groupId = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -58,7 +58,7 @@ export default function GroupDetailsPage() {
   const isOwner = data?.group.is_owner ?? false;
 
   const acceptedMembers = useMemo(() => {
-    return data?.members?.filter((m) => m.status === "joined") ?? [];
+    return data ? data.members?.filter((m) => m.status === "joined") : [];
   }, [data?.members]);
 
   if (isLoading) return <p>Loading group...</p>;
@@ -133,16 +133,17 @@ export default function GroupDetailsPage() {
         />
         <p style={{ color: "var(--muted)" }}>{data.group.description}</p>
         <div className="post-meta">
-          <span>{data.group.total_members ?? acceptedMembers.length} members</span>
+          <span>{data.group.total_members ?? acceptedMembers?.length} members</span>
           {isOwner && <span className="tag">Owner</span>}
           {isMember && !isOwner && <span className="tag">Member</span>}
         </div>
       </section>
 
-      {acceptedMembers.length != 0 && (<section className="surface card">
+      {acceptedMembers?.length != 0 && (<section className="surface card">
         <Tabs
           tabs={[
-            { id: "members", label: `Members (${acceptedMembers.length})` },
+            { id: "members", label: `Members (${acceptedMembers?.length})` },
+            ...(isMember? [{ id: "posts", label: "Posts"}] : []),
             ...(isMember ? [{ id: "events", label: `Events (${data.events?.length ?? 0})` }] : []),
             ...(isOwner ? [{ id: "requests", label: "Join Requests" }] : []),
           ]}
@@ -152,7 +153,7 @@ export default function GroupDetailsPage() {
 
         {activeTab === "members" && (
           <div className="members-grid">
-            {acceptedMembers.map((member) => (
+            {acceptedMembers?.map((member) => (
               <MemberCard
                 key={member.user_id}
                 member={member}
@@ -163,6 +164,11 @@ export default function GroupDetailsPage() {
             ))}
           </div>
         )}
+
+        {activeTab === "posts" && isMember && (
+            <GroupPosts groupName={data.group.group_name} groupId={groupId} session={session}/>
+        )}
+
 
         {activeTab === "events" && isMember && (
           <div>
@@ -187,7 +193,7 @@ export default function GroupDetailsPage() {
             isOpen={isInviteOpen}
             onClose={() => setIsInviteOpen(false)}
             groupId={groupId}
-            existingMemberIds={memberIds}
+            existingMemberIds={memberIds ?? []}
           />
           <GroupSettings
             group={data.group}

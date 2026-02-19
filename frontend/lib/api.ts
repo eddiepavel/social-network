@@ -45,7 +45,7 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {}),
+      ...(options.headers as Record<string, string> || {}),
     },
     ...options,
   });
@@ -327,7 +327,7 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
     method: "POST",
     credentials: "include",
     body: formData,
-  });
+  } as RequestInit);
 
   const payload = (await response.json()) as ApiEnvelope<{ uuid: string; url: string, filename: string; }>;
   if (!response.ok || payload.error) {
@@ -483,7 +483,7 @@ export function rsvpToEvent(eventId: string, status: RSVPRequest["status"]) {
 // ============================================
 
 export function getGroupPosts(groupId: string, page = 1, size = 10) {
-  return apiFetch<FeedPost[]>(`/api/groups/group/${groupId}/posts?page=${page}&size=${size}`);
+  return apiFetch<ApiEnvelope<FeedPost[]>>(`/api/groups/group/${groupId}/posts?page=${page}&size=${size}`);
 }
 
 export function createGroupPost(groupId: string, input: CreateGroupPostRequest) {

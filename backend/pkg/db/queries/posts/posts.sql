@@ -9,7 +9,7 @@ WHERE p.post_id = ?;
 SELECT visibility FROM posts WHERE post_id = ?;
 
 -- name: GetPostBasicInfo :one
-SELECT post_id, author_id, visibility FROM posts WHERE post_id = ?;
+SELECT post_id, author_id, visibility, group_id FROM posts WHERE post_id = ?;
 
 -- name: CheckPrivatePostUserPermit :one
 SELECT * FROM viewing_permissions WHERE user_id = ? AND post_id = ?;
@@ -37,7 +37,13 @@ WHERE
     (p.visibility = 'private' AND EXISTS (SELECT 1
                                           FROM viewing_permissions vp
                                           WHERE vp.user_id = ?
-                                            AND vp.post_id = p.post_id));
+                                            AND vp.post_id = p.post_id))
+   OR
+   -- Group posts
+    (p.visibility = 'group' AND EXISTS( SELECT 1
+                                        FROM group_members gm
+                                        WHERE p.group_id = gm.group_id
+                                          AND gm.user_id = ?));
 
 -- name: GetPostsForFeed :many
 SELECT p.*,
@@ -77,6 +83,12 @@ WHERE
                                           FROM viewing_permissions vp
                                           WHERE vp.user_id = ?
                                             AND vp.post_id = p.post_id))
+    OR
+    -- Group posts
+    (p.visibility = 'group' AND EXISTS( SELECT 1
+                                        FROM group_members gm
+                                        WHERE p.group_id = gm.group_id
+                                        AND gm.user_id = ?))
 ORDER BY p.created_at DESC LIMIT ?
 OFFSET ?;
 
@@ -164,20 +176,6 @@ SELECT ?, ?, ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
     WHERE p.post_id = ?
-      AND (
-          p.visibility = 'public'
-          OR p.author_id = ?
-          OR EXISTS (
-              SELECT 1 FROM followers f
-              WHERE f.follower_id = ?
-                AND f.followee_id = p.author_id
-          )
-          OR EXISTS (
-              SELECT 1 FROM viewing_permissions vp
-              WHERE vp.user_id = ?
-                AND vp.post_id = p.post_id
-          )
-      )
 );
 
 -- name: DeleteComment :exec
@@ -192,20 +190,6 @@ SELECT ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
     WHERE p.post_id = ?
-    AND (
-        p.visibility = 'public'
-        OR p.author_id = ?
-        OR EXISTS (
-            SELECT 1 FROM followers f
-            WHERE f.follower_id = ?
-              AND f.followee_id = p.author_id
-        )
-        OR EXISTS (
-            SELECT 1 FROM viewing_permissions vp
-            WHERE vp.user_id = ?
-              AND vp.post_id = p.post_id
-        )
-    )
 );
 
 -- name: HasUserReacted :one
@@ -243,6 +227,9 @@ LEFT JOIN images i ON p.image_id = i.image_id
 WHERE p.group_id = ?
 ORDER BY p.created_at DESC
 LIMIT ? OFFSET ?;
+
+-- name: GetGroupPostsCount :one
+SELECT COUNT(*) FROM posts p WHERE p.group_id = ?;
 
 -- name: GetUserPosts :many
 SELECT p.*,

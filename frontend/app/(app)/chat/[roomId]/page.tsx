@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import ChatRoom from "@/components/ChatRoom";
 import { getChatList } from "@/lib/api";
 import useSession from "@/hooks/useSession";
+import {ChatThread} from "@/lib/types";
 
 export default function ChatRoomPage() {
   const params = useParams();
@@ -17,7 +18,7 @@ export default function ChatRoomPage() {
     queryFn: getChatList,
   });
 
-  const room = chatList?.find((thread) => thread.room_id === roomId);
+  const room = chatList ? chatList.find((thread: ChatThread) => thread.room_id === roomId) as ChatThread : undefined;
 
   if (sessionLoading) return <p>Loading...</p>;
   if (!session?.user_id) {
@@ -41,7 +42,7 @@ export default function ChatRoomPage() {
           roomId={roomId}
           isGroup={room?.group_id !== ''}
           currentUserId={session.user_id}
-          canEdit={room?.can_edit_room_name}
+          canEdit={room?.can_edit_room_name as boolean}
           roomName={room?.room_name || (room?.group_id !== '' ? "Group chat" : `${room?.other_user?.first_name} ${room?.other_user?.last_name}`)}
         />
       </section>

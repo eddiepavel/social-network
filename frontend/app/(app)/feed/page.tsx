@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import PostComposer from "@/components/PostComposer";
 import PostCard from "@/components/PostCard";
 import SectionHeader from "@/components/SectionHeader";
@@ -65,11 +65,11 @@ export default function FeedPage() {
           if (idx === posts.length - 1) {
             return (
               <div ref={lastElementRef} key={post.post_id}>
-                <PostCard post={post} currentUserId={session?.user_id} />
+                <PostCard post={post as FeedPost} currentUserId={session?.user_id} />
               </div>
             );
           }
-          return <PostCard key={post.post_id} post={post} currentUserId={session?.user_id} />;
+          return <PostCard key={post.post_id} post={post as FeedPost} currentUserId={session?.user_id} />;
         })}
         {isFetchingNextPage && <p>Loading more...</p>}
       </div>

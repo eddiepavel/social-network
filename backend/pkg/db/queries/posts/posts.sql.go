@@ -103,20 +103,6 @@ SELECT ?, ?, ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
     WHERE p.post_id = ?
-      AND (
-          p.visibility = 'public'
-          OR p.author_id = ?
-          OR EXISTS (
-              SELECT 1 FROM followers f
-              WHERE f.follower_id = ?
-                AND f.followee_id = p.author_id
-          )
-          OR EXISTS (
-              SELECT 1 FROM viewing_permissions vp
-              WHERE vp.user_id = ?
-                AND vp.post_id = p.post_id
-          )
-      )
 )
 `
 
@@ -128,9 +114,6 @@ type CreateCommentParams struct {
 	ParentCommentID []byte
 	ImageID         sql.NullString
 	PostID_2        []byte
-	AuthorID_2      []byte
-	FollowerID      []byte
-	UserID          []byte
 }
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (int64, error) {
@@ -142,9 +125,6 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (i
 		arg.ParentCommentID,
 		arg.ImageID,
 		arg.PostID_2,
-		arg.AuthorID_2,
-		arg.FollowerID,
-		arg.UserID,
 	)
 	if err != nil {
 		return 0, err
@@ -226,20 +206,6 @@ SELECT ?, ?, ?, ?
     WHERE EXISTS (
     SELECT 1 FROM posts p
     WHERE p.post_id = ?
-    AND (
-        p.visibility = 'public'
-        OR p.author_id = ?
-        OR EXISTS (
-            SELECT 1 FROM followers f
-            WHERE f.follower_id = ?
-              AND f.followee_id = p.author_id
-        )
-        OR EXISTS (
-            SELECT 1 FROM viewing_permissions vp
-            WHERE vp.user_id = ?
-              AND vp.post_id = p.post_id
-        )
-    )
 )
 `
 
@@ -249,9 +215,6 @@ type CreateReactionParams struct {
 	TargetID   []byte
 	AuthorID   []byte
 	PostID     []byte
-	AuthorID_2 []byte
-	FollowerID []byte
-	UserID     []byte
 }
 
 func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) (int64, error) {
@@ -261,9 +224,6 @@ func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) 
 		arg.TargetID,
 		arg.AuthorID,
 		arg.PostID,
-		arg.AuthorID_2,
-		arg.FollowerID,
-		arg.UserID,
 	)
 	if err != nil {
 		return 0, err
@@ -407,16 +367,28 @@ WHERE
                                           FROM viewing_permissions vp
                                           WHERE vp.user_id = ?
                                             AND vp.post_id = p.post_id))
+   OR
+   -- Group posts
+    (p.visibility = 'group' AND EXISTS( SELECT 1
+                                        FROM group_members gm
+                                        WHERE p.group_id = gm.group_id
+                                          AND gm.user_id = ?))
 `
 
 type GetFeedPostsCountParams struct {
 	AuthorID   []byte
 	FollowerID []byte
 	UserID     []byte
+	UserID_2   []byte
 }
 
 func (q *Queries) GetFeedPostsCount(ctx context.Context, arg GetFeedPostsCountParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getFeedPostsCount, arg.AuthorID, arg.FollowerID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getFeedPostsCount,
+		arg.AuthorID,
+		arg.FollowerID,
+		arg.UserID,
+		arg.UserID_2,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -512,20 +484,37 @@ func (q *Queries) GetGroupPosts(ctx context.Context, arg GetGroupPostsParams) ([
 	return items, nil
 }
 
+const getGroupPostsCount = `-- name: GetGroupPostsCount :one
+SELECT COUNT(*) FROM posts p WHERE p.group_id = ?
+`
+
+func (q *Queries) GetGroupPostsCount(ctx context.Context, groupID []byte) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getGroupPostsCount, groupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getPostBasicInfo = `-- name: GetPostBasicInfo :one
-SELECT post_id, author_id, visibility FROM posts WHERE post_id = ?
+SELECT post_id, author_id, visibility, group_id FROM posts WHERE post_id = ?
 `
 
 type GetPostBasicInfoRow struct {
 	PostID     []byte
 	AuthorID   []byte
 	Visibility string
+	GroupID    []byte
 }
 
 func (q *Queries) GetPostBasicInfo(ctx context.Context, postID []byte) (GetPostBasicInfoRow, error) {
 	row := q.db.QueryRowContext(ctx, getPostBasicInfo, postID)
 	var i GetPostBasicInfoRow
-	err := row.Scan(&i.PostID, &i.AuthorID, &i.Visibility)
+	err := row.Scan(
+		&i.PostID,
+		&i.AuthorID,
+		&i.Visibility,
+		&i.GroupID,
+	)
 	return i, err
 }
 
@@ -713,6 +702,12 @@ WHERE
                                           FROM viewing_permissions vp
                                           WHERE vp.user_id = ?
                                             AND vp.post_id = p.post_id))
+    OR
+    -- Group posts
+    (p.visibility = 'group' AND EXISTS( SELECT 1
+                                        FROM group_members gm
+                                        WHERE p.group_id = gm.group_id
+                                        AND gm.user_id = ?))
 ORDER BY p.created_at DESC LIMIT ?
 OFFSET ?
 `
@@ -722,6 +717,7 @@ type GetPostsForFeedParams struct {
 	AuthorID_2 []byte
 	FollowerID []byte
 	UserID     []byte
+	UserID_2   []byte
 	Limit      int64
 	Offset     int64
 }
@@ -752,6 +748,7 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 		arg.AuthorID_2,
 		arg.FollowerID,
 		arg.UserID,
+		arg.UserID_2,
 		arg.Limit,
 		arg.Offset,
 	)

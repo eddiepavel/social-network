@@ -162,6 +162,7 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 			AuthorID:   currentUserID,
 			FollowerID: currentUserID,
 			UserID:     currentUserID,
+			UserID_2:   currentUserID,
 		})
 
 		if err != nil {
@@ -181,6 +182,7 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 			AuthorID_2: currentUserID,
 			FollowerID: currentUserID,
 			UserID:     currentUserID,
+			UserID_2:   currentUserID,
 			Limit:      limit,
 			Offset:     offset,
 		})
@@ -279,7 +281,7 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 		}
 
 		// Check if user has permission to view this post
-		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.GroupID, postBasicInfo.Visibility, app, r)
 		if err != nil {
 			app.Logger.Error("failed to check post permissions", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -832,7 +834,7 @@ func GetComments(app *app.App) http.HandlerFunc {
 		}
 
 		// Check if user can view this post's comments
-		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.GroupID, postBasicInfo.Visibility, app, r)
 		if err != nil {
 			app.Logger.Error("failed to check post permissions", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -945,7 +947,7 @@ func CreateComment(app *app.App) http.HandlerFunc {
 		}
 
 		// Check if user can comment on this post (same rules as viewing)
-		canComment, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		canComment, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.GroupID, postBasicInfo.Visibility, app, r)
 		if err != nil {
 			app.Logger.Error("failed to check post permissions", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -1004,14 +1006,11 @@ func CreateComment(app *app.App) http.HandlerFunc {
 		rowsAffected, err := sqlite.NewQuery(app.DB).Posts.CreateComment(r.Context(), db_posts.CreateCommentParams{
 			CommentID:       commentID,
 			PostID:          postID,
-			UserID:          currentUserID,
 			Content:         req.Content,
 			ParentCommentID: parentCommentID,
 			ImageID:         imageID,
 			PostID_2:        postID,
-			FollowerID:      currentUserID,
 			AuthorID:        currentUserID,
-			AuthorID_2:      currentUserID,
 		})
 
 		if err != nil {
@@ -1278,7 +1277,7 @@ func GetReactions(app *app.App) http.HandlerFunc {
 		}
 
 		// Check if user can view this post's reactions
-		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		canView, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.GroupID, postBasicInfo.Visibility, app, r)
 		if err != nil {
 			app.Logger.Error("failed to check post permissions", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -1344,13 +1343,14 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 		}
 
 		// Check if user can react to this post (same rules as viewing)
-		canReact, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.Visibility, app, r)
+		canReact, err := helpers.CanViewPost(currentUserID, postBasicInfo.PostID, postBasicInfo.AuthorID, postBasicInfo.GroupID, postBasicInfo.Visibility, app, r)
 		if err != nil {
 			app.Logger.Error("failed to check post permissions", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
 
+		app.Logger.Info("canReact", canReact)
 		if !canReact {
 			utils.Forbidden(w)
 			return
@@ -1413,10 +1413,7 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 				TargetType: targetType,
 				TargetID:   targetID,
 				AuthorID:   currentUserID,
-				AuthorID_2: currentUserID,
 				PostID:     postID,
-				FollowerID: currentUserID,
-				UserID:     currentUserID,
 			})
 
 			if err != nil {

@@ -6,10 +6,14 @@ import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import ImageUpload from "@/components/ImageUpload";
 import Avatar from "@/components/Avatar";
-import { createPost, uploadFile, getFollowers, ApiError } from "@/lib/api";
+import {createPost, uploadFile, getFollowers, ApiError, createGroupPost} from "@/lib/api";
 import useSession from "@/hooks/useSession";
 
-export default function PostComposer() {
+type PostComposerProps = {
+  groupId?: string;
+};
+
+export default function PostComposer({ groupId }: PostComposerProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState("");
@@ -20,6 +24,8 @@ export default function PostComposer() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const isGroup = !!groupId;
 
   // Fetch followers when visibility is private
   const { data: followers, isLoading: loadingFollowers } = useQuery({
@@ -45,7 +51,7 @@ export default function PostComposer() {
 
   const create = useMutation({
     mutationFn: async (input: { content: string; image_id?: string; visibility: string; allowed_users?: string[] }) => {
-      return createPost(input);
+      return isGroup ? createGroupPost(groupId as string, input) : createPost(input);
     },
     onSuccess: () => {
       setContent("");
@@ -55,7 +61,7 @@ export default function PostComposer() {
       setVisibility("public");
       setValidationErrors({});
       setSuccessMessage("Post created successfully!");
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: isGroup ? ["groupPosts", groupId] : ["feed"] });
     },
     onError: (error) => {
       setSuccessMessage(null);
@@ -155,19 +161,20 @@ export default function PostComposer() {
       )}
 
       <div className="composer-footer">
-        <label className="form-field" style={{ flex: 1 }}>
-          <span>Visibility</span>
-          <select
-            name="visibility"
-            value={visibility}
-            onChange={(event) => setVisibility(event.target.value)}
-          >
-            <option disabled={!session?.is_public} value="public">Public - Everyone can see</option>
-            <option disabled={session?.is_public} value="semi-private">Almost Private - Only followers</option>
-            <option value="private">Private - Select specific followers</option>
-          </select>
-        </label>
-
+        {!isGroup && (
+            <label className="form-field" style={{ flex: 1 }}>
+              <span>Visibility</span>
+              <select
+                  name="visibility"
+                  value={visibility}
+                  onChange={(event) => setVisibility(event.target.value)}
+              >
+                <option disabled={!session?.is_public} value="public">Public - Everyone can see</option>
+                <option disabled={session?.is_public} value="semi-private">Almost Private - Only followers</option>
+                <option value="private">Private - Select specific followers</option>
+              </select>
+            </label>
+        )}
         <div className="composer-actions">
           {!imagePreview && (
             <ImageUpload

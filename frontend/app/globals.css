@@ -1365,6 +1365,7 @@ button {
 .composer-footer {
   display: flex;
   gap: 16px;
+  justify-content: end;
   align-items: flex-end;
   flex-wrap: wrap;
 }

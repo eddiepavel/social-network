@@ -35,6 +35,7 @@ sql:
              "/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql",
              "/pkg/db/migrations/sqlite/up/000004_create_images_table.sql",
              "/pkg/db/migrations/sqlite/up/000009_create_groups_table.sql",
+             "/pkg/db/migrations/sqlite/up/000010_create_group_members_table.sql",
              "/pkg/db/migrations/sqlite/up/000019_add_group_id_to_posts.sql"
             ]
     gen:

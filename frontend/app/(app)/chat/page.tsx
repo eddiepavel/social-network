@@ -49,10 +49,10 @@ export default function ChatPage() {
             >
               <div className="chat-thread-info">
                 <strong className="chat-thread-name">
-                  {thread.room_name || (thread.is_group ? "Group chat" : `${thread.other_user?.first_name} ${thread.other_user?.last_name}`)}
+                  {thread.room_name || (thread.group_id !== '' ? "Group chat" : `${thread.other_user?.first_name} ${thread.other_user?.last_name}`)}
                 </strong>
                 <p className="chat-thread-preview">
-                  {session?.user_id === thread.last_message_sender?.user_id ? 'You' : thread.is_group ? `${thread.last_message_sender?.first_name} ${thread.last_message_sender?.last_name}` : 'Them'}: {thread.last_message_content || "No messages yet"}
+                  {session?.user_id === thread.last_message_sender?.user_id ? 'You' : thread.group_id !== '' ? `${thread.last_message_sender?.first_name} ${thread.last_message_sender?.last_name}` : 'Them'}: {thread.last_message_content || "No messages yet"}
                 </p>
               </div>
               <div className="chat-thread-meta">

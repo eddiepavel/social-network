@@ -35,6 +35,14 @@ type Group struct {
 	CreatedAt   time.Time
 }
 
+type GroupMember struct {
+	UserID    []byte
+	GroupID   []byte
+	Status    string
+	InvitedBy []byte
+	CreatedAt sql.NullTime
+}
+
 type Image struct {
 	ImageID   string
 	PosterID  []byte

@@ -48,7 +48,7 @@ export default function CommentCard({
 
   // Count total nested replies
   const countAllReplies = (comments: CommentWithReplies[] | undefined): number => {
-    if (comments === undefined) return;
+    if (comments === undefined) return 0;
     return comments.reduce((count, comment) => {
       return count + 1 + countAllReplies(comment.replies);
     }, 0);
