@@ -194,7 +194,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       if (reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
         const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-        reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectTimeoutRef.current = window.setTimeout(() => {
           console.log(`[WebSocket] Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
           // Re-call connection function - use ref to get latest version
           if (session?.user_id && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
