@@ -258,10 +258,13 @@ func GetRoomMessages(app *app.App) http.HandlerFunc {
 		for _, message := range chatMessages {
 			messageID, _ := helpers.GenerateFromBytes(message.MessageID)
 			senderID, _ := helpers.GenerateFromBytes(message.SenderID)
-			senderAvatar := ""
-			if message.SenderAvatar.Valid {
-				senderAvatar = message.SenderAvatar.String
-			}
+			senderAvatar := func() string {
+				if message.SenderAvatar.Valid && message.SenderAvatar.String != "" {
+					img := app.File.GenerateSignImage(message.SenderAvatar.String, currentUserID, time.Now().Add(15*time.Minute))
+					return img
+				}
+				return ""
+			}()
 			messages = append(messages, models.ChatMessages{
 				MessageID:       messageID,
 				Content:         message.Content,
