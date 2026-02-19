@@ -94,6 +94,7 @@ func (s *FileService) runCleanUp() {
 	imagePaths := []string{}
 
 	for _, image := range images {
+		fmt.Println(image.ExpiresAt.Valid)
 		if !start.After(image.ExpiresAt.Time) {
 			continue
 		}
@@ -200,10 +201,7 @@ func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, er
 }
 
 func (s *FileService) AssignImage(imageUUId string) error {
-	err := sqlite.NewQuery(s.DB).Image.ImageState(context.Background(), db_image.ImageStateParams{
-		Column1: "",
-		ImageID: imageUUId,
-	})
+	err := sqlite.NewQuery(s.DB).Image.AssignImage(context.Background(), imageUUId)
 
 	if err != nil {
 		return err
@@ -213,7 +211,7 @@ func (s *FileService) AssignImage(imageUUId string) error {
 }
 
 func (s *FileService) RemoveImage(imageUUId string) error {
-	err := sqlite.NewQuery(s.DB).Image.ImageState(context.Background(), db_image.ImageStateParams{
+	err := sqlite.NewQuery(s.DB).Image.SetImageExpiry(context.Background(), db_image.SetImageExpiryParams{
 		Column1: time.Now().UTC().Format("2006-01-02 15:04:05"),
 		ImageID: imageUUId,
 	})

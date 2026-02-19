@@ -10,6 +10,15 @@ import (
 	"strings"
 )
 
+const assignImage = `-- name: AssignImage :exec
+UPDATE images SET expires_at = NULL WHERE image_id = ?
+`
+
+func (q *Queries) AssignImage(ctx context.Context, imageID string) error {
+	_, err := q.db.ExecContext(ctx, assignImage, imageID)
+	return err
+}
+
 const createImage = `-- name: CreateImage :exec
 INSERT INTO images (image_id, poster_id, image_path, file_name, created_at, expires_at)
 VALUES(?, ?, ?, ?, CAST(? AS TEXT), CAST(? AS TEXT))
@@ -74,7 +83,7 @@ func (q *Queries) GetImageById(ctx context.Context, imageID string) (Image, erro
 }
 
 const getNotSetImages = `-- name: GetNotSetImages :many
-SELECT image_id, poster_id, image_path, file_name, created_at, expires_at FROM images WHERE expires_at IS NOT NULL
+SELECT image_id, poster_id, image_path, file_name, created_at, expires_at FROM images WHERE expires_at IS NOT NULL AND expires_at != ''
 `
 
 func (q *Queries) GetNotSetImages(ctx context.Context) ([]Image, error) {
@@ -107,16 +116,16 @@ func (q *Queries) GetNotSetImages(ctx context.Context) ([]Image, error) {
 	return items, nil
 }
 
-const imageState = `-- name: ImageState :exec
+const setImageExpiry = `-- name: SetImageExpiry :exec
 UPDATE images SET expires_at = CAST(? AS TEXT) WHERE image_id = ?
 `
 
-type ImageStateParams struct {
+type SetImageExpiryParams struct {
 	Column1 string
 	ImageID string
 }
 
-func (q *Queries) ImageState(ctx context.Context, arg ImageStateParams) error {
-	_, err := q.db.ExecContext(ctx, imageState, arg.Column1, arg.ImageID)
+func (q *Queries) SetImageExpiry(ctx context.Context, arg SetImageExpiryParams) error {
+	_, err := q.db.ExecContext(ctx, setImageExpiry, arg.Column1, arg.ImageID)
 	return err
 }
