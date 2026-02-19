@@ -80,10 +80,8 @@ export default function ChatRoom({ roomId, currentUserId, roomName, isGroup, can
     },
     onSuccess: () => {
       setNewMessage("");
-      // Invalidate chat-list for the preview update
-      queryClient.invalidateQueries({ queryKey: ["chat-list"] });
-      // Also invalidate chat-messages to get the real message with proper ID
-      queryClient.invalidateQueries({ queryKey: ["chat-messages", roomId] });
+      // WebSocket handles updating both chat-messages and chat-list caches
+      // No need to invalidate/refetch - the real message arrives via WebSocket broadcast
     },
     onError: (_err, _vars, context) => {
       // Rollback on error

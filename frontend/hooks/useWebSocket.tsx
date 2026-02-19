@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import useSession from "@/hooks/useSession";
-import type { Notification, ChatMessage } from "@/lib/types";
+import type { Notification, ChatMessage, ChatThread } from "@/lib/types";
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_BASE?.replace(/\/$/, "") || "ws://localhost:8000";
 
@@ -106,16 +106,40 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     };
 
     // Update chat messages cache for the room
+    // Also filter out any temp messages (optimistic updates) to avoid duplicates
     queryClient.setQueryData(["chat-messages", roomId], (old: ChatMessage[] | undefined) => {
       if (!old) return [newMsg];
       // Avoid duplicates
       const exists = old.some((m) => m.message_id === newMsg.message_id);
       if (exists) return old;
-      return [newMsg, ...old];
+      // Filter out temp messages from the same sender to prevent duplicates from optimistic updates
+      const filtered = old.filter(
+        (m) => !(m.message_id.startsWith("temp-") && m.sender_id === newMsg.sender_id)
+      );
+      return [newMsg, ...filtered];
     });
 
-    // Also refresh the chat list
-    queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+    // Update chat-list directly with the new message preview (no refetch needed)
+    queryClient.setQueryData(["chat-list"], (old: ChatThread[] | undefined) => {
+      if (!old) return old;
+      return old.map((thread) => {
+        if (thread.room_id === roomId) {
+          return {
+            ...thread,
+            last_message_id: newMsg.message_id,
+            last_message_content: newMsg.content,
+            last_message_time: newMsg.created_at,
+            last_message_sender: {
+              user_id: newMsg.sender_id,
+              first_name: newMsg.sender_first_name || "",
+              last_name: newMsg.sender_last_name || "",
+              avatar: newMsg.sender_avatar,
+            },
+          };
+        }
+        return thread;
+      });
+    });
   }, [queryClient]);
 
   const createConnection = useCallback(() => {
