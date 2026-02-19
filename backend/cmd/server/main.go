@@ -31,7 +31,7 @@ func main() {
 
 	logger.Info("database success")
 
-	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
+	file := services.NewFileService("./storage/uploads", db.DB, 30*time.Second, logger)
 	file.StartCleanUp()
 
 	// Initialize WebSocket manager
@@ -40,9 +40,9 @@ func main() {
 	defer wsManager.Shutdown()
 
 	app := &app.App{
-		DB:     db.DB,
-		Logger: logger,
-		File:   file,
+		DB:        db.DB,
+		Logger:    logger,
+		File:      file,
 		WsManager: wsManager,
 	}
 

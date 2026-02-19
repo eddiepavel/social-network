@@ -319,7 +319,7 @@ export function toggleCommentReaction(postId: string, commentId: string) {
 // FILE UPLOAD API
 // ============================================
 
-export async function uploadFile(file: File): Promise<{ file_id: string; url: string }> {
+export async function uploadFile(file: File): Promise<{ file_id: string; url: string; filename: string; }> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -329,14 +329,14 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
     body: formData,
   });
 
-  const payload = (await response.json()) as ApiEnvelope<{ uuid: string; url: string }>;
+  const payload = (await response.json()) as ApiEnvelope<{ uuid: string; url: string, filename: string; }>;
   if (!response.ok || payload.error) {
     throw new Error(payload.error?.message || "Upload failed");
   }
   if (!payload.data) {
     throw new Error("Unexpected empty response");
   }
-  return { file_id: payload.data.uuid, url: payload.data.url };
+  return { file_id: payload.data.uuid, url: payload.data.url, filename: payload.data.filename };
 }
 
 // ============================================

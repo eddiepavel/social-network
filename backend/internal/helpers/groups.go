@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"social-network/app"
 	"social-network/internal/models"
 	"social-network/internal/services"
 	db_chat "social-network/pkg/db/queries/chat"
@@ -13,7 +14,7 @@ import (
 	"time"
 )
 
-func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte, f *services.FileService, isGroupMember *db_groups.GroupMember) (models.GroupDetailsResponse, error) {
+func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []byte, f *services.FileService, isGroupMember *db_groups.GroupMember, app *app.App) (models.GroupDetailsResponse, error) {
 
 	var group models.GroupDetailsResponse
 	ctx := context.Background()
@@ -88,8 +89,9 @@ func CreateGroupDetailResponse(groupId []byte, t *sqlite.Transactions, user []by
 			LastName:  &member.LastName,
 			CanRemove: canRemove,
 		}
-		if member.Avatar.Valid {
-			memberResp.Avatar = &member.Avatar.String
+		if member.Avatar.Valid && member.Avatar.String != "" {
+			img := app.File.GenerateSignImage(member.Avatar.String, user, time.Now().Add(15*time.Minute))
+			memberResp.Avatar = &img
 		}
 		group.Members = append(group.Members, memberResp)
 	}

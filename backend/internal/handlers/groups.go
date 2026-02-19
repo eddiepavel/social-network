@@ -241,7 +241,7 @@ func GetGroup(app *app.App) http.HandlerFunc {
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				group, _ := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, nil)
+				group, _ := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, nil, app)
 				utils.OK(w, group)
 				return
 			}
@@ -251,14 +251,14 @@ func GetGroup(app *app.App) http.HandlerFunc {
 		}
 
 		if isMember.Status == "requested" {
-			group, _ := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, isMember)
+			group, _ := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, isMember, app)
 			utils.OK(w, group)
 			return
 		}
 
 		// Fetch group details
 
-		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, isMember)
+		group, err := helpers.CreateGroupDetailResponse(groupIDHex, init, userID, app.File, isMember, app)
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

@@ -106,7 +106,7 @@ export default function ProfilePage() {
     if (avatarFile) {
       const { uploadFile } = await import("@/lib/api");
       const uploaded = await uploadFile(avatarFile);
-      avatarId = uploaded.file_id;
+      avatarId = uploaded.filename;
     }
     saveProfile.mutate({ ...form, avatar: avatarId });
     setAvatarFile(null);

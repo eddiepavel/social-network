@@ -194,8 +194,9 @@ func GetNotificationsWithUserDetails(app *app.App) http.HandlerFunc {
 				}(),
 				FromName: notif.FromFirstName + " " + notif.FromLastName,
 				FromAvatar: func() *string {
-					if notif.FromAvatar.Valid {
-						return &notif.FromAvatar.String
+					if notif.FromAvatar.Valid && notif.FromAvatar.String != "" {
+						img := app.File.GenerateSignImage(notif.FromAvatar.String, userID, time.Now().Add(15*time.Minute))
+						return &img
 					}
 					return nil
 				}(),

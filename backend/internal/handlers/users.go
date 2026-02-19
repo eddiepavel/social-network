@@ -50,7 +50,7 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 
 		// Allow viewing any profile - access control for posts is handled separately
 		// This allows users to see profiles and send follow requests to private accounts
-		response := helpers.UserToResponse(user)
+		response := helpers.UserToResponseImage(user, app)
 
 		utils.OK(w, response)
 	}
@@ -85,19 +85,44 @@ func UpdateProfile(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		user = helpers.UpdateUser(user, req)
-		if user.UserID == nil {
-			utils.BadRequest(w, errors.New("no new data provided"))
-			return
+		if req.Avatar != &user.Avatar.String {
+			img := strings.Split(*req.Avatar, ".")
+
+			if len(img) != 2 {
+				app.Logger.Error("image length error")
+				utils.BadRequest(w, errors.New("wrong payload"))
+				return
+			}
+
+			if err := app.File.AssignImage(img[0]); err != nil {
+				utils.Internal(w, errors.New("something went wrong"))
+				return
+			}
+
+			if user.Avatar.Valid && user.Avatar.String != "" {
+
+				img := strings.Split(user.Avatar.String, ".")
+
+				if len(img) != 2 {
+					utils.Internal(w, errors.New("something went wrong"))
+					return
+				}
+
+				if err := app.File.RemoveImage(img[0]); err != nil {
+					utils.Internal(w, errors.New("something went wrong"))
+					return
+				}
+			}
+
 		}
 
 		updated, err := sqlite.NewQuery(app.DB).Users.UpdateUser(r.Context(), db_users.UpdateUserParams{
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			Nickname:  user.Nickname,
-			AboutMe:   user.AboutMe,
-			Avatar:    user.Avatar,
-			UserID:    user.UserID,
+			FirstName: *req.FirstName,
+			LastName:  *req.LastName,
+			Nickname:  sql.NullString{Valid: true, String: *req.Nickname},
+			AboutMe:   sql.NullString{Valid: true, String: *req.AboutMe},
+			Avatar:    sql.NullString{Valid: true, String: *req.Avatar},
+			UserID:    userID,
 		})
 		if err != nil {
 			app.Logger.Error("Failed to update user", "error", err.Error())

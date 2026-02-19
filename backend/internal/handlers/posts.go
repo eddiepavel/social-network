@@ -217,8 +217,9 @@ func GetFeedPosts(app *app.App) http.HandlerFunc {
 					return nil
 				}(),
 				AuthorAvatar: func() *string {
-					if post.Avatar.Valid {
-						return &post.Avatar.String
+					if post.Avatar.Valid && post.Avatar.String != "" {
+						img := app.File.GenerateSignImage(post.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+						return &img
 					}
 					return nil
 				}(),
@@ -394,8 +395,9 @@ func GetPostWithCommentsReactions(app *app.App) http.HandlerFunc {
 				return nil
 			}(),
 			AuthorAvatar: func() *string {
-				if post.Avatar.Valid {
-					return &post.Avatar.String
+				if post.Avatar.Valid && post.Avatar.String != "" {
+					img := app.File.GenerateSignImage(post.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+					return &img
 				}
 				return nil
 			}(),
@@ -871,8 +873,9 @@ func GetComments(app *app.App) http.HandlerFunc {
 					return nil
 				}(),
 				AuthorAvatar: func() *string {
-					if comment.Avatar.Valid {
-						return &comment.Avatar.String
+					if comment.Avatar.Valid && comment.Avatar.String != "" {
+						img := app.File.GenerateSignImage(comment.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+						return &img
 					}
 					return nil
 				}(),

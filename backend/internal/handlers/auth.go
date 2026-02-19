@@ -175,7 +175,7 @@ func GetSession(app *app.App) http.HandlerFunc {
 		}
 
 		// Return user response
-		response := helpers.UserToResponse(user)
+		response := helpers.UserToResponseImage(user, app)
 		utils.OK(w, response)
 	}
 

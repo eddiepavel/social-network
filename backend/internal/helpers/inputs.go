@@ -8,6 +8,7 @@ import (
 	"social-network/app"
 	contextkeys "social-network/internal/contextKeys"
 	"social-network/pkg/db/sqlite"
+	"strings"
 	"time"
 )
 
@@ -94,7 +95,39 @@ func (upv UpdateProfileValidator) Build(r *http.Request, app *app.App) map[strin
 
 			return errors.New("nickname exists")
 		}},
-		"avatar":   {"sometimes", "base64"},
+		"avatar": {"sometimes", func(v interface{}) error {
+			value := v.(string)
+
+			valueSplit := strings.Split(value, ".")
+
+			if len(valueSplit) != 2 {
+				return errors.New("wrong image file")
+			}
+
+			imageId := valueSplit[0]
+
+			image, err := sqlite.NewQuery(app.DB).Image.GetImageById(r.Context(), imageId)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("wrong id")
+				}
+
+				return errors.New("something went wrong")
+			}
+
+			user := r.Context().Value(contextkeys.UserIDKey).([]byte)
+
+			if !bytes.Equal(user, image.PosterID) {
+				return errors.New("wrong id")
+			}
+
+			if !image.ExpiresAt.Valid {
+				return errors.New("wrong id")
+			}
+
+			return nil
+		}},
 		"about_me": {"sometimes", "string"},
 	}
 }
