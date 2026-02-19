@@ -1,9 +1,9 @@
 -- name: CreateImage :exec
 INSERT INTO images (image_id, poster_id, image_path, file_name, created_at, expires_at)
-VALUES(?, ?, ?, ?, ?, ?);
+VALUES(?, ?, ?, ?, CAST(? AS TEXT), CAST(? AS TEXT));
 
 -- name: ImageState :exec
-UPDATE images SET expires_at = ? WHERE image_id = ?; 
+UPDATE images SET expires_at = CAST(? AS TEXT) WHERE image_id = ?; 
 
 -- name: GetNotSetImages :many
 SELECT * FROM images WHERE expires_at IS NOT NULL; 

@@ -80,7 +80,7 @@ func (s *FileService) StopCleanUp() {
 
 func (s *FileService) runCleanUp() {
 	ctx := context.Background()
-	start := time.Now()
+	start := time.Now().UTC()
 	s.Logger.Info("started clean up images")
 
 	images, err := sqlite.NewQuery(s.DB).Image.GetNotSetImages(ctx)
@@ -185,8 +185,8 @@ func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, er
 		User:      user,
 		Filename:  filename,
 		ImagePath: s.BasePath + "/" + filename,
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(5 * time.Minute),
+		CreatedAt: time.Now().UTC(),
+		ExpiresAt: time.Now().UTC().Add(5 * time.Minute),
 	}
 
 	err = s.saveFileToDatabase(databaseFile)
@@ -201,8 +201,8 @@ func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, er
 
 func (s *FileService) AssignImage(imageUUId string) error {
 	err := sqlite.NewQuery(s.DB).Image.ImageState(context.Background(), db_image.ImageStateParams{
-		ExpiresAt: sql.NullTime{},
-		ImageID:   imageUUId,
+		Column1: "",
+		ImageID: imageUUId,
 	})
 
 	if err != nil {
@@ -214,8 +214,8 @@ func (s *FileService) AssignImage(imageUUId string) error {
 
 func (s *FileService) RemoveImage(imageUUId string) error {
 	err := sqlite.NewQuery(s.DB).Image.ImageState(context.Background(), db_image.ImageStateParams{
-		ExpiresAt: sql.NullTime{Time: time.Now(), Valid: true},
-		ImageID:   imageUUId,
+		Column1: time.Now().UTC().Format("2006-01-02 15:04:05"),
+		ImageID: imageUUId,
 	})
 
 	if err != nil {
@@ -274,8 +274,8 @@ func (s *FileService) saveFileToDatabase(file File) error {
 		PosterID:  file.User,
 		ImagePath: file.ImagePath,
 		FileName:  file.Filename,
-		CreatedAt: sql.NullTime{Time: file.CreatedAt, Valid: true},
-		ExpiresAt: sql.NullTime{Time: file.ExpiresAt, Valid: true},
+		Column5:   file.CreatedAt.Format("2006-01-02 15:04:05"),
+		Column6:   file.ExpiresAt.Format("2006-01-02 15:04:05"),
 	})
 
 	if err != nil {

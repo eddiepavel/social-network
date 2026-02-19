@@ -7,13 +7,12 @@ package db_image
 
 import (
 	"context"
-	"database/sql"
 	"strings"
 )
 
 const createImage = `-- name: CreateImage :exec
 INSERT INTO images (image_id, poster_id, image_path, file_name, created_at, expires_at)
-VALUES(?, ?, ?, ?, ?, ?)
+VALUES(?, ?, ?, ?, CAST(? AS TEXT), CAST(? AS TEXT))
 `
 
 type CreateImageParams struct {
@@ -21,8 +20,8 @@ type CreateImageParams struct {
 	PosterID  []byte
 	ImagePath string
 	FileName  string
-	CreatedAt sql.NullTime
-	ExpiresAt sql.NullTime
+	Column5   string
+	Column6   string
 }
 
 func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error {
@@ -31,8 +30,8 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error 
 		arg.PosterID,
 		arg.ImagePath,
 		arg.FileName,
-		arg.CreatedAt,
-		arg.ExpiresAt,
+		arg.Column5,
+		arg.Column6,
 	)
 	return err
 }
@@ -109,15 +108,15 @@ func (q *Queries) GetNotSetImages(ctx context.Context) ([]Image, error) {
 }
 
 const imageState = `-- name: ImageState :exec
-UPDATE images SET expires_at = ? WHERE image_id = ?
+UPDATE images SET expires_at = CAST(? AS TEXT) WHERE image_id = ?
 `
 
 type ImageStateParams struct {
-	ExpiresAt sql.NullTime
-	ImageID   string
+	Column1 string
+	ImageID string
 }
 
 func (q *Queries) ImageState(ctx context.Context, arg ImageStateParams) error {
-	_, err := q.db.ExecContext(ctx, imageState, arg.ExpiresAt, arg.ImageID)
+	_, err := q.db.ExecContext(ctx, imageState, arg.Column1, arg.ImageID)
 	return err
 }
