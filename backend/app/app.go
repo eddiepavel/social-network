@@ -8,8 +8,8 @@ import (
 )
 
 type App struct {
-	DB     *sql.DB
-	Logger *slog.Logger
-	File   *services.FileService
+	DB        *sql.DB
+	Logger    *slog.Logger
+	File      *services.FileService
 	WsManager *websocket.Manager
 }

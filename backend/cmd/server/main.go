@@ -31,11 +31,11 @@ func main() {
 
 	logger.Info("database success")
 
-	file := services.NewFileService("./storage/uploads", db.DB, 30*time.Second, logger)
+	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
 	file.StartCleanUp()
 
 	// Initialize WebSocket manager
-	wsManager := websocket.NewManager(db.DB, logger)
+	wsManager := websocket.NewManager(db.DB, logger, file.GenerateSignImage)
 	wsManager.Start()
 	defer wsManager.Shutdown()
 

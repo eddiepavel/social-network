@@ -370,6 +370,7 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 		// Create notification for room participants (except sender)
 		// Only if they're not currently viewing the chat and haven't been notified recently
 		participants, err := sqlite.NewQuery(app.DB).Chat.GetRoomParticipants(r.Context(), roomID)
+		var chatevents []ws.ChatEvent
 		if err == nil {
 			roomUUIDStr, _ := helpers.GenerateFromBytes(roomID)
 			senderUUIDStr, _ := helpers.GenerateFromBytes(currentUserID)
@@ -379,15 +380,45 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 				if bytes.Equal(participantID, currentUserID) {
 					continue
 				}
-
 				participantUUIDStr, _ := helpers.GenerateFromBytes(participantID)
 
+				messageUUID, _ := helpers.GenerateFromBytes(messageID)
+				roomUUID, _ := helpers.GenerateFromBytes(roomID)
+				senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
+
+				senderFirstName := ""
+				senderLastName := ""
+				senderAvatar := ""
+				senderInfo, sErr := sqlite.NewQuery(app.DB).Chat.GetUserBasicInfo(r.Context(), currentUserID)
+				if sErr == nil {
+					senderFirstName = senderInfo.FirstName
+					senderLastName = senderInfo.LastName
+					if senderInfo.Avatar.Valid && senderInfo.Avatar.String != "" {
+						senderAvatar = func() string {
+							img := app.File.GenerateSignImage(senderInfo.Avatar.String, participantID, time.Now().Add(15*time.Minute))
+							return img
+						}()
+					}
+				}
+
+				toUser, err := helpers.GenerateFromBytes(participantID)
+				chatevents = append(chatevents, ws.ChatEvent{
+					MessageID:       messageUUID,
+					RoomID:          roomUUID,
+					SenderID:        senderUUID,
+					Content:         req.Content,
+					CreatedAt:       time.Now(),
+					SenderFirstName: senderFirstName,
+					SenderLastName:  senderLastName,
+					SenderAvatar:    senderAvatar,
+					ToUser:          toUser,
+				})
+
+				// Check cooldown - don't spam notifications
 				// Skip if user is currently viewing this chat room
 				if app.WsManager != nil && app.WsManager.IsUserInRoom(participantUUIDStr, roomUUIDStr) {
 					continue
 				}
-
-				// Check cooldown - don't spam notifications
 				lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastMessageNotification(r.Context(), db_notifications.GetLastMessageNotificationParams{
 					ReceiverID: participantID,
 					FromID:     currentUserID,
@@ -403,32 +434,8 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 
 		// Broadcast to room participants via WebSocket
 		if app.WsManager != nil {
-			messageUUID, _ := helpers.GenerateFromBytes(messageID)
-			roomUUID, _ := helpers.GenerateFromBytes(roomID)
-			senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
 
-			senderFirstName := ""
-			senderLastName := ""
-			senderAvatar := ""
-			senderInfo, sErr := sqlite.NewQuery(app.DB).Chat.GetUserBasicInfo(r.Context(), currentUserID)
-			if sErr == nil {
-				senderFirstName = senderInfo.FirstName
-				senderLastName = senderInfo.LastName
-				if senderInfo.Avatar.Valid {
-					senderAvatar = senderInfo.Avatar.String
-				}
-			}
-
-			app.WsManager.BroadcastChatMessage(roomID, ws.ChatMessageEvent{
-				MessageID:       messageUUID,
-				RoomID:          roomUUID,
-				SenderID:        senderUUID,
-				Content:         req.Content,
-				CreatedAt:       time.Now(),
-				SenderFirstName: senderFirstName,
-				SenderLastName:  senderLastName,
-				SenderAvatar:    senderAvatar,
-			})
+			app.WsManager.BroadcastChatMessage(roomID, chatevents)
 		}
 
 		utils.OK(w, "message sent successfully")
@@ -510,7 +517,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 				return
 			}
 
-			if !follower && !followee {
+			if !follower || !followee {
 				utils.BadRequest(w, errors.New("cannot send message to this user unless they follow you or you are following them"))
 				return
 			}
@@ -522,17 +529,15 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			utils.Internal(w, errors.New("internal server error"))
 		}
 
-		messageID, err := uuid.New().MarshalBinary()
 		if err != nil {
 			app.Logger.Error("failed uuid", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
-
 		err = sqlite.NewQuery(app.DB).Chat.CreateRoom(r.Context(), db_chat.CreateRoomParams{
 			RoomID:  roomID,
 			Name:    sql.NullString{Valid: false, String: ""},
-			GroupID: []byte{},
+			GroupID: nil,
 		})
 
 		err = sqlite.NewQuery(app.DB).Chat.AddRoomParticipant(r.Context(), db_chat.AddRoomParticipantParams{
@@ -550,78 +555,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		err = sqlite.NewQuery(app.DB).Chat.CreateMessage(r.Context(), db_chat.CreateMessageParams{
-			MessageID: messageID,
-			Content:   req.Content,
-			SenderID:  currentUserID,
-			TargetID:  roomID,
-		})
-
-		if err != nil {
-			utils.Internal(w, err)
-			return
-		}
-
-		// Create notification for the target user only if they're not viewing the chat
-		// and haven't been notified recently
-		roomUUIDStr, _ := helpers.GenerateFromBytes(roomID)
-		targetUUIDStr, _ := helpers.GenerateFromBytes(targetID)
-		senderUUIDStr, _ := helpers.GenerateFromBytes(currentUserID)
-		notifCooldown := 5 * time.Minute
-
-		shouldNotify := true
-
-		// Skip if user is currently viewing this chat room
-		if app.WsManager != nil && app.WsManager.IsUserInRoom(targetUUIDStr, roomUUIDStr) {
-			shouldNotify = false
-		}
-
-		// Check cooldown - don't spam notifications
-		if shouldNotify {
-			lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastMessageNotification(r.Context(), db_notifications.GetLastMessageNotificationParams{
-				ReceiverID: targetID,
-				FromID:     currentUserID,
-			})
-			if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
-				app.Logger.Info("Skipping message notification due to cooldown", "from", senderUUIDStr, "to", targetUUIDStr)
-				shouldNotify = false
-			}
-		}
-
-		if shouldNotify {
-			_ = helpers.CreateNotification(app, targetID, constants.NotificationMessage, currentUserID, nil, nil, nil)
-		}
-
 		roomUUID, _ := helpers.GenerateFromBytes(roomID)
-
-		// Broadcast to room participants via WebSocket
-		if app.WsManager != nil {
-			messageUUID, _ := helpers.GenerateFromBytes(messageID)
-			senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
-
-			senderFirstName := ""
-			senderLastName := ""
-			senderAvatar := ""
-			senderInfo, sErr := sqlite.NewQuery(app.DB).Chat.GetUserBasicInfo(r.Context(), currentUserID)
-			if sErr == nil {
-				senderFirstName = senderInfo.FirstName
-				senderLastName = senderInfo.LastName
-				if senderInfo.Avatar.Valid {
-					senderAvatar = senderInfo.Avatar.String
-				}
-			}
-
-			app.WsManager.BroadcastChatMessage(roomID, ws.ChatMessageEvent{
-				MessageID:       messageUUID,
-				RoomID:          roomUUID,
-				SenderID:        senderUUID,
-				Content:         req.Content,
-				CreatedAt:       time.Now(),
-				SenderFirstName: senderFirstName,
-				SenderLastName:  senderLastName,
-				SenderAvatar:    senderAvatar,
-			})
-		}
 
 		utils.OK(w, map[string]string{"room_id": roomUUID})
 	}

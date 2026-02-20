@@ -110,8 +110,6 @@ func (h *Handler) chatRoutes() *http.ServeMux {
 	mux.HandleFunc("POST /{roomId}", handlers.CreateMessage(h.App))
 	mux.HandleFunc("POST /new", handlers.CreateRoomAndMessage(h.App))
 	mux.HandleFunc("PUT /{roomId}/name", handlers.EditRoomName(h.App))
-	//mux.HandleFunc("POST /{roomId}/add", handlers.AddParticipants(h.App))
-	//mux.HandleFunc("DELETE /{roomId}/remove", handlers.RemoveParticipants(h.App))
 
 	return mux
 }

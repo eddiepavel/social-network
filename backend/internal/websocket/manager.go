@@ -23,6 +23,8 @@ var (
 	}
 )
 
+type generateImage func(string, []byte, time.Time) string
+
 type Manager struct {
 	DB      *sql.DB
 	Logger  *slog.Logger
@@ -33,9 +35,10 @@ type Manager struct {
 	sentNotifs      map[string]bool
 	sentNotifsMutex sync.RWMutex
 	handlers        map[string]EventHandler
+	image           generateImage
 }
 
-func NewManager(db *sql.DB, l *slog.Logger) *Manager {
+func NewManager(db *sql.DB, l *slog.Logger, generateImage generateImage) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{
 		DB:         db,
@@ -45,30 +48,10 @@ func NewManager(db *sql.DB, l *slog.Logger) *Manager {
 		cancel:     cancel,
 		sentNotifs: make(map[string]bool),
 		handlers:   make(map[string]EventHandler),
+		image:      generateImage,
 	}
-	m.setupEventHandlers()
+
 	return m
-}
-
-// setupEventHandlers registers all event handlers
-// Add your custom handlers here!
-func (m *Manager) setupEventHandlers() {
-	m.handlers[EventPrivateMessage] = PrivateMessageHandler
-	m.handlers[EventSendMessage] = SendMessageHandler
-	m.handlers[EventEnterChat] = EnterChatHandler
-	m.handlers[EventLeaveChat] = LeaveChatHandler
-}
-
-// routeEvent routes incoming events to the appropriate handler
-func (m *Manager) routeEvent(event Event, c *Client) error {
-	if handler, ok := m.handlers[event.Type]; ok {
-		if err := handler(event, c, m.DB); err != nil {
-			m.Logger.Warn("Handler error", "type", event.Type, "userID", c.userID, "err", err)
-			return err
-		}
-		return nil
-	}
-	return fmt.Errorf("unknown event type: %s", event.Type)
 }
 
 func (m *Manager) Start() {
@@ -99,7 +82,6 @@ func (m *Manager) ServeWs(w http.ResponseWriter, r *http.Request, userID []byte)
 
 	m.addClient(client)
 
-	go client.readMessages()
 	go client.writeMessages()
 }
 
@@ -219,8 +201,8 @@ func (m *Manager) checkAndSendNotifications() {
 
 			// Get optional fields
 			fromAvatar := ""
-			if notif.FromAvatar.Valid {
-				fromAvatar = notif.FromAvatar.String
+			if notif.FromAvatar.Valid && notif.FromAvatar.String != "" {
+				fromAvatar = m.image(notif.FromAvatar.String, userIDBytes, time.Now().Add(15*time.Minute))
 			}
 			fromNickname := ""
 			if notif.FromNickname.Valid {
@@ -284,41 +266,31 @@ func (m *Manager) cleanupSentNotifications() {
 }
 
 // BroadcastChatMessage sends a chat message to all participants in a room
-func (m *Manager) BroadcastChatMessage(roomID []byte, msg ChatMessageEvent) {
-	participants, err := sqlite.NewQuery(m.DB).Chat.GetRoomParticipants(context.Background(), roomID)
-	if err != nil {
-		m.Logger.Error("failed to get room participants for broadcast", "err", err)
-		return
-	}
+func (m *Manager) BroadcastChatMessage(roomID []byte, events []ChatEvent) {
 
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		m.Logger.Error("failed to marshal chat message event", "err", err)
-		return
-	}
-
-	event := Event{
+	send := Event{
 		Type:    EventChatMessage,
-		Payload: payload,
+		Payload: nil,
 	}
 
-	for _, participantIDBytes := range participants {
-		uid, err := uuid.FromBytes(participantIDBytes)
+	for _, event := range events {
+		payload, err := json.Marshal(event)
+
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
-		userIDStr := uid.String()
 
+		send.Payload = payload
 		m.RLock()
-		client, ok := m.clients[userIDStr]
+		client, ok := m.clients[event.ToUser]
 		m.RUnlock()
-
 		if ok {
 			select {
-			case client.egress <- event:
-				m.Logger.Info("Chat message broadcast to participant", "userID", userIDStr, "room", msg.RoomID)
+			case client.egress <- send:
+				m.Logger.Info("Chat message broadcast to participant", "userID", event.ToUser, "room", event.RoomID)
 			default:
-				m.Logger.Warn("Client egress channel full during broadcast", "userID", userIDStr)
+				m.Logger.Warn("Client egress channel full during broadcast", "userID", event.ToUser)
 			}
 		}
 	}
