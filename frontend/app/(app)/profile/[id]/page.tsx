@@ -16,7 +16,6 @@ import ImageUpload from "@/components/ImageUpload";
 import PostCard from "@/components/PostCard";
 import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing, getUserPosts, ApiError } from "@/lib/api";
 import useSession from "@/hooks/useSession";
-import { User } from "@/lib/types";
 
 export default function ProfilePage() {
   const params = useParams();
@@ -27,18 +26,6 @@ export default function ProfilePage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["profile", userId],
     queryFn: () => getUserProfile(userId),
-    enabled: !!userId,
-  });
-
-  const { data: followers } = useQuery({
-    queryKey: ["followers", userId],
-    queryFn: () => getFollowers(userId),
-    enabled: !!userId,
-  });
-
-  const { data: following } = useQuery({
-    queryKey: ["following", userId],
-    queryFn: () => getFollowing(userId),
     enabled: !!userId,
   });
 
@@ -118,8 +105,6 @@ export default function ProfilePage() {
   if (isError) return <p style={{ color: "#b42318" }}>{(error as Error).message}</p>;
   if (!data) return <p>No profile found.</p>;
 
-  const followersCount = followers?.length ?? 0;
-  const followingCount = following?.length ?? 0;
 
   return (
     <div className="grid" style={{ paddingBottom: 64 }}>
@@ -139,8 +124,8 @@ export default function ProfilePage() {
             </div>
             <p style={{ margin: "4px 0", color: "var(--muted)" }}>{data.email}</p>
             <div className="profile-stats">
-              <span><strong>{followersCount}</strong> followers</span>
-              <span><strong>{followingCount}</strong> following</span>
+              <span><strong>{data.followers}</strong> followers</span>
+              <span><strong>{data.following}</strong> following</span>
             </div>
           </div>
         </div>
@@ -150,39 +135,41 @@ export default function ProfilePage() {
           <span className="tag">{data.is_public ? "Public" : "Private"}</span>
         </div>
       </section>
+      {data.can_view && (
+        <section className="surface card">
+          <Tabs
+            tabs={[
+              { id: "posts", label: `Posts (${userPosts?.length ?? 0})` },
+              { id: "followers", label: `Followers (${data.followers})` },
+              { id: "following", label: `Following (${data.following})` },
+              ...(isSelf ? [{ id: "requests", label: "Requests" }] : []),
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
+          {activeTab === "posts" && (
+            <div style={{ marginTop: 16 }}>
+              {postsLoading ? (
+                <p>Loading posts...</p>
+              ) : userPosts && userPosts.length > 0 ? (
+                userPosts.map((post) => (
+                  <PostCard key={post.post_id} post={post} currentUserId={session?.user_id} />
+                ))
+              ) : (
+                <p style={{ textAlign: "center", color: "var(--muted)", padding: "2rem" }}>
+                  {data?.is_public === false && !isSelf
+                    ? "This user's profile is private. Follow them to see their posts."
+                    : "No posts yet."}
+                </p>
+              )}
+            </div>
+          )}
+          {activeTab === "followers" && <FollowersList userId={userId} type="followers" />}
+          {activeTab === "following" && <FollowersList userId={userId} type="following" />}
+          {activeTab === "requests" && isSelf && <FollowRequestsList />}
+        </section>
+      )}
 
-      <section className="surface card">
-        <Tabs
-          tabs={[
-            { id: "posts", label: `Posts (${userPosts?.length ?? 0})` },
-            { id: "followers", label: `Followers (${followersCount})` },
-            { id: "following", label: `Following (${followingCount})` },
-            ...(isSelf ? [{ id: "requests", label: "Requests" }] : []),
-          ]}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-        />
-        {activeTab === "posts" && (
-          <div style={{ marginTop: 16 }}>
-            {postsLoading ? (
-              <p>Loading posts...</p>
-            ) : userPosts && userPosts.length > 0 ? (
-              userPosts.map((post) => (
-                <PostCard key={post.post_id} post={post} currentUserId={session?.user_id} />
-              ))
-            ) : (
-              <p style={{ textAlign: "center", color: "var(--muted)", padding: "2rem" }}>
-                {data?.is_public === false && !isSelf
-                  ? "This user's profile is private. Follow them to see their posts."
-                  : "No posts yet."}
-              </p>
-            )}
-          </div>
-        )}
-        {activeTab === "followers" && <FollowersList userId={userId} type="followers" />}
-        {activeTab === "following" && <FollowersList userId={userId} type="following" />}
-        {activeTab === "requests" && isSelf && <FollowRequestsList />}
-      </section>
 
       {isSelf ? (
         <section className="surface card">

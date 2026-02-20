@@ -107,6 +107,63 @@ func (q *Queries) GetUserById(ctx context.Context, userID []byte) (User, error) 
 	return i, err
 }
 
+const getUserByIdWithCounts = `-- name: GetUserByIdWithCounts :one
+SELECT 
+    u.user_id, 
+    u.email, 
+    u.password_hash, 
+    u.first_name, 
+    u.last_name, 
+    u.dob, 
+    u.avatar, 
+    u.nickname, 
+    u.about_me, 
+    u.is_public, 
+    u.created_at,
+    (SELECT COUNT(*) FROM followers WHERE followee_id = u.user_id) AS followers_count,
+    (SELECT COUNT(*) FROM followers WHERE follower_id = u.user_id) AS following_count
+FROM users u
+WHERE user_id = ?
+LIMIT 1
+`
+
+type GetUserByIdWithCountsRow struct {
+	UserID         []byte
+	Email          string
+	PasswordHash   []byte
+	FirstName      string
+	LastName       string
+	Dob            string
+	Avatar         sql.NullString
+	Nickname       sql.NullString
+	AboutMe        sql.NullString
+	IsPublic       bool
+	CreatedAt      sql.NullTime
+	FollowersCount int64
+	FollowingCount int64
+}
+
+func (q *Queries) GetUserByIdWithCounts(ctx context.Context, userID []byte) (GetUserByIdWithCountsRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByIdWithCounts, userID)
+	var i GetUserByIdWithCountsRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Dob,
+		&i.Avatar,
+		&i.Nickname,
+		&i.AboutMe,
+		&i.IsPublic,
+		&i.CreatedAt,
+		&i.FollowersCount,
+		&i.FollowingCount,
+	)
+	return i, err
+}
+
 const getUserByNickname = `-- name: GetUserByNickname :one
 SELECT user_id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, created_at FROM users WHERE nickname = ? LIMIT 1
 `

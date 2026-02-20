@@ -51,6 +51,9 @@ type UserResponse struct {
 	IsPublic  *bool  `json:"is_public,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
 	AvatarID  string `json:"avatar_id,omitempty"`
+	CanView   bool   `json:"can_view,omitempty"`
+	Followers *int64 `json:"followers,omitempty"`
+	Following *int64 `json:"following,omitempty"`
 }
 
 // UpdateProfileRequest represents the request body for updating user profile

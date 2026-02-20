@@ -10,6 +10,7 @@ import (
 	"social-network/internal/middleware"
 	"social-network/internal/models"
 	"social-network/internal/utils"
+	db_followers "social-network/pkg/db/queries/followers"
 	db_posts "social-network/pkg/db/queries/posts"
 	db_users "social-network/pkg/db/queries/users"
 	"social-network/pkg/db/sqlite"
@@ -43,14 +44,43 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 		}
 
 		// Fetch user profile
-		user := helpers.FetchUser(app, targetUserID, r.Context(), w)
-		if user.UserID == nil {
+
+		user, err := sqlite.NewQuery(app.DB).Users.GetUserByIdWithCounts(r.Context(), targetUserID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
+			utils.Internal(w, errors.New("something went wrong"))
 			return
+		}
+
+		var visitPermi bool
+
+		if bytes.Equal(user.UserID, userID) {
+			visitPermi = true
+		} else {
+			follower, err := sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{
+				FollowerID: userID,
+				FolloweeID: user.UserID,
+			})
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					visitPermi = false
+				} else {
+					utils.Internal(w, errors.New("Internal server error"))
+					return
+				}
+			}
+
+			if bytes.Equal(follower.FollowerID, userID) {
+				visitPermi = true
+			}
 		}
 
 		// Allow viewing any profile - access control for posts is handled separately
 		// This allows users to see profiles and send follow requests to private accounts
-		response := helpers.UserToResponseImage(user, app, userID)
+		response := helpers.UserToResponseProfile(user, app, userID, visitPermi)
 
 		utils.OK(w, response)
 	}

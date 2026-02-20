@@ -36,4 +36,23 @@ WHERE (
     LOWER(u.first_name || '') LIKE LOWER('%' || ? || '%')
     OR LOWER(u.last_name || '') LIKE LOWER('%' || ? || '%')
     OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER('%' || ? || '%')
-)
+);
+
+-- name: GetUserByIdWithCounts :one
+SELECT 
+    u.user_id, 
+    u.email, 
+    u.password_hash, 
+    u.first_name, 
+    u.last_name, 
+    u.dob, 
+    u.avatar, 
+    u.nickname, 
+    u.about_me, 
+    u.is_public, 
+    u.created_at,
+    (SELECT COUNT(*) FROM followers WHERE followee_id = u.user_id) AS followers_count,
+    (SELECT COUNT(*) FROM followers WHERE follower_id = u.user_id) AS following_count
+FROM users u
+WHERE user_id = ?
+LIMIT 1;

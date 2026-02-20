@@ -26,6 +26,9 @@ export type User = {
   is_public?: boolean;
   created_at?: string;
   avatar_id?: string;
+  can_view: boolean;
+  followers: number;
+  following: number;
 };
 
 export type SearchUser = {

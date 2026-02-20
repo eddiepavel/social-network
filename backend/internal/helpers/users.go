@@ -120,3 +120,43 @@ func UserToResponseImage(user db_users.User, app *app.App, userId []byte) models
 		AvatarID:  user.Avatar.String,
 	}
 }
+
+func UserToResponseProfile(user db_users.GetUserByIdWithCountsRow, app *app.App, userId []byte, permission bool) models.UserResponse {
+	setUuid, _ := GenerateFromBytes(user.UserID)
+	var userResp models.UserResponse
+	userResp = models.UserResponse{
+		UserID:    setUuid,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		DOB:       user.Dob,
+		Avatar: func() string {
+			if user.Avatar.Valid && user.Avatar.String != "" {
+				return app.File.GenerateSignImage(user.Avatar.String, userId, time.Now().Add(15*time.Minute))
+			}
+			return ""
+		}(),
+		Nickname: func() string {
+			if user.Nickname.Valid {
+				return user.Nickname.String
+			}
+			return ""
+		}(),
+		AboutMe: func() string {
+			if user.AboutMe.Valid {
+				return user.AboutMe.String
+			}
+			return ""
+		}(),
+		IsPublic:  &user.IsPublic,
+		CreatedAt: user.CreatedAt.Time.String(),
+		AvatarID:  user.Avatar.String,
+		CanView:   permission,
+	}
+
+	if permission {
+		userResp.Followers = &user.FollowersCount
+		userResp.Following = &user.FollowingCount
+	}
+	return userResp
+}
