@@ -117,5 +117,6 @@ func UserToResponseImage(user db_users.User, app *app.App, userId []byte) models
 		}(),
 		IsPublic:  &user.IsPublic,
 		CreatedAt: user.CreatedAt.Time.String(),
+		AvatarID:  user.Avatar.String,
 	}
 }

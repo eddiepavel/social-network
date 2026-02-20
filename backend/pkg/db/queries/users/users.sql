@@ -29,7 +29,8 @@ SELECT
     u.user_id,
     u.first_name,
     u.last_name,
-    u.nickname
+    u.nickname,
+    u.avatar
 FROM users u
 WHERE (
     LOWER(u.first_name || '') LIKE LOWER('%' || ? || '%')

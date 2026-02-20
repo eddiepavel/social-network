@@ -135,7 +135,8 @@ SELECT
     u.user_id,
     u.first_name,
     u.last_name,
-    u.nickname
+    u.nickname,
+    u.avatar
 FROM users u
 WHERE (
     LOWER(u.first_name || '') LIKE LOWER('%' || ? || '%')
@@ -155,6 +156,7 @@ type QueryUsersRow struct {
 	FirstName string
 	LastName  string
 	Nickname  sql.NullString
+	Avatar    sql.NullString
 }
 
 func (q *Queries) QueryUsers(ctx context.Context, arg QueryUsersParams) ([]QueryUsersRow, error) {
@@ -171,6 +173,7 @@ func (q *Queries) QueryUsers(ctx context.Context, arg QueryUsersParams) ([]Query
 			&i.FirstName,
 			&i.LastName,
 			&i.Nickname,
+			&i.Avatar,
 		); err != nil {
 			return nil, err
 		}

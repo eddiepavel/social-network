@@ -138,7 +138,7 @@ export function updateProfile(input: {
   last_name?: string;
   nickname?: string;
   about_me?: string;
-  avatar?: string;
+  avatar_id?: string;
 }) {
   return apiFetch<User>("/api/users/profile", {
     method: "PUT",

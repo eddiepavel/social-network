@@ -16,6 +16,7 @@ import ImageUpload from "@/components/ImageUpload";
 import PostCard from "@/components/PostCard";
 import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing, getUserPosts, ApiError } from "@/lib/api";
 import useSession from "@/hooks/useSession";
+import { User } from "@/lib/types";
 
 export default function ProfilePage() {
   const params = useParams();
@@ -58,7 +59,7 @@ export default function ProfilePage() {
     last_name: "",
     nickname: "",
     about_me: "",
-    avatar: "",
+    avatar_id: "",
   });
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function ProfilePage() {
       last_name: data.last_name || "",
       nickname: data.nickname || "",
       about_me: data.about_me || "",
-      avatar: data.avatar || "",
+      avatar_id: data.avatar_id || ""
     });
   }, [data]);
 
@@ -90,9 +91,9 @@ export default function ProfilePage() {
 
   const updateField =
     (key: keyof typeof form) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((prev) => ({ ...prev, [key]: event.target.value }));
-    };
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setForm((prev) => ({ ...prev, [key]: event.target.value }));
+      };
 
   const handleAvatarSelect = (file: File) => {
     setAvatarFile(file);
@@ -102,13 +103,13 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async () => {
-    let avatarId = form.avatar;
+    let avatarId = form.avatar_id;
     if (avatarFile) {
       const { uploadFile } = await import("@/lib/api");
       const uploaded = await uploadFile(avatarFile);
       avatarId = uploaded.filename;
     }
-    saveProfile.mutate({ ...form, avatar: avatarId });
+    saveProfile.mutate({ ...form, avatar_id: avatarId });
     setAvatarFile(null);
     setAvatarPreview(null);
   };
@@ -200,10 +201,10 @@ export default function ProfilePage() {
               compact
             />
           </div>
-          <FormField label="First name" name="first_name" value={form.first_name} onChange={(e) => { updateField("first_name")(e); if (validationErrors.first_name) setValidationErrors(prev => { const n = {...prev}; delete n.first_name; return n; }); }} error={validationErrors.first_name} />
-          <FormField label="Last name" name="last_name" value={form.last_name} onChange={(e) => { updateField("last_name")(e); if (validationErrors.last_name) setValidationErrors(prev => { const n = {...prev}; delete n.last_name; return n; }); }} error={validationErrors.last_name} />
-          <FormField label="Nickname" name="nickname" value={form.nickname} onChange={(e) => { updateField("nickname")(e); if (validationErrors.nickname) setValidationErrors(prev => { const n = {...prev}; delete n.nickname; return n; }); }} error={validationErrors.nickname} />
-          <FormField label="About" name="about_me" as="textarea" value={form.about_me} onChange={(e) => { updateField("about_me")(e); if (validationErrors.about_me) setValidationErrors(prev => { const n = {...prev}; delete n.about_me; return n; }); }} error={validationErrors.about_me} />
+          <FormField label="First name" name="first_name" value={form.first_name} onChange={(e) => { updateField("first_name")(e); if (validationErrors.first_name) setValidationErrors(prev => { const n = { ...prev }; delete n.first_name; return n; }); }} error={validationErrors.first_name} />
+          <FormField label="Last name" name="last_name" value={form.last_name} onChange={(e) => { updateField("last_name")(e); if (validationErrors.last_name) setValidationErrors(prev => { const n = { ...prev }; delete n.last_name; return n; }); }} error={validationErrors.last_name} />
+          <FormField label="Nickname" name="nickname" value={form.nickname} onChange={(e) => { updateField("nickname")(e); if (validationErrors.nickname) setValidationErrors(prev => { const n = { ...prev }; delete n.nickname; return n; }); }} error={validationErrors.nickname} />
+          <FormField label="About" name="about_me" as="textarea" value={form.about_me} onChange={(e) => { updateField("about_me")(e); if (validationErrors.about_me) setValidationErrors(prev => { const n = { ...prev }; delete n.about_me; return n; }); }} error={validationErrors.about_me} />
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Button
               onClick={handleSaveProfile}

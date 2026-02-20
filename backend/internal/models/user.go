@@ -50,6 +50,7 @@ type UserResponse struct {
 	AboutMe   string `json:"about_me,omitempty"`
 	IsPublic  *bool  `json:"is_public,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
+	AvatarID  string `json:"avatar_id,omitempty"`
 }
 
 // UpdateProfileRequest represents the request body for updating user profile
@@ -58,7 +59,7 @@ type UpdateProfileRequest struct {
 	LastName  *string `json:"last_name"`
 	Nickname  *string `json:"nickname"`
 	AboutMe   *string `json:"about_me"`
-	Avatar    *string `json:"avatar"`
+	Avatar    *string `json:"avatar_id"`
 }
 
 // UpdatePrivacyRequest represents the request body for updating privacy settings

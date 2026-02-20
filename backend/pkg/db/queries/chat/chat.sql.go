@@ -308,8 +308,8 @@ SELECT
     cr.group_id,
     cr.created_at AS room_created_at,
 
-    lm.message_id AS last_message_id,
-    lm.content AS last_message_content,
+    COALESCE(lm.message_id, '') AS last_message_id,
+    COALESCE(lm.content, '') AS last_message_content,
     lm.created_at AS last_message_time,
     lm.sender_id AS last_message_sender_id,
 

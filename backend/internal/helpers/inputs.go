@@ -98,6 +98,10 @@ func (upv UpdateProfileValidator) Build(r *http.Request, app *app.App) map[strin
 		"avatar": {"sometimes", func(v interface{}) error {
 			value := v.(string)
 
+			if value == "" {
+				return nil
+			}
+
 			valueSplit := strings.Split(value, ".")
 
 			if len(valueSplit) != 2 {

@@ -316,8 +316,9 @@ func GetFollowers(app *app.App) http.HandlerFunc {
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
 				Avatar: func() *string {
-					if user.Avatar.Valid {
-						return &user.Avatar.String
+					if user.Avatar.Valid && user.Avatar.String != "" {
+						img := app.File.GenerateSignImage(user.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+						return &img
 					}
 					return nil
 				}(),
@@ -403,8 +404,9 @@ func GetFollowing(app *app.App) http.HandlerFunc {
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
 				Avatar: func() *string {
-					if user.Avatar.Valid {
-						return &user.Avatar.String
+					if user.Avatar.Valid && user.Avatar.String != "" {
+						img := app.File.GenerateSignImage(user.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+						return &img
 					}
 					return nil
 				}(),

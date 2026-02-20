@@ -20,7 +20,7 @@ export default function LandingPage() {
     return (
       <div className="page">
         <main className="container hero">
-          <h1>Welcome back!</h1>
+          <h1>Welcome back {session.first_name} !</h1>
           <p>
             You're already logged in. Continue to your feed to see what's happening.
           </p>

@@ -25,6 +25,7 @@ export type User = {
   about_me?: string;
   is_public?: boolean;
   created_at?: string;
+  avatar_id?: string;
 };
 
 export type SearchUser = {
@@ -32,6 +33,7 @@ export type SearchUser = {
   first_name: string;
   last_name: string;
   nickname?: string;
+  avatar? : string;
 };
 
 export type FeedPost = {

@@ -35,6 +35,7 @@ function SearchContent() {
           {data?.map((user) => (
             <Link key={user.user_id} href={`/profile/${user.user_id}`} className="surface card search-result">
               <Avatar
+                src={user.avatar}
                 name={`${user.first_name} ${user.last_name}`}
                 size={40}
               />

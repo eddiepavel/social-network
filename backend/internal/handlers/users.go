@@ -84,8 +84,7 @@ func UpdateProfile(app *app.App) http.HandlerFunc {
 			utils.Error(w, http.StatusBadRequest, "400", "validation error", errValidation)
 			return
 		}
-
-		if req.Avatar != &user.Avatar.String {
+		if req.Avatar != &user.Avatar.String && *req.Avatar != "" {
 			img := strings.Split(*req.Avatar, ".")
 
 			if len(img) != 2 {
@@ -262,6 +261,7 @@ func GetUserPosts(app *app.App) http.HandlerFunc {
 
 		if len(posts) == 0 {
 			utils.OK(w, userPosts)
+			return
 		}
 
 		for _, post := range posts {
@@ -344,6 +344,13 @@ func SearchUsers(app *app.App) http.HandlerFunc {
 				FirstName: user.FirstName,
 				LastName:  user.LastName,
 				Nickname:  user.Nickname.String,
+				Avatar: func() string {
+					if user.Avatar.Valid && user.Avatar.String != "" {
+						img := app.File.GenerateSignImage(user.Avatar.String, user_id, time.Now().Add(15*time.Minute))
+						return img
+					}
+					return ""
+				}(),
 			})
 		}
 

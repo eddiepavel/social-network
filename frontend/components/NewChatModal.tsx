@@ -81,6 +81,7 @@ export default function NewChatModal({ isOpen, onClose, currentUserId }: NewChat
               disabled={startChat.isPending}
             >
               <Avatar
+                src={user.avatar}
                 name={`${user.first_name} ${user.last_name}`}
                 size={40}
               />
