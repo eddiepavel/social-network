@@ -139,7 +139,7 @@ export default function GroupDetailsPage() {
         </div>
       </section>
 
-      {acceptedMembers?.length != 0 && (<section className="surface card">
+      {acceptedMembers?.length != 0 && data.members && (<section className="surface card">
         <Tabs
           tabs={[
             { id: "members", label: `Members (${acceptedMembers?.length})` },
