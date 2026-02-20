@@ -538,8 +538,9 @@ func GetFollowRequests(app *app.App) http.HandlerFunc {
 					return nil
 				}(),
 				Avatar: func() *string {
-					if user.Avatar.Valid {
-						return &user.Avatar.String
+					if user.Avatar.Valid && user.Avatar.String != "" {
+						img := app.File.GenerateSignImage(user.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+						return &img
 					}
 					return nil
 				}(),
