@@ -23,7 +23,7 @@ import (
 func GetUserProfile(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get current user from context (for authentication check)
-		_, ok := middleware.GetUserIDFromContext(r.Context())
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
 		if !ok {
 			utils.Unauthorized(w, "Unauthorized")
 			return
@@ -50,7 +50,7 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 
 		// Allow viewing any profile - access control for posts is handled separately
 		// This allows users to see profiles and send follow requests to private accounts
-		response := helpers.UserToResponseImage(user, app)
+		response := helpers.UserToResponseImage(user, app, userID)
 
 		utils.OK(w, response)
 	}
@@ -283,8 +283,9 @@ func GetUserPosts(app *app.App) http.HandlerFunc {
 				AuthorFirstName: post.FirstName,
 				AuthorLastName:  post.LastName,
 				AuthorAvatar: func() *string {
-					if post.Avatar.Valid {
-						return &post.Avatar.String
+					if post.Avatar.Valid && post.Avatar.String != "" {
+						path := app.File.GenerateSignImage(post.Avatar.String, currentUserID, time.Now().Add(15*time.Minute))
+						return &path
 					}
 					return nil
 				}(),

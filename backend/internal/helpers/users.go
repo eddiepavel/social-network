@@ -88,8 +88,9 @@ func UserToResponse(user db_users.User) models.UserResponse {
 	}
 }
 
-func UserToResponseImage(user db_users.User, app *app.App) models.UserResponse {
+func UserToResponseImage(user db_users.User, app *app.App, userId []byte) models.UserResponse {
 	setUuid, _ := GenerateFromBytes(user.UserID)
+
 	return models.UserResponse{
 		UserID:    setUuid,
 		Email:     user.Email,
@@ -98,7 +99,7 @@ func UserToResponseImage(user db_users.User, app *app.App) models.UserResponse {
 		DOB:       user.Dob,
 		Avatar: func() string {
 			if user.Avatar.Valid && user.Avatar.String != "" {
-				return app.File.GenerateSignImage(user.Avatar.String, user.UserID, time.Now().Add(15*time.Minute))
+				return app.File.GenerateSignImage(user.Avatar.String, userId, time.Now().Add(15*time.Minute))
 			}
 			return ""
 		}(),
