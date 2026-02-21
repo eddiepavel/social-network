@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"social-network/app"
+	contextkeys "social-network/internal/contextKeys"
 	"social-network/internal/helpers"
 	"social-network/internal/middleware"
 	"social-network/internal/models"
@@ -22,6 +23,7 @@ func Register(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Validate required fields
+		guest := r.Context().Value(contextkeys.GuestSession).(string)
 
 		var req models.CreateUserRequest
 
@@ -70,7 +72,7 @@ func Register(app *app.App) http.HandlerFunc {
 		}
 
 		// Create session for auto-login
-		session, err := middleware.CreateSession(app.DB, transaction.UserID)
+		session, err := middleware.CreateSession(app.DB, transaction.UserID, guest)
 		if err != nil {
 			app.Logger.Error("failed to create session", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
@@ -79,6 +81,7 @@ func Register(app *app.App) http.HandlerFunc {
 
 		// Set session cookie
 		middleware.SetSessionCookie(w, session.SessionID)
+		middleware.ClearSessionCookie(w, contextkeys.GuestSession)
 
 		// return user response
 		response := helpers.UserToResponse(transaction)
@@ -91,6 +94,8 @@ func Register(app *app.App) http.HandlerFunc {
 // Login handles user login
 func Login(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		guest := r.Context().Value(contextkeys.GuestSession).(string)
 
 		var req models.LoginRequest
 
@@ -125,7 +130,7 @@ func Login(app *app.App) http.HandlerFunc {
 		// If no session exists OR session is invalid, create a new one
 		if errors.Is(err, sql.ErrNoRows) {
 			// No session exists, create new one
-			session, err = middleware.CreateSession(app.DB, transaction.UserID)
+			session, err = middleware.CreateSession(app.DB, transaction.UserID, guest)
 			if err != nil {
 				app.Logger.Error("Failed to create session", "error", err)
 				utils.Internal(w, err)
@@ -135,21 +140,10 @@ func Login(app *app.App) http.HandlerFunc {
 			// Database error
 			utils.Internal(w, err)
 			return
-		} else {
-			// Session exists, validate it
-			_, err = middleware.ValidateSession(app.DB, session.SessionID)
-			if err != nil {
-				// Session exists but is invalid/expired, create new one
-				session, err = middleware.CreateSession(app.DB, transaction.UserID)
-				if err != nil {
-					app.Logger.Error("Failed to create session", "error", err)
-					utils.Internal(w, err)
-					return
-				}
-			}
 		}
 		// Set session cookie
 		middleware.SetSessionCookie(w, session.SessionID)
+		middleware.ClearSessionCookie(w, contextkeys.GuestSession)
 
 		// Return user response
 		response := helpers.UserToResponse(transaction)
@@ -189,7 +183,7 @@ func Logout(app *app.App) http.HandlerFunc {
 		sessionID, err := middleware.GetSessionCookie(r)
 		if err != nil {
 			// Even if no session, clear cookie and return success
-			middleware.ClearSessionCookie(w)
+			middleware.ClearSessionCookie(w, contextkeys.SessionCookieName)
 			utils.OK(w, "Logged out successfully")
 			return
 		}
@@ -200,7 +194,7 @@ func Logout(app *app.App) http.HandlerFunc {
 		}
 
 		// Clear cookie
-		middleware.ClearSessionCookie(w)
+		middleware.ClearSessionCookie(w, contextkeys.SessionCookieName)
 
 		utils.OK(w, "Logged out successfully")
 	}

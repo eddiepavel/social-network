@@ -478,13 +478,12 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.NotFound(w)
+				return
+			}
 			app.Logger.Error("failed to find room between users", "error", err.Error())
-			utils.Internal(w, err)
-			return
-		}
-
-		if roomExists != nil {
 			utils.Internal(w, errors.New("Internal"))
 			return
 		}

@@ -40,10 +40,11 @@ func main() {
 	defer wsManager.Shutdown()
 
 	app := &app.App{
-		DB:        db.DB,
-		Logger:    logger,
-		File:      file,
-		WsManager: wsManager,
+		DB:            db.DB,
+		Logger:        logger,
+		File:          file,
+		WsManager:     wsManager,
+		GuestSessions: make(map[string]time.Time),
 	}
 
 	defer func() {

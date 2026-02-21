@@ -15,16 +15,43 @@ import (
 	"social-network/pkg/db/sqlite"
 	"strconv"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // AuthMiddleware is middleware that requires a valid session
 func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID, err := GetSessionCookie(r)
+		//we move to guesst
 		if err != nil {
-			m.App.Logger.Error("cookie validation failed", "err", err)
+			m.App.Logger.Error("cookie validation failed searching for guest", "err", err)
+			getGuestCookieSession, err := m.GetGuestSession(r)
+
+			if err != nil {
+				uuId := m.CreateGuestSessionCookie(w)
+				ctx := context.WithValue(r.Context(), contextkeys.GuestSession, uuId)
+				_ = ctx
+				utils.Unauthorized(w, "Unauthorized")
+				return
+			}
+
+			getSession, ok := m.App.GuestSessions[getGuestCookieSession]
+
+			if !ok {
+				uuId := m.CreateGuestSessionCookie(w)
+				ctx := context.WithValue(r.Context(), contextkeys.GuestSession, uuId)
+				_ = ctx
+				utils.Unauthorized(w, "Unauthorized")
+				return
+			}
+
+			if time.Now().After(getSession) {
+				uuId := m.CreateGuestSessionCookie(w)
+				ctx := context.WithValue(r.Context(), contextkeys.GuestSession, uuId)
+				_ = ctx
+				utils.Unauthorized(w, "Unauthorized")
+				return
+			}
+
 			utils.Unauthorized(w, "Unauthorized")
 			return
 		}
@@ -101,9 +128,9 @@ func GetSessionCookie(r *http.Request) ([]byte, error) {
 }
 
 // ClearSessionCookie clears the session cookie (for logout)
-func ClearSessionCookie(w http.ResponseWriter) {
+func ClearSessionCookie(w http.ResponseWriter, key string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     contextkeys.SessionCookieName,
+		Name:     key,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -114,8 +141,8 @@ func ClearSessionCookie(w http.ResponseWriter) {
 }
 
 // CreateSession creates a new session for a user
-func CreateSession(db *sql.DB, userID []byte) (db_sessions.Session, error) {
-	sessionID, _ := uuid.New().MarshalBinary()
+func CreateSession(db *sql.DB, userID []byte, guestSession string) (db_sessions.Session, error) {
+	sessionID, _ := helpers.GenerateFromString(guestSession)
 	expiresAt := time.Now().Add(contextkeys.SessionDuration)
 
 	session, err := sqlite.NewQuery(db).Sessions.CreateSession(context.Background(),

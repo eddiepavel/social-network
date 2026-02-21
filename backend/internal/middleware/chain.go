@@ -21,6 +21,7 @@ func (m *MiddlewareChain) ChainMiddleware(h http.HandlerFunc, k []string) http.H
 		"cors":    m.CorsMiddleware,
 		"recover": m.RecoveryMiddleware,
 		"log":     m.LoggingMiddleware,
+		"guest":   m.GuestSessionMiddleware,
 	}
 
 	globalMiddle := []string{"cors", "recover", "log"}

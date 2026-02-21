@@ -24,6 +24,10 @@ export default function LoginPage() {
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
       }
+
+      if (error instanceof ApiError && error.code == "419"){
+        location.reload()
+      }
     },
   });
 

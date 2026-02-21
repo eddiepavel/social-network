@@ -30,6 +30,11 @@ export default function RegisterPage() {
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
       }
+ 
+      if (error instanceof ApiError && error.code == "419"){
+        console.log("never refresh")
+        location.reload()
+      }
     },
   });
 

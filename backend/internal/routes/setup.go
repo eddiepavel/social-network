@@ -46,7 +46,7 @@ func Setup(app *app.App) http.Handler {
 
 	//group handlers
 	authGroup := handler.createGroup(handler.authRoutes, []string{"auth"})
-	publicGroup := handler.createGroup(handler.publicRoutes, []string{})
+	publicGroup := handler.createGroup(handler.publicRoutes, []string{"guest"})
 	usersGroup := handler.createGroup(handler.userRoutes, []string{"auth"})
 	followersGroup := handler.createGroup(handler.followersRoutes, []string{"auth"})
 	postsGroup := handler.createGroup(handler.postsRoutes, []string{"auth"})

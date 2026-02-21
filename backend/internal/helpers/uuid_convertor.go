@@ -3,7 +3,7 @@ package helpers
 import (
 	"errors"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 )
 
 func GenerateFromBytes(data []byte) (string, error) {
@@ -19,7 +19,7 @@ func GenerateFromBytes(data []byte) (string, error) {
 }
 
 func GenerateFromString(data string) ([]byte, error) {
-	id, err := uuid.FromString(data)
+	id, err := uuid.Parse(data)
 	if err != nil {
 		return nil, errors.New("failed to parse uuid string")
 	}

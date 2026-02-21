@@ -1349,8 +1349,6 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 			utils.Internal(w, errors.New("internal server error"))
 			return
 		}
-
-		app.Logger.Info("canReact", canReact)
 		if !canReact {
 			utils.Forbidden(w)
 			return
