@@ -111,7 +111,8 @@ SELECT
     gm.created_at,
     u.user_id AS m_user_id,
     u.first_name AS m_first_name,
-    u.last_name AS m_last_name
+    u.last_name AS m_last_name,
+    u.avatar as m_avatar
 FROM group_members gm
 JOIN users u ON gm.user_id = u.user_id
 WHERE group_id = ? AND status = 'requested' AND invited_by IS NULL;

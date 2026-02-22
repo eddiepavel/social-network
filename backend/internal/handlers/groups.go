@@ -640,19 +640,14 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 		var pendingMembers []models.GroupMemberResponse
 
 		for _, member := range groupMemberRequests {
-			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), member.UserID)
-			if err != nil {
-				app.Logger.Error("Failed to fetch user for follow request", "error", err)
-				continue
-			}
-			UUID, _ := helpers.GenerateFromBytes(user.UserID)
+			UUID, _ := helpers.GenerateFromBytes(member.UserID)
 
 			pendingMembers = append(pendingMembers, models.GroupMemberResponse{
 				UserID: UUID,
 				Status: member.Status,
 				Avatar: func() *string {
-					if user.Avatar.Valid && user.Avatar.String != "" {
-						img := app.File.GenerateSignImage(user.Avatar.String, currentUser, time.Now().Add(15*time.Minute))
+					if member.MAvatar.Valid && member.MAvatar.String != "" {
+						img := app.File.GenerateSignImage(member.MAvatar.String, currentUser, time.Now().Add(15*time.Minute))
 						return &img
 					}
 					return nil
