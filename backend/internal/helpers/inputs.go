@@ -77,6 +77,9 @@ func (upv UpdateProfileValidator) Build(r *http.Request, app *app.App) map[strin
 		"last_name":  {"sometimes", "string"},
 		"nickname": {"sometimes", "string", func(v interface{}) error {
 			nickname, _ := v.(string)
+			if nickname == "" {
+				return nil
+			}
 			existingUser, err := sqlite.NewQuery(app.DB).Users.GetUserByNickname(r.Context(), sql.NullString{Valid: true, String: nickname})
 
 			if errors.Is(err, sql.ErrNoRows) {

@@ -15,6 +15,7 @@ type PostComposerProps = {
 
 export default function PostComposer({ groupId }: PostComposerProps) {
   const { data: session } = useSession();
+  const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState("");
   const [selectedFollowers, setSelectedFollowers] = useState<string[]>([]);
@@ -61,6 +62,7 @@ export default function PostComposer({ groupId }: PostComposerProps) {
       setVisibility("public");
       setValidationErrors({});
       setSuccessMessage("Post created successfully!");
+      setIsOpen(false); // Close drawer on success
       queryClient.invalidateQueries({ queryKey: isGroup ? ["groupPosts", groupId] : ["feed"] });
     },
     onError: (error) => {
@@ -86,9 +88,9 @@ export default function PostComposer({ groupId }: PostComposerProps) {
 
   const handleFollowerToggle = (userId: string) => {
     setSelectedFollowers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+        prev.includes(userId)
+            ? prev.filter((id) => id !== userId)
+            : [...prev, userId]
     );
   };
 
@@ -128,153 +130,192 @@ export default function PostComposer({ groupId }: PostComposerProps) {
   };
 
   const isPosting = create.isPending || isUploading;
-  const canPost = content.trim() && !isPosting && 
-    (visibility !== "private" || selectedFollowers.length > 0);
+  const canPost = content.trim() && !isPosting &&
+      (visibility !== "private" || selectedFollowers.length > 0);
 
   return (
-    <div className="surface card">
-      <h3>Share a moment</h3>
-      <FormField
-        label="What is on your mind?"
-        name="content"
-        as="textarea"
-        placeholder="Start a conversation, drop a quick update, or share a thought."
-        value={content}
-        onChange={(event) => {
-          setContent(event.target.value);
-          if (validationErrors.content) setValidationErrors(prev => { const n = {...prev}; delete n.content; return n; });
-        }}
-        error={validationErrors.content}
-      />
+      <div className="surface card">
+        {/* Drawer Header - Always Visible */}
+        <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="drawer-header"
+            style={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              textAlign: "left"
+            }}
+        >
+          <h3 style={{ margin: 0 }}>Share a moment</h3>
+          <span style={{
+            fontSize: "1.5rem",
+            transition: "transform 0.3s ease",
+            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"
+          }}>
+          ▼
+        </span>
+        </button>
 
-      {imagePreview && (
-        <div className="post-image-preview">
-          <img src={imagePreview} alt="Preview" />
-          <button
-            className="remove-preview"
-            onClick={handleRemoveImage}
-            type="button"
-          >
-            Remove
-          </button>
-        </div>
-      )}
+        {/* Drawer Content - Slides Down */}
+        <div
+            style={{
+              display: "grid",
+              gridTemplateRows: isOpen ? "1fr" : "0fr",
+              transition: "grid-template-rows 0.3s ease",
+              overflow: "hidden"
+            }}
+        >
+          <div style={{ minHeight: 0 }}>
+            <div style={{ paddingTop: "1rem", gap: "1rem", display: "flex", flexDirection: "column" }}>
+              <FormField
+                  label="What is on your mind?"
+                  name="content"
+                  as="textarea"
+                  placeholder="Start a conversation, drop a quick update, or share a thought."
+                  value={content}
+                  onChange={(event) => {
+                    setContent(event.target.value);
+                    if (validationErrors.content) setValidationErrors(prev => { const n = {...prev}; delete n.content; return n; });
+                  }}
+                  error={validationErrors.content}
+              />
 
-      <div className="composer-footer">
-        {!isGroup && (
-            <label className="form-field" style={{ flex: 1 }}>
-              <span>Visibility</span>
-              <select
-                  name="visibility"
-                  value={visibility}
-                  onChange={(event) => setVisibility(event.target.value)}
-              >
-                <option disabled={!session?.is_public} value="public">Public - Everyone can see</option>
-                <option disabled={session?.is_public} value="semi-private">Almost Private - Only followers</option>
-                <option value="private">Private - Select specific followers</option>
-              </select>
-            </label>
-        )}
-        <div className="composer-actions">
-          {!imagePreview && (
-            <ImageUpload
-              onImageSelect={handleImageSelect}
-              accept="image/*"
-              maxSizeMB={5}
-              label="Add photo"
-              compact
-            />
-          )}
-          <Button
-            onClick={handlePost}
-            disabled={!canPost}
-          >
-            {isPosting ? "Posting..." : "Post"}
-          </Button>
-        </div>
-      </div>
-
-      {/* Follower selection for private posts */}
-      {visibility === "private" && (
-        <div className="follower-selector">
-          <div className="follower-selector-header">
-            <span className="follower-selector-title">
-              Select who can see this post
-              {selectedFollowers.length > 0 && (
-                <span className="selected-count"> ({selectedFollowers.length} selected)</span>
+              {imagePreview && (
+                  <div className="post-image-preview">
+                    <img src={imagePreview} alt="Preview" />
+                    <button
+                        className="remove-preview"
+                        onClick={handleRemoveImage}
+                        type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
               )}
-            </span>
-            {followers && followers.length > 0 && (
-              <div className="follower-selector-actions">
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={handleSelectAll}
-                >
-                  Select all
-                </button>
-                <span className="divider">|</span>
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={handleDeselectAll}
-                >
-                  Deselect all
-                </button>
+
+              <div className="composer-footer">
+                {!isGroup && (
+                    <label className="form-field" style={{ flex: 1 }}>
+                      <span>Visibility</span>
+                      <select
+                          name="visibility"
+                          value={visibility}
+                          onChange={(event) => setVisibility(event.target.value)}
+                      >
+                        <option disabled={!session?.is_public} value="public">Public - Everyone can see</option>
+                        <option disabled={session?.is_public} value="semi-private">Almost Private - Only followers</option>
+                        <option value="private">Private - Select specific followers</option>
+                      </select>
+                    </label>
+                )}
+                <div className="composer-actions">
+                  {!imagePreview && (
+                      <ImageUpload
+                          onImageSelect={handleImageSelect}
+                          accept="image/*"
+                          maxSizeMB={5}
+                          label="Add photo"
+                          compact
+                      />
+                  )}
+                  <Button
+                      onClick={handlePost}
+                      disabled={!canPost}
+                  >
+                    {isPosting ? "Posting..." : "Post"}
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
-          
-          {loadingFollowers ? (
-            <p className="text-secondary">Loading followers...</p>
-          ) : followers && followers.length > 0 ? (
-            <div className="follower-list">
-              {followers.map((follower) => (
-                <label key={follower.user_id} className="follower-item">
-                  <input
-                    type="checkbox"
-                    checked={selectedFollowers.includes(follower.user_id)}
-                    onChange={() => handleFollowerToggle(follower.user_id)}
-                  />
-                  <Avatar
-                    src={follower.avatar}
-                    name={`${follower.first_name} ${follower.last_name}`}
-                    size={32}
-                  />
-                  <span className="follower-name">
-                    {follower.first_name} {follower.last_name}
-                    {follower.nickname && (
-                      <span className="follower-nickname">@{follower.nickname}</span>
+
+              {/* Follower selection for private posts */}
+              {visibility === "private" && (
+                  <div className="follower-selector">
+                    <div className="follower-selector-header">
+                  <span className="follower-selector-title">
+                    Select who can see this post
+                    {selectedFollowers.length > 0 && (
+                        <span className="selected-count"> ({selectedFollowers.length} selected)</span>
                     )}
                   </span>
-                </label>
-              ))}
+                      {followers && followers.length > 0 && (
+                          <div className="follower-selector-actions">
+                            <button
+                                type="button"
+                                className="text-button"
+                                onClick={handleSelectAll}
+                            >
+                              Select all
+                            </button>
+                            <span className="divider">|</span>
+                            <button
+                                type="button"
+                                className="text-button"
+                                onClick={handleDeselectAll}
+                            >
+                              Deselect all
+                            </button>
+                          </div>
+                      )}
+                    </div>
+
+                    {loadingFollowers ? (
+                        <p className="text-secondary">Loading followers...</p>
+                    ) : followers && followers.length > 0 ? (
+                        <div className="follower-list">
+                          {followers.map((follower) => (
+                              <label key={follower.user_id} className="follower-item">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedFollowers.includes(follower.user_id)}
+                                    onChange={() => handleFollowerToggle(follower.user_id)}
+                                />
+                                <Avatar
+                                    src={follower.avatar}
+                                    name={`${follower.first_name} ${follower.last_name}`}
+                                    size={32}
+                                />
+                                <span className="follower-name">
+                          {follower.first_name} {follower.last_name}
+                                  {follower.nickname && (
+                                      <span className="follower-nickname">@{follower.nickname}</span>
+                                  )}
+                        </span>
+                              </label>
+                          ))}
+                        </div>
+                    ) : (
+                        <p className="text-secondary empty-followers">
+                          You don&apos;t have any followers yet. Only your followers can be selected for private posts.
+                        </p>
+                    )}
+
+                    {visibility === "private" && selectedFollowers.length === 0 && followers && followers.length > 0 && (
+                        <p className="validation-hint">Please select at least one follower to post privately.</p>
+                    )}
+                  </div>
+              )}
+
+              {successMessage && (
+                  <p className="success-message">{successMessage}</p>
+              )}
+
+              {create.isError ? (
+                  create.error instanceof ApiError && typeof create.error.details === 'object' ? null : (
+                      <p style={{ color: "#b42318" }}>
+                        {create.error instanceof ApiError && typeof create.error.details === 'string'
+                            ? create.error.details
+                            : create.error.message}
+                      </p>
+                  )
+              ) : null}
             </div>
-          ) : (
-            <p className="text-secondary empty-followers">
-              You don&apos;t have any followers yet. Only your followers can be selected for private posts.
-            </p>
-          )}
-          
-          {visibility === "private" && selectedFollowers.length === 0 && followers && followers.length > 0 && (
-            <p className="validation-hint">Please select at least one follower to post privately.</p>
-          )}
+          </div>
         </div>
-      )}
-
-      {successMessage && (
-        <p className="success-message">{successMessage}</p>
-      )}
-
-      {create.isError ? (
-        create.error instanceof ApiError && typeof create.error.details === 'object' ? null : (
-          <p style={{ color: "#b42318" }}>
-            {create.error instanceof ApiError && typeof create.error.details === 'string'
-              ? create.error.details
-              : create.error.message}
-          </p>
-        )
-      ) : null}
-    </div>
+      </div>
   );
 }
