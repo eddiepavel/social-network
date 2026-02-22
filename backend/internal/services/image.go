@@ -292,7 +292,7 @@ func (s *FileService) isValidFile(file []byte) bool {
 func (s *FileService) fileExtension(file []byte) (string, error) {
 	filetype := http.DetectContentType(file)
 
-	alowedFiles := []string{"png", "jpg", "gif", "jpeg"}
+	allowedFiles := []string{"png", "jpg", "gif", "jpeg"}
 
 	extension := strings.Split(filetype, "/")
 
@@ -300,7 +300,7 @@ func (s *FileService) fileExtension(file []byte) (string, error) {
 		return "", errors.New("wrong file format")
 	}
 
-	if !slices.Contains(alowedFiles, extension[1]) {
+	if !slices.Contains(allowedFiles, extension[1]) {
 		return "", errors.New("wrong file extension")
 	}
 

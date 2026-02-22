@@ -3,8 +3,10 @@ import type { GroupEvent } from "@/lib/types";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import Tabs from "@/components/Tabs";
-import { rsvpToEvent, ApiError } from "@/lib/api";
+import {rsvpToEvent, ApiError, getEventRSVP} from "@/lib/api";
 import { useState } from "react";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import Avatar from "@/components/Avatar";
 
 type EventCardProps = {
   event: GroupEvent;
@@ -12,6 +14,8 @@ type EventCardProps = {
 };
 
 export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
+  const queryClient = useQueryClient();
+
   const [currentRsvp, setCurrentRsvp] = useState(event.user_rsvp);
   const [goingCount, setGoingCount] = useState(event.going_count);
   const [notGoingCount, setNotGoingCount] = useState(event.not_going_count);
@@ -20,8 +24,13 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("going");
 
-  const goingUsers = event.rsvps?.filter(r => r.status === "going") || [];
-  const notGoingUsers = event.rsvps?.filter(r => r.status === "not going") || [];
+  const { data, isLoading: eventsLoading, isError, error } = useQuery({
+    queryKey: ["group_event", event.event_id],
+    queryFn: () => getEventRSVP(event.event_id),
+  });
+
+  const goingUsers = data?.filter(r => r.status === "going") || [];
+  const notGoingUsers = data?.filter(r => r.status === "not going") || [];
 
   const tabs = [
     { id: "going", label: `Going (${goingUsers.length})` },
@@ -43,6 +52,8 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
 
       setCurrentRsvp(status);
       onRsvpUpdate?.(event.event_id, status);
+
+      queryClient.invalidateQueries({ queryKey: ["group_event", event.event_id] });
     } catch (error) {
       if (error instanceof ApiError && typeof error.details === 'string') {
         setErrorMsg(error.details);
@@ -54,12 +65,16 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
     }
   };
 
+  if (eventsLoading) return <p>Loading group event...</p>;
+
+
   return (
     <div className="event-card surface card" style={{ 
       boxShadow: "0 2px 8px rgba(0,0,0,0.08)", 
       borderRadius: "12px",
       padding: "1.25rem",
       display: "flex",
+      flexDirection: "row",
       gap: "1.5rem",
       alignItems: "stretch"
     }}>
@@ -117,7 +132,7 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
           background: "var(--bg-tertiary)", 
           padding: "0.5rem 0.75rem", 
           borderRadius: "8px",
-          textAlign: "center"
+          textAlign: "end"
         }}>
           <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
             Event Time
@@ -129,8 +144,9 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
 
         <div style={{ 
           display: "flex", 
-          gap: "1rem", 
-          fontSize: "0.85rem",
+          gap: "1rem",
+          padding: "0 0.75rem",
+          fontSize: "1.1rem",
           color: "var(--text-secondary)"
         }}>
           <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
@@ -180,20 +196,11 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
                     borderRadius: "8px",
                     background: "var(--bg-tertiary)"
                   }}>
-                    <div style={{ 
-                      width: "36px", 
-                      height: "36px", 
-                      borderRadius: "50%", 
-                      background: "var(--primary)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontWeight: 600,
-                      fontSize: "0.85rem"
-                    }}>
-                      {user.first_name[0]}{user.last_name[0]}
-                    </div>
+                    <Avatar
+                        src={user.avatar}
+                        name={user.first_name + " " + user.last_name}
+                        size={40}
+                    />
                     <span style={{ fontWeight: 500 }}>{user.first_name} {user.last_name}</span>
                   </div>
                 ))
@@ -215,20 +222,11 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
                     borderRadius: "8px",
                     background: "var(--bg-tertiary)"
                   }}>
-                    <div style={{ 
-                      width: "36px", 
-                      height: "36px", 
-                      borderRadius: "50%", 
-                      background: "var(--text-tertiary)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontWeight: 600,
-                      fontSize: "0.85rem"
-                    }}>
-                      {user.first_name[0]}{user.last_name[0]}
-                    </div>
+                    <Avatar
+                      src={user.avatar}
+                      name={user.first_name + " " + user.last_name}
+                      size={40}
+                    />
                     <span style={{ fontWeight: 500 }}>{user.first_name} {user.last_name}</span>
                   </div>
                 ))

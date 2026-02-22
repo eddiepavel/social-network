@@ -1,11 +1,11 @@
-import type {
+import {
   ApiEnvelope,
   ChatMessage,
   ChatMessagesResponse,
   ChatThread,
   Comment,
   CreateEventRequest,
-  CreateGroupPostRequest,
+  CreateGroupPostRequest, EventRsvp,
   FeedPost,
   Follower,
   FollowRequest,
@@ -331,7 +331,7 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
 
   const payload = (await response.json()) as ApiEnvelope<{ uuid: string; url: string, filename: string; }>;
   if (!response.ok || payload.error) {
-    throw new Error(payload.error?.message || "Upload failed");
+    throw new Error(payload.error?.details as string || "Upload failed");
   }
   if (!payload.data) {
     throw new Error("Unexpected empty response");
@@ -475,6 +475,12 @@ export function rsvpToEvent(eventId: string, status: RSVPRequest["status"]) {
   return apiFetch<{ message: string; status: string }>(`/api/events/${eventId}/rsvp`, {
     method: "POST",
     body: JSON.stringify({ status }),
+  });
+}
+
+export function getEventRSVP(eventId: string) {
+  return apiFetch<EventRsvp[]>(`/api/events/${eventId}/rsvp`, {
+    method: "GET",
   });
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import SectionHeader from "@/components/SectionHeader";
 import Button from "@/components/Button";
@@ -12,7 +12,7 @@ import GroupRequestsList from "@/components/GroupRequestsList";
 import GroupSettings from "@/components/GroupSettings";
 import EventsList from "@/components/EventsList";
 import CreateEventModal from "@/components/CreateEventModal";
-import { getGroup, requestJoinGroup, leaveGroup } from "@/lib/api";
+import {getGroup, requestJoinGroup, leaveGroup, getGroupRequests} from "@/lib/api";
 import useSession from "@/hooks/useSession";
 import GroupPosts from "@/components/GroupPosts";
 
@@ -26,7 +26,6 @@ export default function GroupDetailsPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
-
 
   const { data, isLoading, isError, error, refetch: refetchGroup } = useQuery({
     queryKey: ["group", groupId],
@@ -54,8 +53,18 @@ export default function GroupDetailsPage() {
     );
   }, [session?.user_id, data?.members]);
 
-
   const isOwner = data?.group.is_owner ?? false;
+
+  const {
+    data: requests,
+    isLoading: requestsIsLoading,
+    isError: requestsIsError,
+    error: requestsError
+  } = useQuery({
+    queryKey: ["group-requests", groupId],
+    queryFn: () => getGroupRequests(groupId),
+    enabled: !!groupId && isOwner,
+  });
 
   const acceptedMembers = useMemo(() => {
     return data ? data.members?.filter((m) => m.status === "joined") : [];
@@ -132,7 +141,7 @@ export default function GroupDetailsPage() {
           }
         />
         <p style={{ color: "var(--muted)" }}>{data.group.description}</p>
-        <div className="post-meta">
+        <div className="post-meta" style={{ display: "flex", alignItems: "center" }}>
           <span>{data.group.total_members ?? acceptedMembers?.length} members</span>
           {isOwner && <span className="tag">Owner</span>}
           {isMember && !isOwner && <span className="tag">Member</span>}
@@ -145,7 +154,7 @@ export default function GroupDetailsPage() {
             { id: "members", label: `Members (${acceptedMembers?.length})` },
             ...(isMember? [{ id: "posts", label: "Posts"}] : []),
             ...(isMember ? [{ id: "events", label: `Events (${data.events?.length ?? 0})` }] : []),
-            ...(isOwner ? [{ id: "requests", label: "Join Requests" }] : []),
+            ...(isOwner ? [{ id: "requests", label: `Join Requests (${requests?.length ?? 0})` }] : []),
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
@@ -182,7 +191,7 @@ export default function GroupDetailsPage() {
         )}
 
         {activeTab === "requests" && isOwner && (
-          <GroupRequestsList groupId={groupId} />
+          <GroupRequestsList groupId={groupId} data={requests} isLoading={requestsIsLoading} isError={requestsIsError} error={requestsError}/>
         )}
       </section>)}
 

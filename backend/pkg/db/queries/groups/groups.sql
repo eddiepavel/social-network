@@ -10,6 +10,9 @@ VALUES (?, ?, ?, NULL, ?);
 -- name: GetGroupByName :one
 SELECT * FROM groups WHERE group_name = ? LIMIT 1;
 
+-- name: GetGroupEventRSVPs :many
+SELECT * FROM group_rsvp WHERE event_id = ?;
+
 -- name: GetGroupsWithMemberCount :many
 SELECT
     g.group_id,

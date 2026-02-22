@@ -14,7 +14,10 @@ import FollowRequestsList from "@/components/FollowRequestsList";
 import Tabs from "@/components/Tabs";
 import ImageUpload from "@/components/ImageUpload";
 import PostCard from "@/components/PostCard";
-import { getUserProfile, updatePrivacy, updateProfile, getFollowers, getFollowing, getUserPosts, ApiError } from "@/lib/api";
+import {
+  getUserProfile, updatePrivacy, updateProfile, getUserPosts, ApiError,
+  getFollowRequests
+} from "@/lib/api";
 import useSession from "@/hooks/useSession";
 
 export default function ProfilePage() {
@@ -37,10 +40,17 @@ export default function ProfilePage() {
     retry: false, // Don't retry if unauthorized
   });
 
+  const {data: userRequests, isLoading: requestsIsLoading, isError: requestsIsError, error: requestsError} = useQuery({
+    queryKey: ["follow-requests"],
+    queryFn: getFollowRequests,
+    enabled: !!session?.user_id && isSelf,
+  });
+
   const [activeTab, setActiveTab] = useState("posts");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -84,21 +94,30 @@ export default function ProfilePage() {
 
   const handleAvatarSelect = (file: File) => {
     setAvatarFile(file);
+    setAvatarError(null);
     const reader = new FileReader();
     reader.onload = (e) => setAvatarPreview(e.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleSaveProfile = async () => {
-    let avatarId = form.avatar_id;
-    if (avatarFile) {
-      const { uploadFile } = await import("@/lib/api");
-      const uploaded = await uploadFile(avatarFile);
-      avatarId = uploaded.filename;
+    try {
+      let avatarId = form.avatar_id;
+      if (avatarFile) {
+        const { uploadFile } = await import("@/lib/api");
+        const uploaded = await uploadFile(avatarFile);
+        avatarId = uploaded.filename;
+      }
+      saveProfile.mutate({ ...form, avatar_id: avatarId });
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.toLowerCase().includes("file") || errorMessage.toLowerCase().includes("extension")) {
+        setAvatarError("Invalid file type. Please select an image file (jpg, png, gif, jpeg).");
+      }
     }
-    saveProfile.mutate({ ...form, avatar_id: avatarId });
-    setAvatarFile(null);
-    setAvatarPreview(null);
   };
 
   if (isLoading) return <p>Loading profile...</p>;
@@ -142,7 +161,7 @@ export default function ProfilePage() {
               { id: "posts", label: `Posts (${userPosts?.length ?? 0})` },
               { id: "followers", label: `Followers (${data.followers})` },
               { id: "following", label: `Following (${data.following})` },
-              ...(isSelf ? [{ id: "requests", label: "Requests" }] : []),
+              ...(isSelf ? [{ id: "requests", label: `Requests (${userRequests?.length ?? 0})` }] : []),
             ]}
             activeTab={activeTab}
             onChange={setActiveTab}
@@ -166,7 +185,7 @@ export default function ProfilePage() {
           )}
           {activeTab === "followers" && <FollowersList userId={userId} type="followers" />}
           {activeTab === "following" && <FollowersList userId={userId} type="following" />}
-          {activeTab === "requests" && isSelf && <FollowRequestsList />}
+          {activeTab === "requests" && isSelf && <FollowRequestsList data={userRequests} isError={requestsIsError} isLoading={requestsIsLoading} error={requestsError}/>}
         </section>
       )}
 
@@ -187,6 +206,7 @@ export default function ProfilePage() {
               label="Change avatar"
               compact
             />
+            {avatarError && <p style={{ color: "#b42318" }}>{avatarError}</p>}
           </div>
           <FormField label="First name" name="first_name" value={form.first_name} onChange={(e) => { updateField("first_name")(e); if (validationErrors.first_name) setValidationErrors(prev => { const n = { ...prev }; delete n.first_name; return n; }); }} error={validationErrors.first_name} />
           <FormField label="Last name" name="last_name" value={form.last_name} onChange={(e) => { updateField("last_name")(e); if (validationErrors.last_name) setValidationErrors(prev => { const n = { ...prev }; delete n.last_name; return n; }); }} error={validationErrors.last_name} />

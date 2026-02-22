@@ -8,9 +8,11 @@ import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import {createGroup, getGroups, ApiError } from "@/lib/api";
 import { useState } from "react";
+import useSession from "@/hooks/useSession";
 
 export default function GroupsPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["groups"],
     queryFn: getGroups,
@@ -45,22 +47,6 @@ export default function GroupsPage() {
 
   return (
     <div className="grid" style={{ paddingBottom: 64 }}>
-      <section className="surface card">
-        <SectionHeader title="Groups" />
-        {isLoading ? <p>Loading groups...</p> : null}
-        {isError ? <p style={{ color: "#b42318" }}>{(error as Error).message}</p> : null}
-        {!isLoading && data?.length === 0 || !data ? (
-          <EmptyState
-            title="No groups yet"
-            body="Create the first group to start building your community."
-          />
-        ) : null}
-        <div className="grid two">
-          {data?.map((group) => (
-            <GroupCard key={group.group_id} group={group} />
-          ))}
-        </div>
-      </section>
       <section className="surface card">
         <SectionHeader title="Start a new group" />
         <FormField
@@ -99,6 +85,22 @@ export default function GroupsPage() {
         >
           Create group
         </Button>
+      </section>
+      <section className="surface card">
+        <SectionHeader title="Groups" />
+        {isLoading ? <p>Loading groups...</p> : null}
+        {isError ? <p style={{ color: "#b42318" }}>{(error as Error).message}</p> : null}
+        {!isLoading && data?.length === 0 || !data ? (
+            <EmptyState
+                title="No groups yet"
+                body="Create the first group to start building your community."
+            />
+        ) : null}
+        <div className="grid two">
+          {data?.map((group) => (
+              <GroupCard key={group.group_id} group={group} userId={session?.user_id} />
+          ))}
+        </div>
       </section>
     </div>
   );

@@ -1,25 +1,24 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
-import { getGroupRequests, respondToGroupRequest, ApiError } from "@/lib/api";
+import { respondToGroupRequest, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
+import {GroupJoinRequest} from "@/lib/types";
 
 type GroupRequestsListProps = {
   groupId: string;
+  data: GroupJoinRequest[] | undefined
+  isLoading?: boolean
+  isError?: boolean
+  error?: Error | null
 };
 
-export default function GroupRequestsList({ groupId }: GroupRequestsListProps) {
+export default function GroupRequestsList({ groupId, isError, isLoading, error, data }: GroupRequestsListProps) {
   const queryClient = useQueryClient();
-
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["group-requests", groupId],
-    queryFn: () => getGroupRequests(groupId),
-    enabled: !!groupId,
-  });
 
   const respond = useMutation({
     mutationFn: ({ user_id, response }: { user_id: string; response: string }) =>

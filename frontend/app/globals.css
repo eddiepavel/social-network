@@ -79,6 +79,8 @@ button {
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 12px;
+  display: flex;
+  justify-content: space-between;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   background: #f1e2ca;

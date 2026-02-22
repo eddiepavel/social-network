@@ -187,7 +187,7 @@ func GetGroups(app *app.App) http.HandlerFunc {
 			groupCollection = append(groupCollection, models.GroupResponse{
 				GroupID:     setGroupUUid,
 				GroupName:   group.GroupName,
-				Description: group.GroupName,
+				Description: group.Description,
 				Image: func() string {
 					if group.Image.Valid {
 						return group.Image.String
@@ -602,7 +602,7 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		user, ok := middleware.GetUserIDFromContext(r.Context())
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
 
 		if !ok {
 			utils.Unauthorized(w, "user not found")
@@ -620,7 +620,7 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if !bytes.Equal(user, getGroup.CreatorID) {
+		if !bytes.Equal(currentUser, getGroup.CreatorID) {
 			utils.Unauthorized(w, "you are not owner")
 			return
 		}
@@ -640,11 +640,23 @@ func GetGroupRequests(app *app.App) http.HandlerFunc {
 		var pendingMembers []models.GroupMemberResponse
 
 		for _, member := range groupMemberRequests {
-			UUID, _ := helpers.GenerateFromBytes(member.UserID)
+			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), member.UserID)
+			if err != nil {
+				app.Logger.Error("Failed to fetch user for follow request", "error", err)
+				continue
+			}
+			UUID, _ := helpers.GenerateFromBytes(user.UserID)
 
 			pendingMembers = append(pendingMembers, models.GroupMemberResponse{
-				UserID:    UUID,
-				Status:    member.Status,
+				UserID: UUID,
+				Status: member.Status,
+				Avatar: func() *string {
+					if user.Avatar.Valid && user.Avatar.String != "" {
+						img := app.File.GenerateSignImage(user.Avatar.String, currentUser, time.Now().Add(15*time.Minute))
+						return &img
+					}
+					return nil
+				}(),
 				FirstName: &member.MFirstName,
 				LastName:  &member.MLastName,
 			})
@@ -1103,6 +1115,62 @@ func CreateGroupEvent(app *app.App) http.HandlerFunc {
 			}(),
 			GoingCount:    0,
 			NotGoingCount: 0,
+		}
+
+		utils.OK(w, response)
+	}
+}
+
+func GetGroupEventDetails(app *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentUser, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok {
+			utils.Unauthorized(w, "Unauthorized")
+			return
+		}
+
+		eventID, err := helpers.GenerateFromString(r.PathValue("eventId"))
+		if err != nil {
+			utils.BadRequest(w, errors.New("invalid event ID"))
+		}
+
+		list, err := sqlite.NewQuery(app.DB).Groups.GetGroupEventRSVPs(r.Context(), eventID)
+		if err != nil {
+			app.Logger.Error("failed to get group event RSVPs", "error", err)
+			utils.Internal(w, errors.New("internal server error"))
+		}
+
+		var response []models.RSVPResponse
+		if len(list) == 0 {
+			utils.OK(w, response)
+			return
+		}
+
+		for _, rsvp := range list {
+			user, err := sqlite.NewQuery(app.DB).Users.GetUserById(r.Context(), rsvp.UserID)
+			if err != nil {
+				app.Logger.Error("Failed to fetch user for follow request", "error", err)
+				continue
+			}
+			UUID, _ := helpers.GenerateFromBytes(user.UserID)
+			response = append(response, models.RSVPResponse{
+				UserID: UUID,
+				Status: func() string {
+					if rsvp.Status.Valid {
+						return rsvp.Status.String
+					}
+					return ""
+				}(),
+				FirstName: &user.FirstName,
+				LastName:  &user.LastName,
+				Avatar: func() *string {
+					if user.Avatar.Valid && user.Avatar.String != "" {
+						img := app.File.GenerateSignImage(user.Avatar.String, currentUser, time.Now().Add(15*time.Minute))
+						return &img
+					}
+					return nil
+				}(),
+			})
 		}
 
 		utils.OK(w, response)

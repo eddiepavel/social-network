@@ -237,6 +237,38 @@ func (q *Queries) GetGroupByName(ctx context.Context, groupName string) (*Group,
 	return &i, err
 }
 
+const getGroupEventRSVPs = `-- name: GetGroupEventRSVPs :many
+SELECT event_id, user_id, status, created_at FROM group_rsvp WHERE event_id = ?
+`
+
+func (q *Queries) GetGroupEventRSVPs(ctx context.Context, eventID []byte) ([]*GroupRsvp, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupEventRSVPs, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GroupRsvp
+	for rows.Next() {
+		var i GroupRsvp
+		if err := rows.Scan(
+			&i.EventID,
+			&i.UserID,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupEvents = `-- name: GetGroupEvents :many
 SELECT e.event_id, e.creator_id, e.group_id, e.title, e.description, e.event_timestamp, e.created_at,
     (SELECT COUNT(*) FROM group_rsvp r WHERE r.event_id=e.event_id AND r.status='going') as going_count,
