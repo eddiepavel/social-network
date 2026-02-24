@@ -113,7 +113,7 @@ func (h *Handler) chatRoutes() *http.ServeMux {
 
 	mux.HandleFunc("GET /{roomId}", handlers.GetRoomMessages(h.App))
 	mux.HandleFunc("POST /{roomId}", handlers.CreateMessage(h.App))
-	mux.HandleFunc("POST /new", handlers.CreateRoomAndMessage(h.App))
+	mux.HandleFunc("POST /new", handlers.CreateRoom(h.App))
 	mux.HandleFunc("PUT /{roomId}/name", handlers.EditRoomName(h.App))
 
 	return mux

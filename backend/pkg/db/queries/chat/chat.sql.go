@@ -308,8 +308,8 @@ SELECT
     cr.group_id,
     cr.created_at AS room_created_at,
 
-    COALESCE(lm.message_id, '') AS last_message_id,
-    COALESCE(lm.content, '') AS last_message_content,
+    lm.message_id AS last_message_id,
+    lm.content AS last_message_content,
     lm.created_at AS last_message_time,
     lm.sender_id AS last_message_sender_id,
 
@@ -331,7 +331,7 @@ FROM chat_rooms cr
                     ON cr.room_id = cp.room_id
                         AND cp.user_id = ?
 
-         LEFT JOIN (
+         INNER JOIN (
     SELECT cm1.message_id, cm1.content, cm1.sender_id, cm1.target_id, cm1.created_at
     FROM chat_messages cm1
              INNER JOIN (
@@ -342,7 +342,7 @@ FROM chat_rooms cr
         AND cm1.created_at = cm2.max_time
 ) lm ON cr.room_id = lm.target_id
 
-ORDER BY COALESCE(lm.created_at, cr.created_at) DESC
+ORDER BY lm.created_at DESC
 `
 
 type GetUserChatListParams struct {

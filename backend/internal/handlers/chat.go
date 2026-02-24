@@ -442,7 +442,7 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 	}
 }
 
-func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
+func CreateRoom(app *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 		if !ok {
@@ -465,6 +465,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		targetUser := helpers.FetchUser(app, targetID, r.Context(), w)
 
 		if targetUser.UserID == nil {
+			utils.BadRequest(w, errors.New("bad request"))
 			return
 		}
 
@@ -479,11 +480,7 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			return
 		}
 
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				utils.NotFound(w)
-				return
-			}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			app.Logger.Error("failed to find room between users", "error", err.Error())
 			utils.Internal(w, errors.New("Internal"))
 			return
@@ -529,11 +526,6 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 			utils.Internal(w, errors.New("internal server error"))
 		}
 
-		if err != nil {
-			app.Logger.Error("failed uuid", "error", err.Error())
-			utils.Internal(w, errors.New("internal server error"))
-			return
-		}
 		err = sqlite.NewQuery(app.DB).Chat.CreateRoom(r.Context(), db_chat.CreateRoomParams{
 			RoomID:  roomID,
 			Name:    sql.NullString{Valid: false, String: ""},
