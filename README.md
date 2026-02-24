@@ -10,19 +10,17 @@ A modern, privacy-focused social network built for intentional sharing with circ
 
 Pulse is a full-stack social networking platform that emphasizes user privacy and intentional content sharing. It features a clean, modern interface with support for posts, groups, real-time chat, followers/following relationships, and granular visibility controls.
 
-**Current Branch:** `development`
-
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend (`/frontnew`)
+### Frontend (`/frontend`)
 - **Framework:** [Next.js](https://nextjs.org/) (React-based)
 - **Language:** TypeScript
 - **UI Components:** Custom component library with modern CSS
 - **State Management:** [TanStack Query (React Query)](https://tanstack.com/query) - server state management
+- **Real-time Communication:** WebSocket integration for chat and notifications
 - **Routing:** Next.js App Router
-- **Fonts:** Google Fonts (Fraunces, Space Grotesk)
 - **HTTP Client:** Native `fetch` API with custom wrapper
 - **Build Tool:** Next.js built-in tooling
 
@@ -30,11 +28,17 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
 - **Language:** [Go](https://go.dev/) (v1.24.6)
 - **Database:** [SQLite](https://www.sqlite.org/) with [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) driver
 - **Query Generation:** [sqlc](https://sqlc.dev/) - type-safe SQL queries from raw SQL
-- **Authentication:** Session-based with bcrypt password hashing
+- **Authentication:** Session-based with bcrypt password hashing and cookies
 - **UUID Generation:** `github.com/google/uuid` & `github.com/gofrs/uuid`
+- **WebSocket:** Real-time bidirectional communication for chat and notifications
 - **Hot Reload:** [Air](https://github.com/air-verse/air) (`.air.toml` config)
 - **File Management:** Custom file upload service with automatic cleanup
+- **Migrations:** Automated database migrations with versioning
 - **API Testing:** Postman collections included
+
+### Deployment & Infrastructure
+- **Containerization:** Docker for both frontend and backend services
+- **Development:** docker-compose for local development environment
 
 ---
 
@@ -73,6 +77,8 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
   - Normalized relational schema
   - UUID-based primary keys
   - Support for complex relationships (followers, group members, post visibility)
+  - Foreign key constraints with cascading deletes
+  - Automated migrations with up/down scripts
 
 ### Frontend Architecture
 - **App Router Structure:**
@@ -102,34 +108,124 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
 ## ✨ Key Features
 
 ### User Management
-- **Authentication:** Secure registration and login with session management
-- **Profiles:** User profiles with avatars, bio, and personal details
-- **Follow System:** Follow/unfollow users with request approval for private accounts
-- **Privacy Controls:** Public, semi-private, and private visibility settings
+- **Authentication:** 
+  - Secure registration with email, password, name, date of birth
+  - Optional profile fields: avatar, nickname, about me
+  - Session-based authentication with secure cookies
+  - Persistent login sessions until explicit logout
+- **Profiles:** 
+  - User profiles with customizable avatars and bio
+  - Public vs. private profile settings
+  - View user activity, posts, followers, and following lists
+  - Profile visibility respects privacy settings
+- **Follow System:** 
+  - Send follow requests to other users
+  - Automatic approval for public profiles
+  - Request approval workflow for private profiles
+  - Unfollow functionality
+  - View followers and following lists with privacy controls
+- **Privacy Controls:** Toggle between public and private profile modes
 
 ### Content Sharing
-- **Posts:** Create posts with text and optional images
-- **Visibility Control:** Granular control over who can see your posts
-- **Comments:** Nested commenting system
-- **Reactions:** Like/react to posts and comments
-- **Feed Algorithm:** Personalized feed based on followers and group memberships
+- **Posts:** 
+  - Create posts with text content and optional images/GIFs
+  - Support for JPEG, PNG, and GIF formats
+  - Edit and delete your own posts
+  - Personalized feed algorithm
+- **Visibility Control:** 
+  - **Public:** Visible to all users on the network
+  - **Semi-Private (Almost Private):** Only visible to your followers
+  - **Private:** Visible only to selected followers you choose
+  - Profile privacy affects default post visibility
+- **Comments:** 
+  - Comment on posts you can view
+  - Edit and delete your own comments
+  - Image/GIF support in comments
+- **Reactions:** 
+  - React to posts and comments
+  - View reaction counts and who reacted
+- **Feed Algorithm:** 
+  - Personalized feed based on followers
+  - Group posts included for your groups
+  - Respects privacy settings and visibility rules
 
 ### Groups
-- **Create & Join:** Create public or private groups
-- **Invitations:** Invite users or request to join groups
-- **Approval System:** Group creators can approve/reject join requests
-- **Group Posts:** Share content within specific groups
+- **Create & Join:** 
+  - Create groups with title, description, and optional image
+  - Browse all available groups
+  - Request to join private groups
+  - Receive invitations from group members
+- **Approval System:** 
+  - Group creators manage join requests
+  - Accept or decline membership requests
+  - Invite system for existing members
+- **Group Posts:** 
+  - Create posts visible only to group members
+  - Comment and react within the group
+  - Group-specific feed and content
+- **Group Events:**
+  - Create events with title, description, and date/time
+  - RSVP system with "Going" and "Not Going" options
+  - Event notifications for all group members
+  - View event attendance and responses
+- **Group Chat:**
+  - Dedicated chat room for each group
+  - Real-time messaging for all group members
+  - Persistent message history
 
 ### Messaging
-- **Direct Messages:** One-on-one conversations
-- **Group Chat:** Multi-user conversations
-- **Real-time Support:** WebSocket support for live messaging
-- **Unread Tracking:** Track unread message counts
+- **Direct Messages:** 
+  - One-on-one private conversations
+  - Send messages to users you follow or who follow you
+  - Instant delivery for public profiles
+- **Group Chat:** 
+  - Dedicated chat rooms for each group
+  - All group members can participate
+  - Real-time message synchronization
+- **Real-time Support:** 
+  - WebSocket-powered instant messaging
+  - Live message delivery without page refresh
+  - Connection status indicators
+- **Emoji Support:** 
+  - Emoji picker for expressive messaging
+  - Send and receive emojis in all chats
+- **Chat Features:**
+  - Unread message tracking
+  - Message timestamps
+  - Chat room management
+  - Persistent message history
 
-### Media
-- **Image Uploads:** Secure image upload with validation
-- **Temporary Storage:** Auto-cleanup of unused uploads
-- **Signed URLs:** Secure file access with HMAC signatures
+### Media & File Management
+- **Image Uploads:** 
+  - Secure image upload with validation
+  - Support for JPEG, PNG, and GIF formats
+  - Image handling for posts, comments, profiles, and groups
+- **File Storage:**
+  - Organized storage structure
+  - Temporary storage for upload previews
+  - Auto-cleanup of unused uploads (every 5 minutes)
+- **Security:**
+  - File type validation
+  - Size limits and validation
+  - Secure file access patterns
+
+### Notifications
+- **Real-time Notifications:**
+  - WebSocket-powered instant notifications
+  - Distinct from chat messages
+  - Visible across all pages
+- **Notification Types:**
+  - Follow requests (for private profiles)
+  - Group invitations
+  - Group join requests (for group creators)
+  - New group events
+  - Group membership approvals
+- **Notification Management:**
+  - Mark as seen/unseen
+  - Notification count badges
+  - View notification details with user information
+  - Delete individual notifications
+  - Mark all as read functionality
 
 ---
 
@@ -139,6 +235,7 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
 - **Node.js** (v18+)
 - **Go** (v1.24.6+)
 - **SQLite** (usually pre-installed on most systems)
+- **Docker** (for containerized deployment)
 - **sqlc** (for regenerating DB queries) - [Install sqlc](https://docs.sqlc.dev/en/stable/overview/install.html)
 
 ### Backend Setup
@@ -174,7 +271,7 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
 
 1. Navigate to the frontend directory:
    ```bash
-   cd frontnew
+   cd frontend
    ```
 
 2. Install dependencies:
@@ -184,10 +281,34 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
 
 3. Run the development server:
    ```bash
-   PORT=5173 npm run dev
+   npm run dev
    ```
 
-**Default Frontend Port:** `5173`
+**Default Frontend Port:** `3000`
+
+### Docker Setup (Recommended)
+
+The project is fully containerized with Docker for easy deployment:
+
+1. Build and run both services:
+   ```bash
+   docker-compose up --build
+   ```
+
+2. Access the application:
+   - **Frontend:** `http://localhost:3000`
+   - **Backend API:** `http://localhost:8000`
+
+3. Stop the services:
+   ```bash
+   docker-compose down
+   ```
+
+**Docker Images:**
+- `pulse-frontend` - Next.js frontend application
+- `pulse-backend` - Go backend server
+
+Both containers are configured for optimal development and production environments.
 
 ---
 
@@ -238,31 +359,77 @@ social-network/
 │   ├── app/                 # App context & DI
 │   ├── internal/            # Private application code
 │   │   ├── handlers/        # HTTP handlers
+│   │   │   ├── auth.go      # Authentication
+│   │   │   ├── chat.go      # Real-time messaging
+│   │   │   ├── followers.go # Follow system
+│   │   │   ├── groups.go    # Groups & events
+│   │   │   ├── notifications.go
+│   │   │   ├── posts.go     # Posts, comments, reactions
+│   │   │   ├── users.go     # User profiles
+│   │   │   ├── upload.go    # File uploads
+│   │   │   └── websocket.go # WebSocket connection
 │   │   ├── middleware/      # Middleware stack
-│   │   ├── models/          # Response models
+│   │   │   ├── auth.go      # Session authentication
+│   │   │   ├── cors.go      # CORS handling
+│   │   │   ├── guest.go     # Guest session
+│   │   │   └── log.go       # Request logging
+│   │   ├── models/          # Response DTOs
 │   │   ├── services/        # Business logic
-│   │   ├── helpers/         # Utilities
-│   │   └── utils/           # Response helpers
+│   │   ├── helpers/         # Input validation & utilities
+│   │   ├── utils/           # Response helpers
+│   │   ├── websocket/       # WebSocket manager
+│   │   │   ├── client.go
+│   │   │   ├── event.go
+│   │   │   └── manager.go
+│   │   └── constants/       # App constants
 │   ├── pkg/
-│   │   └── db/
-│   │       ├── queries/     # SQL queries by feature
-│   │       └── sqlite/      # DB connection
+│   │   ├── db/
+│   │   │   ├── migrations/  # Database migrations
+│   │   │   │   └── sqlite/
+│   │   │   │       ├── up/  # Migration up scripts
+│   │   │   │       └── down/# Migration down scripts
+│   │   │   ├── queries/     # SQL queries by feature
+│   │   │   │   ├── users/
+│   │   │   │   ├── posts/
+│   │   │   │   ├── groups/
+│   │   │   │   ├── chat/
+│   │   │   │   └── ...
+│   │   │   └── sqlite/      # DB connection & migrations
+│   │   └── environment/     # Environment config
 │   ├── storage/uploads/     # File uploads
 │   ├── go.mod               # Go dependencies
 │   ├── sqlc.yml            # sqlc configuration
-│   └── .air.toml           # Hot reload config
-├── frontnew/
+│   ├── .air.toml           # Hot reload config
+│   ├── Dockerfile          # Backend container
+│   └── *.postman_*         # API testing collections
+├── frontend/
 │   ├── app/                 # Next.js app directory
-│   │   ├── (auth)/         # Auth pages
+│   │   ├── (auth)/         # Auth pages (login, register)
 │   │   ├── (app)/          # Protected routes
+│   │   │   ├── chat/       # Messaging UI
+│   │   │   ├── feed/       # Main feed
+│   │   │   ├── groups/     # Group pages
+│   │   │   └── profile/    # User profiles
 │   │   ├── layout.tsx      # Root layout
-│   │   ├── providers.tsx   # App providers
+│   │   ├── providers.tsx   # App providers (React Query, WS)
 │   │   └── globals.css     # Global styles
 │   ├── components/          # Reusable UI components
+│   │   ├── ChatRoom.tsx
+│   │   ├── PostCard.tsx
+│   │   ├── NotificationDropdown.tsx
+│   │   └── ... (30+ components)
 │   ├── hooks/              # Custom React hooks
+│   │   ├── useSession.ts   # Auth state
+│   │   ├── useWebSocket.tsx # WebSocket connection
+│   │   └── useInfiniteScroll.ts
 │   ├── lib/                # Utilities & API client
+│   │   ├── api.ts          # HTTP client wrapper
+│   │   ├── types.ts        # TypeScript types
+│   │   └── utils.ts        # Helper functions
 │   ├── next.config.mjs     # Next.js config
-│   └── tsconfig.json       # TypeScript config
+│   ├── tsconfig.json       # TypeScript config
+│   └── Dockerfile          # Frontend container
+├── docker-compose.yml      # Multi-container orchestration
 └── endpoints.md            # API documentation
 ```
 
@@ -271,40 +438,56 @@ social-network/
 ## 👥 Team
 
 This is a collaborative project. For questions or assistance:
-- **Giannis** (Discord)
-- **Eddie** (Discord)
+- [**Giannis Geo**](https://platform.zone01.gr/git/ggeorgako)
+- [**Eddie**](https://platform.zone01.gr/git/epavel) 
+- [**Giannis Vos**](https://platform.zone01.gr/git/ivossos)
+- [**Uipko**](https://platform.zone01.gr/git/ustikker)
+- [**Pavlos**](https://platform.zone01.gr/git/pkerasid)
+- [**Giorgos**](https://platform.zone01.gr/git/gpavrian)
 
 ---
+
+## 🔑 Key Technical Highlights
+
+### Authentication & Sessions
+- **Session-based authentication** with secure HTTP-only cookies
+- **bcrypt password hashing** for secure credential storage
+- Sessions persist until explicit logout
+- Middleware-based route protection
+
+### Database Migrations
+- **Automated migration system** using numbered SQL files
+- Migrations run automatically on application start
+- Up and down scripts for version control
+- Migration tracking in `schema_migrations` table
+- Example migration structure:
+  ```
+  000001_create_users_table.sql
+  000002_create_sessions_table.sql
+  000003_create_followers_table.sql
+  ...
+  ```
+
+### Real-time Features
+- **WebSocket connection** at `/ws/connect`
+- Bi-directional communication for chat and notifications
+- Automatic reconnection with exponential backoff
+- Event-based message routing
+- Connection state management
+
+### Privacy & Security
+- Profile-level privacy (public/private)
+- Post-level visibility controls
+- Follow request approval system
+- Secure file upload validation
+- Foreign key constraints with cascading deletes
 
 ## 📝 Notes
 
 - **Development Branch:** Active development happens on the `development` branch
-- **Database:** SQLite is used for simplicity; migrations are handled manually
+- **Database:** SQLite with automated migrations applied on startup
 - **File Cleanup:** Unused uploads are automatically cleaned every 5 minutes
-- **Session Management:** Sessions are stored server-side; adjust timeout in config
-- **WebSocket:** Real-time chat available at `/ws/chat` endpoint
+- **Session Management:** Sessions are stored server-side in the database
+- **WebSocket:** Real-time connection at `/ws/connect` endpoint
+- **Type Safety:** Full TypeScript on frontend, type-safe SQL with sqlc on backend
 
----
-
-## 🔮 Future Enhancements
-
-- [ ] Notifications system
-- [ ] Advanced search functionality
-- [ ] Stories/ephemeral content
-- [ ] Video upload support
-- [ ] Progressive Web App (PWA) support
-- [ ] Email notifications
-- [ ] Advanced moderation tools
-- [ ] Analytics dashboard
-
----
-
-## 📄 License
-
-*To be determined by the team.*
-
----
-
-**Happy coding! 🚀**
-
-*Built with ❤️ by the Pulse team.*

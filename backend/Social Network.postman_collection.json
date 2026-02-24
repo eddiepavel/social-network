@@ -1,652 +1,1560 @@
 {
-	"info": {
-		"_postman_id": "364abc95-bd52-41f8-986b-e191a0e8b616",
-		"name": "Social Network",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
-		"_exporter_id": "44054371",
-		"_collection_link": "https://edouardospavel.postman.co/workspace/Edouardos-Pavel's-Workspace~ae203417-a07f-4206-8ccc-7879e57a4078/collection/44054371-364abc95-bd52-41f8-986b-e191a0e8b616?action=share&source=collection_link&creator=44054371"
-	},
-	"item": [
-		{
-			"name": "Public",
-			"item": [
-				{
-					"name": "Register",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg7\",\r\n    \"last_name\": \"gg8\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/public/register"
-					},
-					"response": []
-				},
-				{
-					"name": "Login",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/public/login"
-					},
-					"response": []
-				},
-				{
-					"name": "Logout",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": ""
-						},
-						"url": "{{url}}/auth/logout"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Users",
-			"item": [
-				{
-					"name": "Profile",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/users/profile/9130f7d9-11ec-420a-892d-d2cf27aa3508"
-					},
-					"response": []
-				},
-				{
-					"name": "Privacy",
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"is_public\": false\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/users/privacy"
-					},
-					"response": []
-				},
-				{
-					"name": "Update Profile",
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"first_name\": \"tzitzikas\",\r\n    \"last_name\": \"MERMIGAS\",\r\n    \"nickname\": \"gg\",\r\n    \"about_me\": \"gg2\",\r\n    \"avatar\" : \"\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/users/profile"
-					},
-					"response": []
-				},
-				{
-					"name": "Search Users",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{url}}/users/search?name=gg",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"users",
-								"search"
-							],
-							"query": [
-								{
-									"key": "name",
-									"value": "gg"
-								}
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Follow",
-			"item": [
-				{
-					"name": "Follow User",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": "{{url}}/followers/9130f7d9-11ec-420a-892d-d2cf27aa3508/follow"
-					},
-					"response": []
-				},
-				{
-					"name": "Following",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/following"
-					},
-					"response": []
-				},
-				{
-					"name": "Followers",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/followers"
-					},
-					"response": []
-				},
-				{
-					"name": "Follow respond",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"status\": \"accepted\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/followers/requests/3/respond"
-					},
-					"response": []
-				},
-				{
-					"name": "Follow Requests",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/followers/requests"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Groups",
-			"item": [
-				{
-					"name": "All Groups",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/groups/all"
-					},
-					"response": []
-				},
-				{
-					"name": "Group",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/groups/group/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89"
-					},
-					"response": []
-				},
-				{
-					"name": "Invite Group",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"users\": [\r\n        \"2e9cfa6a-d179-4fd6-ac15-58ffd9dcfc38\",\r\n        \"24a70329-2b1d-494f-a53c-36ad334f10e4\",\r\n        \"11a2f964-0398-47b9-add0-9ee2ea0fdc1d\",\r\n        \"a985486f-5783-4a6e-9c02-66e617475db3\",\r\n        \"e1c71d25-1445-4979-a955-5aca13a391ca\"\r\n    ]\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5"
-					},
-					"response": []
-				},
-				{
-					"name": "Handle Group Membership",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"action\" : \"request\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/groups/membership/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89/update"
-					},
-					"response": []
-				},
-				{
-					"name": "Create Group",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"group_name\" : \"papakia2\",\r\n    \"description\" : \"stin seira\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/groups/create"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Files",
-			"item": [
-				{
-					"name": "Upload",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "file",
-									"type": "file",
-									"src": "/C:/Users/giannisgeo/Desktop/Logo Hellenic Folder/logo round.png"
-								}
-							]
-						},
-						"url": {
-							"raw": "{{url}}/storage/upload",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"storage",
-								"upload"
-							],
-							"query": [
-								{
-									"key": "skata",
-									"value": null,
-									"disabled": true
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Image",
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:8000/api/storage/image/e97df30b-105b-47c3-9a6d-33bb579feb18.png?expires=1767012778&signature=19lSGD0yi5VyE4047X1IQvHW6nkpUoa8Q_MYZrA_pcY=",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "8000",
-							"path": [
-								"api",
-								"storage",
-								"image",
-								"e97df30b-105b-47c3-9a6d-33bb579feb18.png"
-							],
-							"query": [
-								{
-									"key": "expires",
-									"value": "1767012778"
-								},
-								{
-									"key": "signature",
-									"value": "19lSGD0yi5VyE4047X1IQvHW6nkpUoa8Q_MYZrA_pcY="
-								}
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Posts",
-			"item": [
-				{
-					"name": "Comments",
-					"item": [
-						{
-							"name": "Get Post Comments",
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
-							},
-							"response": []
-						},
-						{
-							"name": "Create Comment with Parent",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"content\": \"this is the second comment reply from another user\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
-							},
-							"response": []
-						},
-						{
-							"name": "Create Comment",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"content\": \"this is the first comment\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment"
-							},
-							"response": []
-						},
-						{
-							"name": "Edit Comment",
-							"request": {
-								"method": "PUT",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"content\": \"first edited comment\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6"
-							},
-							"response": []
-						},
-						{
-							"name": "Delete Comment",
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Reactions",
-					"item": [
-						{
-							"name": "Get Post Reactions",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction"
-							},
-							"response": []
-						},
-						{
-							"name": "Toggle Post Reaction",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction"
-							},
-							"response": []
-						},
-						{
-							"name": "Toggle Comment Reaction",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c09973d8-9e5c-44ce-904c-f5fc1a77f24f/reaction"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Create Post",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"content\": \"testing pagination\",\n    \"visibility\": \"semi-private\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/posts/create"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Posts Feed",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/posts/feed"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Post Profile",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157"
-					},
-					"response": []
-				},
-				{
-					"name": "Add User To Private Post List",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"user_id\": \"1ac03f92-7c5f-4d38-8aa6-9604ed4c3a49\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328/privacy"
-					},
-					"response": []
-				},
-				{
-					"name": "Remove User To Private Post List",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy"
-					},
-					"response": []
-				},
-				{
-					"name": "Update Post Visibility",
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"visibility\": \"semi-private\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/posts/id/bb0e9498-ef24-4fa3-ba30-76797fbeaf3e/privacy"
-					},
-					"response": []
-				},
-				{
-					"name": "Edit Post",
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"content\": \"edited to test\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328"
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Post",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Chat",
-			"item": [
-				{
-					"name": "Get Chat List",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/chat/list"
-					},
-					"response": []
-				},
-				{
-					"name": "Create Room and Message",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"target_id\": \"9130f7d9-11ec-420a-892d-d2cf27aa3508\",\n    \"content\": \"test 😀\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/chat/new"
-					},
-					"response": []
-				},
-				{
-					"name": "Send Message",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"content\": \"last test for cursor pagiantion\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": "{{url}}/chat/1edd1a0c-33ac-4540-8650-495f501e657e"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Room Messages",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": "{{url}}/chat/1edd1a0c-33ac-4540-8650-495f501e657e"
-					},
-					"response": []
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "364abc95-bd52-41f8-986b-e191a0e8b616",
+    "name": "Social Network",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "44054371",
+    "_collection_link": "https://go.postman.co/collection/44054371-364abc95-bd52-41f8-986b-e191a0e8b616?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{url}}/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/auth/session",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "auth",
+                "session"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\",\r\n    \"first_name\": \"gg7\",\r\n    \"last_name\": \"gg8\",\r\n    \"dob\" : \"28-06-1992\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/public/register",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "public",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"test3@gmail.com\",\r\n    \"password\": \"12345678\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/public/login",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "public",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/users/profile/9130f7d9-11ec-420a-892d-d2cf27aa3508",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "profile",
+                "9130f7d9-11ec-420a-892d-d2cf27aa3508"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Profile Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/users/profile/9130f7d9-11ec-420a-892d-d2cf27aa3508/posts",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "profile",
+                "9130f7d9-11ec-420a-892d-d2cf27aa3508",
+                "posts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Privacy",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"is_public\": false\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/users/privacy",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "privacy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"first_name\": \"tzitzikas\",\r\n    \"last_name\": \"MERMIGAS\",\r\n    \"nickname\": \"gg\",\r\n    \"about_me\": \"gg2\",\r\n    \"avatar\" : \"\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/users/profile",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/users/search?name=gg",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "gg"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Followers",
+      "item": [
+        {
+          "name": "Follow User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/followers/9130f7d9-11ec-420a-892d-d2cf27aa3508/follow",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "followers",
+                "9130f7d9-11ec-420a-892d-d2cf27aa3508",
+                "follow"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Following",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/following",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "followers",
+                "2c3b42e0-edf4-4069-9e30-69426323460f",
+                "following"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Follow Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/followers/status/2c3b42e0-edf4-4069-9e30-69426323460f",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "followers",
+                "status",
+                "2c3b42e0-edf4-4069-9e30-69426323460f"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/followers/2c3b42e0-edf4-4069-9e30-69426323460f/followers",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "followers",
+                "2c3b42e0-edf4-4069-9e30-69426323460f",
+                "followers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Follow respond",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"status\": \"accepted\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/followers/requests/3/respond",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "followers",
+                "requests",
+                "3",
+                "respond"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Follow Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/followers/requests",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "followers",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "Comments",
+          "item": [
+            {
+              "name": "Get Post Comments",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "comment"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Comment with Parent",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"content\": \"this is the second comment reply from another user\",\n    \"parent_id\": \"c09973d8-9e5c-44ce-904c-f5fc1a77f24f\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "comment"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Comment",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"content\": \"this is the first comment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "comment"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Comment",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"content\": \"first edited comment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "comment",
+                    "c92163b1-67e9-4459-abf3-76ee1121d7c6"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Comment",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c92163b1-67e9-4459-abf3-76ee1121d7c6",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "comment",
+                    "c92163b1-67e9-4459-abf3-76ee1121d7c6"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Reactions",
+          "item": [
+            {
+              "name": "Get Post Reactions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "reaction"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Toggle Post Reaction",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/reaction",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "reaction"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Toggle Comment Reaction",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157/comment/c09973d8-9e5c-44ce-904c-f5fc1a77f24f/reaction",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "posts",
+                    "id",
+                    "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                    "comment",
+                    "c09973d8-9e5c-44ce-904c-f5fc1a77f24f",
+                    "reaction"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Create Post",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"testing pagination\",\n    \"visibility\": \"semi-private\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/posts/create",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Posts Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/posts/feed",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "feed"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Post Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/posts/id/fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "id",
+                "fa6e0cce-26d3-45c1-85d5-9a622edbf157"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add User To Private Post List",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": \"1ac03f92-7c5f-4d38-8aa6-9604ed4c3a49\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328/privacy",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "id",
+                "7f3e1470-cd69-4521-9d32-129e49ae2328",
+                "privacy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove User To Private Post List",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": \"2c3b42e0-edf4-4069-9e30-69426323460f\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/posts/id/64565d9e-c26e-4f55-86c1-97ee9a80287a/privacy",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "id",
+                "64565d9e-c26e-4f55-86c1-97ee9a80287a",
+                "privacy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Post Visibility",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"visibility\": \"semi-private\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/posts/id/bb0e9498-ef24-4fa3-ba30-76797fbeaf3e/privacy",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "id",
+                "bb0e9498-ef24-4fa3-ba30-76797fbeaf3e",
+                "privacy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Edit Post",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"edited to test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "id",
+                "7f3e1470-cd69-4521-9d32-129e49ae2328"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/posts/id/7f3e1470-cd69-4521-9d32-129e49ae2328",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "posts",
+                "id",
+                "7f3e1470-cd69-4521-9d32-129e49ae2328"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "All Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/groups/all",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "all"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Group",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/groups/group/3f9c8db8-45a2-4a43-aba1-b057bb6bcf89",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "group",
+                "3f9c8db8-45a2-4a43-aba1-b057bb6bcf89"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Group",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"group_name\" : \"papakia2\",\r\n    \"description\" : \"stin seira\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/create",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Group",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/groups/delete",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "delete"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Group",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"group_name\": \"\",\n    \"description\": \"\",\n    \"image\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/update",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Group",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"users\": [\r\n        \"2e9cfa6a-d179-4fd6-ac15-58ffd9dcfc38\",\r\n        \"24a70329-2b1d-494f-a53c-36ad334f10e4\",\r\n        \"11a2f964-0398-47b9-add0-9ee2ea0fdc1d\",\r\n        \"a985486f-5783-4a6e-9c02-66e617475db3\",\r\n        \"e1c71d25-1445-4979-a955-5aca13a391ca\"\r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/invite/6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "invite",
+                "6a8bf775-00d7-4598-881a-2cf85d9d66c5"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request To Join Group",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"action\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/members/request/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "members",
+                "request",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Group Requests (Admin only)",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"action\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/members/requests/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "members",
+                "requests",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Respond to Group Requests (Admin only)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": \"\",\n    \"response\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/members/respond",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "members",
+                "respond"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove from Group (Admin only)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/members/remove",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "members",
+                "remove"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/groups/group/6a8bf775-00d7-4598-881a-2cf85d9d66c5/events",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "group",
+                "6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+                "events"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/groups/group/6a8bf775-00d7-4598-881a-2cf85d9d66c5/posts",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "group",
+                "6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+                "posts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Group Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"\",\n    \"description\": \"\",\n    \"timestamp\": \"\" // ISO 8601 format\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/group/6a8bf775-00d7-4598-881a-2cf85d9d66c5/events",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "group",
+                "6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+                "events"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Group Post",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"\",\n    \"image_id\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/groups/group/6a8bf775-00d7-4598-881a-2cf85d9d66c5/events",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "groups",
+                "group",
+                "6a8bf775-00d7-4598-881a-2cf85d9d66c5",
+                "events"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Get Chat List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/chat/list",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "chat",
+                "list"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Room and Message",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"target_id\": \"9130f7d9-11ec-420a-892d-d2cf27aa3508\",\n    \"content\": \"test 😀\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/chat/new",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "chat",
+                "new"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"last test for cursor pagiantion\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/chat/1edd1a0c-33ac-4540-8650-495f501e657e",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "chat",
+                "1edd1a0c-33ac-4540-8650-495f501e657e"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Room Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/chat/1edd1a0c-33ac-4540-8650-495f501e657e",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "chat",
+                "1edd1a0c-33ac-4540-8650-495f501e657e"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Edit Room Name",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room_name\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{url}}/chat/1edd1a0c-33ac-4540-8650-495f501e657e/name",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "chat",
+                "1edd1a0c-33ac-4540-8650-495f501e657e",
+                "name"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/C:/Users/giannisgeo/Desktop/Logo Hellenic Folder/logo round.png"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/storage/upload",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "storage",
+                "upload"
+              ],
+              "query": [
+                {
+                  "key": "skata",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Image",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/storage/image/e97df30b-105b-47c3-9a6d-33bb579feb18.png?expires=1767012778&signature=19lSGD0yi5VyE4047X1IQvHW6nkpUoa8Q_MYZrA_pcY=",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "storage",
+                "image",
+                "e97df30b-105b-47c3-9a6d-33bb579feb18.png"
+              ],
+              "query": [
+                {
+                  "key": "expires",
+                  "value": "1767012778"
+                },
+                {
+                  "key": "signature",
+                  "value": "19lSGD0yi5VyE4047X1IQvHW6nkpUoa8Q_MYZrA_pcY="
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notifications with User details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/detalis",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "detalis"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unseen Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/unseen",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "unseen"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unseen Notifications Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/detalis/unseen/count",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "detalis",
+                "unseen",
+                "count"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All as Seen",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/seen/all",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "seen",
+                "all"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Notification as Seen",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/fa6e0cce-26d3-45c1-85d5-9a622edbf157/seen",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                "seen"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/notifications/fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "fa6e0cce-26d3-45c1-85d5-9a622edbf157"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "WebSocket",
+      "item": [
+        {
+          "name": "Connect WebSocket",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/ws/connect",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "ws",
+                "connect"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Get Group Event Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/events/fa6e0cce-26d3-45c1-85d5-9a622edbf157/rsvp",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "events",
+                "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                "rsvp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "RSVP to Group Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/events/fa6e0cce-26d3-45c1-85d5-9a622edbf157/rsvp",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "events",
+                "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                "rsvp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Group Event v2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"\",\n    \"description\": \"\",\n    \"timestamp\": \"\" // ISO 8601 format\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/events/fa6e0cce-26d3-45c1-85d5-9a622edbf157/create",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "events",
+                "fa6e0cce-26d3-45c1-85d5-9a622edbf157",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
 }
