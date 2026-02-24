@@ -59,6 +59,10 @@ func (m *MiddlewareChain) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc
 		userID, err := ValidateSession(m.App.DB, sessionID)
 		if err != nil {
 			m.App.Logger.Error("user validation failed", "err", err)
+			ClearSessionCookie(w, "session_id")
+			uuId := m.CreateGuestSessionCookie(w)
+			ctx := context.WithValue(r.Context(), contextkeys.GuestSession, uuId)
+			_ = ctx
 			utils.Unauthorized(w, "Unauthorized")
 			//always delete session if expired after response
 			if userID != nil {

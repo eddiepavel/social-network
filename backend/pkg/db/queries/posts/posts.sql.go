@@ -135,7 +135,7 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (i
 const createGroupPost = `-- name: CreateGroupPost :one
 INSERT INTO posts (post_id, author_id, content, visibility, image_id, group_id)
 VALUES (?, ?, ?, 'group', ?, ?)
-RETURNING post_id, author_id, content, image_id, visibility, created_at, group_id
+RETURNING post_id, author_id, content, image_id, group_id, visibility, created_at
 `
 
 type CreateGroupPostParams struct {
@@ -160,15 +160,15 @@ func (q *Queries) CreateGroupPost(ctx context.Context, arg CreateGroupPostParams
 		&i.AuthorID,
 		&i.Content,
 		&i.ImageID,
+		&i.GroupID,
 		&i.Visibility,
 		&i.CreatedAt,
-		&i.GroupID,
 	)
 	return i, err
 }
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING post_id, author_id, content, image_id, visibility, created_at, group_id
+INSERT INTO posts (post_id, author_id, content, visibility, image_id) VALUES (?, ?, ?, ?, ?) RETURNING post_id, author_id, content, image_id, group_id, visibility, created_at
 `
 
 type CreatePostParams struct {
@@ -193,9 +193,9 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.AuthorID,
 		&i.Content,
 		&i.ImageID,
+		&i.GroupID,
 		&i.Visibility,
 		&i.CreatedAt,
-		&i.GroupID,
 	)
 	return i, err
 }
@@ -395,7 +395,7 @@ func (q *Queries) GetFeedPostsCount(ctx context.Context, arg GetFeedPostsCountPa
 }
 
 const getGroupPosts = `-- name: GetGroupPosts :many
-SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.group_id, p.visibility, p.created_at,
        u.first_name, u.last_name, u.nickname, u.avatar,
        i.image_id as post_image_id,
        i.image_path,
@@ -423,9 +423,9 @@ type GetGroupPostsRow struct {
 	AuthorID      []byte
 	Content       string
 	ImageID       sql.NullString
+	GroupID       []byte
 	Visibility    string
 	CreatedAt     sql.NullTime
-	GroupID       []byte
 	FirstName     string
 	LastName      string
 	Nickname      sql.NullString
@@ -457,9 +457,9 @@ func (q *Queries) GetGroupPosts(ctx context.Context, arg GetGroupPostsParams) ([
 			&i.AuthorID,
 			&i.Content,
 			&i.ImageID,
+			&i.GroupID,
 			&i.Visibility,
 			&i.CreatedAt,
-			&i.GroupID,
 			&i.FirstName,
 			&i.LastName,
 			&i.Nickname,
@@ -519,7 +519,7 @@ func (q *Queries) GetPostBasicInfo(ctx context.Context, postID []byte) (GetPostB
 }
 
 const getPostByID = `-- name: GetPostByID :one
-SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id, u.first_name, u.last_name, u.nickname, u.avatar, i.file_name
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.group_id, p.visibility, p.created_at, u.first_name, u.last_name, u.nickname, u.avatar, i.file_name
 FROM posts p
 JOIN users u ON p.author_id = u.user_id
 LEFT JOIN images i ON p.image_id = i.image_id
@@ -531,9 +531,9 @@ type GetPostByIDRow struct {
 	AuthorID   []byte
 	Content    string
 	ImageID    sql.NullString
+	GroupID    []byte
 	Visibility string
 	CreatedAt  sql.NullTime
-	GroupID    []byte
 	FirstName  string
 	LastName   string
 	Nickname   sql.NullString
@@ -549,9 +549,9 @@ func (q *Queries) GetPostByID(ctx context.Context, postID []byte) (GetPostByIDRo
 		&i.AuthorID,
 		&i.Content,
 		&i.ImageID,
+		&i.GroupID,
 		&i.Visibility,
 		&i.CreatedAt,
-		&i.GroupID,
 		&i.FirstName,
 		&i.LastName,
 		&i.Nickname,
@@ -665,7 +665,7 @@ func (q *Queries) GetPostVisibility(ctx context.Context, postID []byte) (string,
 }
 
 const getPostsForFeed = `-- name: GetPostsForFeed :many
-SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.group_id, p.visibility, p.created_at,
        u.first_name, u.last_name, u.nickname, u.avatar,
        i.image_id as post_image_id,
        i.image_path,
@@ -727,9 +727,9 @@ type GetPostsForFeedRow struct {
 	AuthorID      []byte
 	Content       string
 	ImageID       sql.NullString
+	GroupID       []byte
 	Visibility    string
 	CreatedAt     sql.NullTime
-	GroupID       []byte
 	FirstName     string
 	LastName      string
 	Nickname      sql.NullString
@@ -764,9 +764,9 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 			&i.AuthorID,
 			&i.Content,
 			&i.ImageID,
+			&i.GroupID,
 			&i.Visibility,
 			&i.CreatedAt,
-			&i.GroupID,
 			&i.FirstName,
 			&i.LastName,
 			&i.Nickname,
@@ -792,7 +792,7 @@ func (q *Queries) GetPostsForFeed(ctx context.Context, arg GetPostsForFeedParams
 }
 
 const getUserPosts = `-- name: GetUserPosts :many
-SELECT p.post_id, p.author_id, p.content, p.image_id, p.visibility, p.created_at, p.group_id,
+SELECT p.post_id, p.author_id, p.content, p.image_id, p.group_id, p.visibility, p.created_at,
        u.first_name, u.last_name, u.nickname, u.avatar,
        i.image_id as post_image_id,
        i.image_path,
@@ -841,9 +841,9 @@ type GetUserPostsRow struct {
 	AuthorID      []byte
 	Content       string
 	ImageID       sql.NullString
+	GroupID       []byte
 	Visibility    string
 	CreatedAt     sql.NullTime
-	GroupID       []byte
 	FirstName     string
 	LastName      string
 	Nickname      sql.NullString
@@ -878,9 +878,9 @@ func (q *Queries) GetUserPosts(ctx context.Context, arg GetUserPostsParams) ([]G
 			&i.AuthorID,
 			&i.Content,
 			&i.ImageID,
+			&i.GroupID,
 			&i.Visibility,
 			&i.CreatedAt,
-			&i.GroupID,
 			&i.FirstName,
 			&i.LastName,
 			&i.Nickname,

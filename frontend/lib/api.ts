@@ -339,6 +339,31 @@ export async function uploadFile(file: File): Promise<{ file_id: string; url: st
   return { file_id: payload.data.uuid, url: payload.data.url, filename: payload.data.filename };
 }
 
+export async function uploadPublicFile(file: File): Promise<{ file_id: string; url: string; filename: string; }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${BASE_URL}/api/public/upload`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  } as RequestInit);
+
+  const payload = (await response.json()) as ApiEnvelope<{ uuid: string; url: string, filename: string; }>;
+  if (!response.ok || payload.error) {
+    const message = payload.error?.message || "Request failed.";
+    const code = payload.error?.code || String(response.status);
+    const details = payload.error?.details;
+    throw new ApiError(message, code, details);
+  }
+  
+  if (!payload.data) {
+    throw new ApiError("Unexpected empty response", "500");
+  }
+  
+  return { file_id: payload.data.uuid, url: payload.data.url, filename: payload.data.filename };
+}
+
 // ============================================
 // CHAT API
 // ============================================

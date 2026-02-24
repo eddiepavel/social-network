@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
-import { registerUser, ApiError } from "@/lib/api";
+import { registerUser, ApiError, uploadPublicFile } from "@/lib/api";
 import Avatar from "@/components/Avatar";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -25,14 +25,22 @@ export default function RegisterPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>();
-  const handleAvatarSelect = (file: File) => {
-      setAvatarFile(file);
-      setAvatarError(null);
-      const reader = new FileReader();
-      reader.onload = (e) => setAvatarPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
+  const handleAvatarSelect = async (file: File) => {
+    setAvatarError(null);
+    await uploadPublicFile(file).then((response) => {
+      setAvatarPreview(response.url)
+      setForm(prev => ({...prev, avatar: response.filename}))
+    }).catch((error) => {
+      if (error instanceof ApiError && error.details && typeof error.details === 'object') {
+        setValidationErrors(error.details);
+      }
+
+      if (error instanceof ApiError && error.code == "419") {
+        location.reload()
+      }
+    })
+
   };
 
   const register = useMutation({
@@ -40,12 +48,12 @@ export default function RegisterPage() {
     onSuccess: () => router.push("/feed"),
     onError: (error) => {
       setValidationErrors({});
-    
+
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
       }
- 
-      if (error instanceof ApiError && error.code == "419"){
+
+      if (error instanceof ApiError && error.code == "419") {
         console.log("never refresh")
         location.reload()
       }
@@ -54,35 +62,35 @@ export default function RegisterPage() {
 
   const update =
     (key: keyof typeof form) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm((prev) => ({ ...prev, [key]: event.target.value }));
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setForm((prev) => ({ ...prev, [key]: event.target.value }));
 
-    if (validationErrors[key]) {
-      setValidationErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[key];
-        return newErrors;
-      });
-    }
-  };
+        if (validationErrors[key]) {
+          setValidationErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors[key];
+            return newErrors;
+          });
+        }
+      };
 
   return (
     <div className="surface card" style={{ maxWidth: 620, margin: "0 auto" }}>
       <h2 style={{ margin: 0 }}>Create your account</h2>
       <p style={{ color: "var(--muted)" }}>Start shaping your circle.</p>
       <div className="grid two">
-        <FormField 
-          label="First name" 
-          name="first_name" 
-          value={form.first_name} 
-          onChange={update("first_name")} 
+        <FormField
+          label="First name"
+          name="first_name"
+          value={form.first_name}
+          onChange={update("first_name")}
           error={validationErrors.first_name}
         />
-        <FormField 
-          label="Last name" 
-          name="last_name" 
-          value={form.last_name} 
-          onChange={update("last_name")} 
+        <FormField
+          label="Last name"
+          name="last_name"
+          value={form.last_name}
+          onChange={update("last_name")}
           error={validationErrors.last_name}
         />
       </div>
@@ -103,39 +111,39 @@ export default function RegisterPage() {
         onChange={update("password")}
         error={validationErrors.password}
       />
-      <FormField 
-        label="Date of birth" 
-        name="dob" 
-        type="date" 
-        value={form.dob} 
-        onChange={update("dob")} 
+      <FormField
+        label="Date of birth"
+        name="dob"
+        type="date"
+        value={form.dob}
+        onChange={update("dob")}
         error={validationErrors.dob}
       />
-      <FormField 
-        label="Nickname" 
-        name="nickname" 
-        value={form.nickname} 
-        onChange={update("nickname")} 
+      <FormField
+        label="Nickname"
+        name="nickname"
+        value={form.nickname}
+        onChange={update("nickname")}
         error={validationErrors.nickname}
       />
-        <label className="form-field">
-            <span>Avatar</span>
-        </label>
-        <div className="edit-avatar-section">
-            <Avatar
-                src={avatarPreview}
-                name={`${form.first_name} ${form.last_name}`}
-                size={80}
-            />
-            <ImageUpload
-                onImageSelect={handleAvatarSelect}
-                accept="image/*"
-                maxSizeMB={5}
-                label="Upload avatar"
-                compact
-            />
-            {avatarError && <p style={{ color: "#b42318" }}>{avatarError}</p>}
-        </div>
+      <label className="form-field">
+        <span>Avatar</span>
+      </label>
+      <div className="edit-avatar-section">
+        <Avatar
+          src={avatarPreview}
+          name={`${form.first_name} ${form.last_name}`}
+          size={80}
+        />
+        <ImageUpload
+          onImageSelect={handleAvatarSelect}
+          accept="image/*"
+          maxSizeMB={5}
+          label="Upload avatar"
+          compact
+        />
+        {avatarError && <p style={{ color: "#b42318" }}>{avatarError}</p>}
+      </div>
       {register.isError ? (
         register.error instanceof ApiError && typeof register.error.details === 'object' ? null : (
           <p style={{ color: "#b42318" }}>

@@ -35,7 +35,45 @@ func (rv RegisterValidator) Build(r *http.Request, app *app.App) map[string][]in
 		"first_name": {"required", "string"},
 		"last_name":  {"required", "string"},
 		"dob":        {"required", "string"},
-		"avatar":     {"sometimes", "base64"},
+		"avatar": {"sometimes", func(v interface{}) error {
+			value := v.(string)
+
+			if value == "" {
+				return nil
+			}
+
+			valueSplit := strings.Split(value, ".")
+
+			if len(valueSplit) != 2 {
+				return errors.New("wrong image file")
+			}
+
+			imageId := valueSplit[0]
+
+			image, err := sqlite.NewQuery(app.DB).PublicImage.GetPublicImage(r.Context(), imageId)
+
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return errors.New("wrong id")
+				}
+
+				return errors.New("something went wrong")
+			}
+
+			guestUser := r.Context().Value(contextkeys.GuestSession).(string)
+
+			gGuestSession, err := GenerateFromString(guestUser)
+
+			if !bytes.Equal(gGuestSession, image.GuestSession) {
+				return errors.New("wrong id")
+			}
+
+			if !image.ExpiresAt.Valid {
+				return errors.New("wrong id")
+			}
+
+			return nil
+		}},
 		"nickname": {"sometimes", "string", func(v interface{}) error {
 			nickname, _ := v.(string)
 			if nickname == "" {

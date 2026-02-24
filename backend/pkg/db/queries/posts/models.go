@@ -57,9 +57,9 @@ type Post struct {
 	AuthorID   []byte
 	Content    string
 	ImageID    sql.NullString
+	GroupID    []byte
 	Visibility string
 	CreatedAt  sql.NullTime
-	GroupID    []byte
 }
 
 type Reaction struct {

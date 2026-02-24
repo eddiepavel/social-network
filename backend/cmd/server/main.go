@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"social-network/app"
@@ -31,7 +35,7 @@ func main() {
 
 	logger.Info("database success")
 
-	file := services.NewFileService("./storage/uploads", db.DB, 5*time.Minute, logger)
+	file := services.NewFileService("./storage/uploads", "./storage/public", db.DB, 5*time.Minute, logger)
 	file.StartCleanUp()
 
 	// Initialize WebSocket manager
@@ -55,11 +59,42 @@ func main() {
 	// Set up routes
 	mux := routes.Setup(app)
 
-	// Start server
 	port := os.Getenv("PORT")
 
-	log.Printf("Server starting on port %s...", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatal("Server failed to start:", err)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
 	}
+
+	serverError := make(chan error, 1)
+
+	// Start server
+	go func() {
+		log.Printf("Server starting on port %s...", port)
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("Server failed to start:", err)
+			serverError <- err
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	select {
+	case err := <-serverError:
+		logger.Error("server error", "err", err)
+	case sig := <-stop:
+		logger.Info("receive signal", "info", sig)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Info("server shutdown error", "err", err)
+		return
+	}
+
 }

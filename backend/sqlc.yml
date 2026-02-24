@@ -35,8 +35,7 @@ sql:
              "/pkg/db/migrations/sqlite/up/000003_create_followers_table.sql",
              "/pkg/db/migrations/sqlite/up/000004_create_images_table.sql",
              "/pkg/db/migrations/sqlite/up/000009_create_groups_table.sql",
-             "/pkg/db/migrations/sqlite/up/000010_create_group_members_table.sql",
-             "/pkg/db/migrations/sqlite/up/000019_add_group_id_to_posts.sql"
+             "/pkg/db/migrations/sqlite/up/000010_create_group_members_table.sql"
             ]
     gen:
       go:
@@ -98,3 +97,10 @@ sql:
       go:
         package: "db_notifications"
         out: "/pkg/db/queries/notifications"
+  - engine: "sqlite"
+    queries: ["/pkg/db/queries/public_images/public_images.sql"]
+    schema: ["/pkg/db/migrations/sqlite/up/000019_create_public_images_table.sql"]
+    gen:
+      go:
+        package: "db_public_images"
+        out: "/pkg/db/queries/public_images"

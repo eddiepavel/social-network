@@ -21,6 +21,8 @@ func (h *Handler) publicRoutes() *http.ServeMux {
 
 	mux.HandleFunc("POST /register", handlers.Register(h.App))
 	mux.HandleFunc("POST /login", handlers.Login(h.App))
+	mux.HandleFunc("POST /upload", handlers.UploadPublic(h.App))
+	mux.HandleFunc("GET /image/{image}", handlers.GetPublicImage(h.App))
 
 	return mux
 }

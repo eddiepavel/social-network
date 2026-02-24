@@ -474,7 +474,8 @@ func CreateRoomAndMessage(app *app.App) http.HandlerFunc {
 		})
 
 		if roomExists != nil {
-			utils.BadRequest(w, errors.New("room already exists"))
+			roomUUid, _ := helpers.GenerateFromBytes(roomExists)
+			utils.OK(w, map[string]string{"room_id": roomUUid})
 			return
 		}
 

@@ -13,6 +13,7 @@ import (
 	"social-network/internal/utils"
 	db_users "social-network/pkg/db/queries/users"
 	"social-network/pkg/db/sqlite"
+	"strings"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -52,6 +53,13 @@ func Register(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		var avatarValue sql.NullString
+		if req.Avatar != "" {
+			avatarValue = sql.NullString{String: req.Avatar, Valid: true}
+		} else {
+			avatarValue = sql.NullString{String: "", Valid: false}
+		}
+
 		//insert user
 		transaction, err := sqlite.NewQuery(app.DB).Users.CreateUser(r.Context(), db_users.CreateUserParams{
 			UserID:       userID,
@@ -60,7 +68,7 @@ func Register(app *app.App) http.HandlerFunc {
 			FirstName:    req.FirstName,
 			LastName:     req.LastName,
 			Dob:          req.DOB,
-			Avatar:       sql.NullString{String: req.Avatar, Valid: true},
+			Avatar:       avatarValue,
 			Nickname:     sql.NullString{String: req.Nickname, Valid: true},
 			AboutMe:      sql.NullString{String: req.AboutMe, Valid: true},
 		})
@@ -69,6 +77,21 @@ func Register(app *app.App) http.HandlerFunc {
 			app.Logger.Error("failed to create user", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
+		}
+
+		if req.Avatar != "" {
+			imageId := strings.Split(req.Avatar, ".")
+
+			if len(imageId) == 2 {
+				err := app.File.MoveToPrivate(imageId[0], transaction.UserID, imageId[1])
+
+				if err != nil {
+					app.Logger.Error("failed to assign public image to user", "error", err)
+				}
+			}
+
+			app.Logger.Error("failed to assign image due to wrong type")
+
 		}
 
 		// Create session for auto-login

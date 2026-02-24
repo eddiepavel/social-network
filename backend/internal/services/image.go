@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"slices"
 	db_image "social-network/pkg/db/queries/image"
+	db_public_images "social-network/pkg/db/queries/public_images"
 	"social-network/pkg/db/sqlite"
 	"strconv"
 	"strings"
@@ -27,11 +28,12 @@ import (
 var secretKey = []byte(os.Getenv("SECRET_SIGN"))
 
 type FileService struct {
-	BasePath string
-	DB       *sql.DB
-	Interval time.Duration
-	stopChan chan bool
-	Logger   *slog.Logger
+	BasePath   string
+	DB         *sql.DB
+	Interval   time.Duration
+	stopChan   chan bool
+	Logger     *slog.Logger
+	PublicPath string
 }
 
 type File struct {
@@ -43,13 +45,27 @@ type File struct {
 	ExpiresAt time.Time
 }
 
-func NewFileService(path string, db *sql.DB, interval time.Duration, log *slog.Logger) *FileService {
+type PublicFile struct {
+	UUId         string
+	GuestSession []byte
+	Filename     string
+	ImagePath    string
+	CreatedAt    time.Time
+	ExpiresAt    time.Time
+}
+
+type SaveDBImage interface {
+	saveImageToDatabase(db *sql.DB) error
+}
+
+func NewFileService(privatePath string, publicPath string, db *sql.DB, interval time.Duration, log *slog.Logger) *FileService {
 	return &FileService{
-		BasePath: path,
-		DB:       db,
-		Interval: interval,
-		stopChan: make(chan bool),
-		Logger:   log,
+		BasePath:   privatePath,
+		DB:         db,
+		Interval:   interval,
+		stopChan:   make(chan bool),
+		Logger:     log,
+		PublicPath: publicPath,
 	}
 }
 
@@ -90,17 +106,32 @@ func (s *FileService) runCleanUp() {
 		return
 	}
 
+	publicImages, err := sqlite.NewQuery(s.DB).PublicImage.GetPublicImages(ctx)
+
+	if err != nil {
+		s.Logger.Error("error fetching public images")
+		return
+	}
+
 	imagesToDelete := []string{}
 	imagePaths := []string{}
 
 	for _, image := range images {
-		fmt.Println(image.ExpiresAt.Valid)
 		if !start.After(image.ExpiresAt.Time) {
 			continue
 		}
 
 		imagesToDelete = append(imagesToDelete, image.ImageID)
 		imagePaths = append(imagePaths, image.ImagePath)
+	}
+
+	for _, publicImage := range publicImages {
+		if !start.After(publicImage.ExpiresAt.Time) {
+			continue
+		}
+
+		imagesToDelete = append(imagesToDelete, publicImage.ImageID)
+		imagePaths = append(imagePaths, publicImage.ImagePath)
 	}
 
 	if len(imagesToDelete) == 0 {
@@ -114,6 +145,14 @@ func (s *FileService) runCleanUp() {
 	}
 
 	err = sqlite.NewQuery(s.DB).Image.WithTx(tx).DeleteImages(ctx, imagesToDelete)
+
+	if err != nil {
+		tx.Rollback()
+		s.Logger.Error("failed to delete images from database", "error", err)
+		return
+	}
+
+	err = sqlite.NewQuery(s.DB).PublicImage.WithTx(tx).DeletePublicImages(ctx, imagesToDelete)
 
 	if err != nil {
 		tx.Rollback()
@@ -141,10 +180,14 @@ func (s *FileService) runCleanUp() {
 	s.Logger.Info("cleanup completed", "database_records", len(imagesToDelete), "files deleted", deletedFiles)
 }
 
-func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, error) {
+func (s *FileService) UploadHandler(file multipart.File, user []byte, path string) (SaveDBImage, error) {
 
-	if _, err := os.Stat(s.BasePath); os.IsNotExist(err) {
-		os.Mkdir(s.BasePath, 0755)
+	if path != s.BasePath && path != s.PublicPath {
+		return nil, errors.New("wrong path")
+	}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		os.Mkdir(path, 0755)
 	}
 
 	readFile, err := io.ReadAll(file)
@@ -169,7 +212,7 @@ func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, er
 		return nil, errors.New("not an image")
 	}
 
-	create, err := os.Create(filepath.Join(s.BasePath, filename))
+	create, err := os.Create(filepath.Join(path, filename))
 
 	if err != nil {
 		return nil, err
@@ -181,22 +224,37 @@ func (s *FileService) UploadHandler(file multipart.File, user []byte) (*File, er
 		return nil, err
 	}
 
-	databaseFile := File{
-		UUId:      uuid,
-		User:      user,
-		Filename:  filename,
-		ImagePath: s.BasePath + "/" + filename,
-		CreatedAt: time.Now().UTC(),
-		ExpiresAt: time.Now().UTC().Add(5 * time.Minute),
+	IsPublic := strings.Contains(path, "public")
+
+	var img SaveDBImage
+
+	if IsPublic {
+		img = &PublicFile{
+			UUId:         uuid,
+			GuestSession: user,
+			Filename:     filename,
+			ImagePath:    filepath.Join(path, filename),
+			CreatedAt:    time.Now().UTC(),
+			ExpiresAt:    time.Now().UTC().Add(5 * time.Minute),
+		}
+	} else {
+		img = &File{
+			UUId:      uuid,
+			User:      user,
+			Filename:  filename,
+			ImagePath: filepath.Join(path, filename),
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(5 * time.Minute),
+		}
 	}
 
-	err = s.saveFileToDatabase(databaseFile)
+	err = s.saveImage(img)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &databaseFile, nil
+	return img, nil
 
 }
 
@@ -238,6 +296,21 @@ func (s *FileService) GenerateSignImage(filename string, userID []byte, expires 
 	return fmt.Sprintf("%s/api/storage/image/%s?expires=%d&signature=%s", url, filename, expires.Unix(), signature)
 }
 
+func (s *FileService) GeneratePublicSignImage(filename string, userID []byte, expires time.Time) string {
+
+	signMessage := fmt.Sprintf("%s:%d", userID, expires.Unix())
+
+	mac := hmac.New(sha256.New, secretKey)
+
+	mac.Write([]byte(signMessage))
+
+	signature := base64.URLEncoding.EncodeToString(mac.Sum(nil))
+
+	url := os.Getenv("APP_URL")
+
+	return fmt.Sprintf("%s/api/public/image/%s?expires=%d&signature=%s", url, filename, expires.Unix(), signature)
+}
+
 func (s *FileService) ValidateImageSign(r *http.Request, userId []byte) (bool, error) {
 
 	queries := r.URL.Query()
@@ -266,8 +339,92 @@ func (s *FileService) ValidateImageSign(r *http.Request, userId []byte) (bool, e
 	return hmac.Equal([]byte(signature), []byte(expectedSig)), nil
 }
 
-func (s *FileService) saveFileToDatabase(file File) error {
-	err := sqlite.NewQuery(s.DB).Image.CreateImage(context.Background(), db_image.CreateImageParams{
+func (s *FileService) MoveToPrivate(img string, user []byte, extension string) error {
+	ctx := context.Background()
+
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.New("failed to start transaction")
+	}
+	defer tx.Rollback()
+
+	getPublicImage, err := sqlite.NewQuery(s.DB).PublicImage.GetPublicImage(ctx, img)
+	if err != nil {
+		return errors.New("failed to fetch image")
+	}
+
+	publicFolderFile, err := os.Open(filepath.Join(s.PublicPath, img+"."+extension))
+	if err != nil {
+		return errors.New("failed to find public image file")
+	}
+	defer publicFolderFile.Close()
+
+	privateFolderFile, err := os.Create(filepath.Join(s.BasePath, img+"."+extension))
+	if err != nil {
+		return errors.New("failed to create private image file")
+	}
+	defer privateFolderFile.Close()
+
+	_, err = io.Copy(privateFolderFile, publicFolderFile)
+	if err != nil {
+		os.Remove(filepath.Join(s.BasePath, img))
+		return errors.New("failed to transfer file")
+	}
+
+	savePrivateFile := &File{
+		UUId:      getPublicImage.ImageID,
+		User:      user,
+		Filename:  getPublicImage.FileName,
+		ImagePath: filepath.Join(s.BasePath, img),
+		CreatedAt: getPublicImage.CreatedAt.Time,
+		ExpiresAt: time.Now().UTC().Add(24 * time.Hour),
+	}
+
+	err = sqlite.NewQuery(s.DB).Image.WithTx(tx).CreateImage(ctx, db_image.CreateImageParams{
+		ImageID:   savePrivateFile.UUId,
+		PosterID:  savePrivateFile.User,
+		ImagePath: savePrivateFile.ImagePath,
+		FileName:  savePrivateFile.Filename,
+		Column5:   savePrivateFile.CreatedAt.Format("2006-01-02 15:04:05"),
+		Column6:   savePrivateFile.ExpiresAt.Format("2006-01-02 15:04:05"),
+	})
+
+	if err != nil {
+		os.Remove(filepath.Join(s.BasePath, img+"."+extension))
+		return err
+	}
+
+	err = sqlite.NewQuery(s.DB).Image.WithTx(tx).AssignImage(ctx, savePrivateFile.UUId)
+	if err != nil {
+		os.Remove(filepath.Join(s.BasePath, img+"."+extension))
+		return err
+	}
+
+	err = sqlite.NewQuery(s.DB).PublicImage.WithTx(tx).DeletePublicImage(ctx, getPublicImage.ImageID)
+	if err != nil {
+		os.Remove(filepath.Join(s.BasePath, img+"."+extension))
+		return errors.New("failed to delete public image record")
+	}
+
+	if err := tx.Commit(); err != nil {
+		os.Remove(filepath.Join(s.BasePath, img+"."+extension))
+		return errors.New("failed to commit transaction")
+	}
+
+	err = os.Remove(filepath.Join(s.PublicPath, img+"."+extension))
+	if err != nil {
+		s.Logger.Warn("failed to delete public file", "path", filepath.Join(s.PublicPath, img))
+	}
+
+	return nil
+}
+
+func (s *FileService) saveImage(img SaveDBImage) error {
+	return img.saveImageToDatabase(s.DB)
+}
+
+func (file *File) saveImageToDatabase(db *sql.DB) error {
+	err := sqlite.NewQuery(db).Image.CreateImage(context.Background(), db_image.CreateImageParams{
 		ImageID:   file.UUId,
 		PosterID:  file.User,
 		ImagePath: file.ImagePath,
@@ -281,6 +438,24 @@ func (s *FileService) saveFileToDatabase(file File) error {
 	}
 
 	return nil
+}
+
+func (publicFile *PublicFile) saveImageToDatabase(db *sql.DB) error {
+	err := sqlite.NewQuery(db).PublicImage.SavePublicImage(context.Background(), db_public_images.SavePublicImageParams{
+		ImageID:      publicFile.UUId,
+		GuestSession: publicFile.GuestSession,
+		ImagePath:    publicFile.ImagePath,
+		FileName:     publicFile.Filename,
+		Column5:      publicFile.CreatedAt.Format("2006-01-02 15:04:05"),
+		Column6:      publicFile.ExpiresAt.Format("2006-01-02 15:04:05"),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func (s *FileService) isValidFile(file []byte) bool {
