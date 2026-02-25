@@ -68,7 +68,6 @@ func Setup(app *app.App) http.Handler {
 	apiMux.Handle("/chat/", http.StripPrefix("/chat", chatRoutes))
 	apiMux.Handle("/events/", http.StripPrefix("/events", eventsRoutes))
 	apiMux.Handle("/notifications/", http.StripPrefix("/notifications", notificationsGroup))
-	apiMux.Handle("/ws/", http.StripPrefix("/ws", wsGroup))
 	mux.Handle("/api/", http.StripPrefix("/api", apiMux))
 
 	// WebSocket route (outside /api/ prefix)
