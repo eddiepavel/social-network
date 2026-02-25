@@ -37,10 +37,11 @@ export default function ProfilePage() {
   const { data: userPosts, isLoading: postsLoading, isError: postsError } = useQuery({
     queryKey: ["userPosts", userId],
     queryFn: () => getUserPosts(userId, 1, 20),
-    retry: false, // Don't retry if unauthorized
+    retry: false, 
+    enabled: !!data?.can_view, 
   });
 
-  const {data: userRequests, isLoading: requestsIsLoading, isError: requestsIsError, error: requestsError} = useQuery({
+  const { data: userRequests, isLoading: requestsIsLoading, isError: requestsIsError, error: requestsError } = useQuery({
     queryKey: ["follow-requests"],
     queryFn: getFollowRequests,
     enabled: !!session?.user_id && isSelf,
@@ -185,7 +186,7 @@ export default function ProfilePage() {
           )}
           {activeTab === "followers" && <FollowersList userId={userId} type="followers" />}
           {activeTab === "following" && <FollowersList userId={userId} type="following" />}
-          {activeTab === "requests" && isSelf && <FollowRequestsList data={userRequests} isError={requestsIsError} isLoading={requestsIsLoading} error={requestsError}/>}
+          {activeTab === "requests" && isSelf && <FollowRequestsList data={userRequests} isError={requestsIsError} isLoading={requestsIsLoading} error={requestsError} />}
         </section>
       )}
 
