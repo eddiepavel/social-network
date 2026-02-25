@@ -16,9 +16,10 @@ type EventHandler func(event Event, c *Client, db *sql.DB) error
 
 const (
 	// Server -> Client events (outgoing)
-	EventNotification = "notification"
-	EventError        = "error"
-	EventChatMessage  = "chat_message"
+	EventNotification        = "notification"
+	EventNotificationDeleted = "notification_deleted"
+	EventError               = "error"
+	EventChatMessage         = "chat_message"
 )
 
 // NotificationEvent represents a notification pushed to the client
@@ -34,6 +35,14 @@ type NotificationEvent struct {
 	EventID      string    `json:"event_id,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	IsSeen       bool      `json:"is_seen"`
+}
+
+// NotificationDeletedEvent represents a notification deletion event
+type NotificationDeletedEvent struct {
+	ReceiverID string `json:"receiver_id"`
+	FromID     string `json:"from_id"`
+	Type       string `json:"type"`
+	GroupID    string `json:"group_id,omitempty"`
 }
 
 // ErrorEvent represents an error message sent to the client

@@ -12,6 +12,7 @@ import (
 	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_followers "social-network/pkg/db/queries/followers"
+	db_notifications "social-network/pkg/db/queries/notifications"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
 	"strconv"
@@ -118,12 +119,21 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
-				
-				// Create notification for follow request
-				err = helpers.CreateNotification(app, user.UserID, constants.NotificationFollowRequest, currentUserID, nil, nil, nil)
-				if err != nil {
-					app.Logger.Error("failed to create follow request notification", "err", err)
-					// Don't fail the request if notification fails
+
+				// Create notification for follow request with cooldown check
+				notifCooldown := 2 * time.Minute
+				lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastFollowRequestNotification(r.Context(), db_notifications.GetLastFollowRequestNotificationParams{
+					ReceiverID: user.UserID,
+					FromID:     currentUserID,
+				})
+				if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+					app.Logger.Info("Skipping follow request notification due to cooldown", "from", string(currentUserID), "to", string(user.UserID))
+				} else {
+					err = helpers.CreateNotification(app, user.UserID, constants.NotificationFollowRequest, currentUserID, nil, nil, nil)
+					if err != nil {
+						app.Logger.Error("failed to create follow request notification", "err", err)
+						// Don't fail the request if notification fails
+					}
 				}
 
 				utils.OK(w, "Follow requested successfully")
@@ -138,6 +148,24 @@ func FollowUser(app *app.App) http.HandlerFunc {
 					utils.Internal(w, err)
 					return
 				}
+
+				// Delete the follow request notification
+				err = sqlite.NewQuery(app.DB).Notifications.DeleteFollowRequestNotification(r.Context(), db_notifications.DeleteFollowRequestNotificationParams{
+					ReceiverID: user.UserID,
+					FromID:     currentUserID,
+				})
+				if err != nil {
+					app.Logger.Error("failed to delete follow request notification", "err", err)
+					// Don't fail the request if notification deletion fails
+				}
+
+				// Broadcast notification deletion to receiver via WebSocket
+				if app.WsManager != nil {
+					receiverUUID, _ := helpers.GenerateFromBytes(user.UserID)
+					senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
+					app.WsManager.BroadcastNotificationDeleted(receiverUUID, senderUUID, "follow_request", "")
+				}
+
 				utils.OK(w, "Follow request cancelled successfully")
 				return
 			}
@@ -231,11 +259,20 @@ func UpdateFollowRequest(app *app.App) http.HandlerFunc {
 				return
 			}
 
-			// Create notification for follow accepted
-			err = helpers.CreateNotification(app, request.FollowerID, constants.NotificationFollowAccepted, currentUserID, nil, nil, nil)
-			if err != nil {
-				app.Logger.Error("failed to create follow accepted notification", "err", err)
-				// Don't fail the request if notification fails
+			// Create notification for follow accepted with cooldown check
+			notifCooldown := 2 * time.Minute
+			lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastFollowAcceptedNotification(r.Context(), db_notifications.GetLastFollowAcceptedNotificationParams{
+				ReceiverID: request.FollowerID,
+				FromID:     currentUserID,
+			})
+			if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+				app.Logger.Info("Skipping follow accepted notification due to cooldown", "from", string(currentUserID), "to", string(request.FollowerID))
+			} else {
+				err = helpers.CreateNotification(app, request.FollowerID, constants.NotificationFollowAccepted, currentUserID, nil, nil, nil)
+				if err != nil {
+					app.Logger.Error("failed to create follow accepted notification", "err", err)
+					// Don't fail the request if notification fails
+				}
 			}
 
 			utils.OK(w, "Follow request accepted")

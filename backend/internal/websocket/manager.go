@@ -297,6 +297,51 @@ func (m *Manager) BroadcastChatMessage(roomID []byte, events []ChatEvent) {
 	}
 }
 
+// BroadcastNotificationDeleted sends a notification deletion event to a specific user
+// Only sends if the user is currently connected
+func (m *Manager) BroadcastNotificationDeleted(receiverID, fromID, notifType, groupID string) {
+	// Check if user is online first
+	m.RLock()
+	_, isOnline := m.clients[receiverID]
+	m.RUnlock()
+
+	if !isOnline {
+		m.Logger.Info("User not online, skipping notification deleted broadcast", "receiverID", receiverID)
+		return
+	}
+
+	deleteEvent := NotificationDeletedEvent{
+		ReceiverID: receiverID,
+		FromID:     fromID,
+		Type:       notifType,
+		GroupID:    groupID,
+	}
+
+	payload, err := json.Marshal(deleteEvent)
+	if err != nil {
+		m.Logger.Error("failed to marshal notification deleted event", "err", err)
+		return
+	}
+
+	event := Event{
+		Type:    EventNotificationDeleted,
+		Payload: payload,
+	}
+
+	m.RLock()
+	client, ok := m.clients[receiverID]
+	m.RUnlock()
+
+	if ok {
+		select {
+		case client.egress <- event:
+			m.Logger.Info("Notification deleted event sent", "receiverID", receiverID, "type", notifType)
+		default:
+			m.Logger.Warn("Client egress channel full for notification deleted", "receiverID", receiverID)
+		}
+	}
+}
+
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 

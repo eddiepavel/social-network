@@ -84,3 +84,58 @@ SELECT created_at FROM notifications
 WHERE receiver_id = ? AND from_id = ? AND type = 'message'
 ORDER BY created_at DESC
 LIMIT 1;
+-- name: GetLastFollowRequestNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'follow_request'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: GetLastFollowAcceptedNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'follow_accepted'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: GetLastGroupRequestNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'group_request'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: GetLastGroupJoinApprovedNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'group_join_approved'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: DeleteFollowRequestNotification :exec
+DELETE FROM notifications 
+WHERE receiver_id = ? AND from_id = ? AND type = 'follow_request';
+
+-- name: DeleteGroupRequestNotification :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND group_id = ? AND type = 'group_request';
+
+-- name: GetLastPostReactionNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'post_reaction'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: GetLastCommentReactionNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'comment_reaction'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: DeletePostReactionNotification :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'post_reaction';
+
+-- name: DeleteCommentReactionNotification :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'comment_reaction';
+
+-- name: DeleteCommentNotificationByReceiverAndType :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = ?;

@@ -14,6 +14,7 @@ import (
 	"social-network/internal/utils"
 	db_chat "social-network/pkg/db/queries/chat"
 	db_groups "social-network/pkg/db/queries/groups"
+	db_notifications "social-network/pkg/db/queries/notifications"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
 	"strconv"
@@ -475,12 +476,21 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 					return
 				}
 
-				// Create notification for group join request
+				// Create notification for group join request with cooldown check
 				groupCreator := getGroup.CreatorID
-				err = helpers.CreateNotification(app, groupCreator, constants.NotificationGroupRequest, userId, groupID, nil, nil)
-				if err != nil {
-					app.Logger.Error("failed to create group request notification", "err", err)
-					// Don't fail the request if notification fails
+				notifCooldown := 2 * time.Minute
+				lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastGroupRequestNotification(r.Context(), db_notifications.GetLastGroupRequestNotificationParams{
+					ReceiverID: groupCreator,
+					FromID:     userId,
+				})
+				if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+					app.Logger.Info("Skipping group request notification due to cooldown", "from", string(userId), "to", string(groupCreator))
+				} else {
+					err = helpers.CreateNotification(app, groupCreator, constants.NotificationGroupRequest, userId, groupID, nil, nil)
+					if err != nil {
+						app.Logger.Error("failed to create group request notification", "err", err)
+						// Don't fail the request if notification fails
+					}
 				}
 
 				utils.OK(w, map[string]string{"message": "created"})
@@ -506,7 +516,29 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 			if err != nil {
 				app.Logger.Error("error deleting user from group", "err", err)
 				utils.Internal(w, errors.New("internal server error"))
+				return
 			}
+
+			// Delete the group request notification
+			groupCreator := getGroup.CreatorID
+			err = sqlite.NewQuery(app.DB).Notifications.DeleteGroupRequestNotification(r.Context(), db_notifications.DeleteGroupRequestNotificationParams{
+				ReceiverID: groupCreator,
+				FromID:     userId,
+				GroupID:    groupID,
+			})
+			if err != nil {
+				app.Logger.Error("failed to delete group request notification", "err", err)
+				// Don't fail the request if notification deletion fails
+			}
+
+			// Broadcast notification deletion to group creator via WebSocket
+			if app.WsManager != nil {
+				receiverUUID, _ := helpers.GenerateFromBytes(groupCreator)
+				senderUUID, _ := helpers.GenerateFromBytes(userId)
+				groupUUID, _ := helpers.GenerateFromBytes(groupID)
+				app.WsManager.BroadcastNotificationDeleted(receiverUUID, senderUUID, "group_request", groupUUID)
+			}
+
 			utils.OK(w, map[string]string{"message": "removed"})
 			return
 		}
@@ -792,11 +824,20 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 				return
 			}
 
-			// Create notification for group join approval
-			err = helpers.CreateNotification(app, groupMem.UserID, constants.NotificationGroupJoinApproved, currentUser, groupId, nil, tx)
-			if err != nil {
-				app.Logger.Error("failed to create group join approved notification", "err", err)
-				// Don't fail the request if notification fails
+			// Create notification for group join approval with cooldown check
+			notifCooldown := 2 * time.Minute
+			lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastGroupJoinApprovedNotification(r.Context(), db_notifications.GetLastGroupJoinApprovedNotificationParams{
+				ReceiverID: groupMem.UserID,
+				FromID:     currentUser,
+			})
+			if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+				app.Logger.Info("Skipping group join approved notification due to cooldown", "from", string(currentUser), "to", string(groupMem.UserID))
+			} else {
+				err = helpers.CreateNotification(app, groupMem.UserID, constants.NotificationGroupJoinApproved, currentUser, groupId, nil, tx)
+				if err != nil {
+					app.Logger.Error("failed to create group join approved notification", "err", err)
+					// Don't fail the request if notification fails
+				}
 			}
 
 			if err := tx.Commit(); err != nil {

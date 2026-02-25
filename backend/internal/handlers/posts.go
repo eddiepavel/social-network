@@ -12,6 +12,7 @@ import (
 	"social-network/internal/models"
 	"social-network/internal/utils"
 	db_followers "social-network/pkg/db/queries/followers"
+	db_notifications "social-network/pkg/db/queries/notifications"
 	db_posts "social-network/pkg/db/queries/posts"
 	"social-network/pkg/db/sqlite"
 	"strconv"
@@ -1229,6 +1230,14 @@ func DeleteComment(app *app.App) http.HandlerFunc {
 			return
 		}
 
+		// Fetch comment details before deleting to determine who received the notification
+		comment, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), commentID)
+		if err != nil {
+			app.Logger.Error("failed to get comment details", "error", err.Error())
+			utils.Internal(w, errors.New("internal server error"))
+			return
+		}
+
 		// Delete comment (only owner can delete)
 		err = sqlite.NewQuery(app.DB).Posts.DeleteComment(r.Context(), db_posts.DeleteCommentParams{
 			CommentID: commentID,
@@ -1239,6 +1248,49 @@ func DeleteComment(app *app.App) http.HandlerFunc {
 			app.Logger.Error("failed to delete comment", "error", err.Error())
 			utils.Internal(w, errors.New("internal server error"))
 			return
+		}
+
+		// Determine notification receiver and type based on whether this was a reply or top-level comment
+		var receiverID []byte
+		var notificationType string
+
+		if comment.ParentCommentID != nil && len(comment.ParentCommentID) > 0 {
+			// This was a reply - notification went to parent comment author
+			parentComment, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), comment.ParentCommentID)
+			if err == nil {
+				receiverID = parentComment.AuthorID
+				notificationType = "comment_reply"
+			}
+		} else {
+			// This was a top-level comment - notification went to post author
+			post, err := sqlite.NewQuery(app.DB).Posts.GetPostByID(r.Context(), comment.PostID)
+			if err == nil {
+				receiverID = post.AuthorID
+				notificationType = "post_comment"
+			}
+		}
+
+		// Delete the notification if we determined the receiver
+		if receiverID != nil && len(receiverID) > 0 {
+			err = sqlite.NewQuery(app.DB).Notifications.DeleteCommentNotificationByReceiverAndType(
+				r.Context(),
+				db_notifications.DeleteCommentNotificationByReceiverAndTypeParams{
+					ReceiverID: receiverID,
+					FromID:     currentUserID,
+					Type:       notificationType,
+				},
+			)
+			if err != nil {
+				app.Logger.Error("failed to delete comment notification", "err", err)
+				// Don't fail the request if notification deletion fails
+			}
+
+			// Broadcast notification deletion via WebSocket to the specific receiver (only if online)
+			if app.WsManager != nil {
+				receiverUUID, _ := helpers.GenerateFromBytes(receiverID)
+				senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
+				app.WsManager.BroadcastNotificationDeleted(receiverUUID, senderUUID, notificationType, "")
+			}
 		}
 
 		utils.OK(w, map[string]string{
@@ -1393,6 +1445,45 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 				return
 			}
 
+			// Delete the reaction notification and broadcast if user is online
+			var notifReceiver []byte
+			var notifTypeStr string
+
+			if targetType == "post" {
+				notifTypeStr = "post_reaction"
+				notifReceiver = postBasicInfo.AuthorID
+			} else if targetType == "comment" {
+				notifTypeStr = "comment_reaction"
+				commentData, err := sqlite.NewQuery(app.DB).Posts.GetCommentById(r.Context(), targetID)
+				if err == nil {
+					notifReceiver = commentData.AuthorID
+				}
+			}
+
+			if len(notifReceiver) > 0 && string(currentUserID) != string(notifReceiver) {
+				if targetType == "post" {
+					err = sqlite.NewQuery(app.DB).Notifications.DeletePostReactionNotification(r.Context(), db_notifications.DeletePostReactionNotificationParams{
+						ReceiverID: notifReceiver,
+						FromID:     currentUserID,
+					})
+				} else {
+					err = sqlite.NewQuery(app.DB).Notifications.DeleteCommentReactionNotification(r.Context(), db_notifications.DeleteCommentReactionNotificationParams{
+						ReceiverID: notifReceiver,
+						FromID:     currentUserID,
+					})
+				}
+				if err != nil {
+					app.Logger.Error("failed to delete reaction notification", "err", err)
+				}
+
+				// Broadcast deletion via WebSocket only if user is online
+				if app.WsManager != nil {
+					receiverUUID, _ := helpers.GenerateFromBytes(notifReceiver)
+					senderUUID, _ := helpers.GenerateFromBytes(currentUserID)
+					app.WsManager.BroadcastNotificationDeleted(receiverUUID, senderUUID, notifTypeStr, "")
+				}
+			}
+
 			utils.OK(w, map[string]interface{}{
 				"message":      "Reaction removed",
 				"user_reacted": false,
@@ -1444,10 +1535,30 @@ func ToggleReaction(app *app.App) http.HandlerFunc {
 
 			// Don't notify if reacting to own content
 			if len(notifReceiver) > 0 && string(currentUserID) != string(notifReceiver) {
-				err = helpers.CreateNotification(app, notifReceiver, notifType, currentUserID, nil, nil, nil)
-				if err != nil {
-					app.Logger.Error("failed to create reaction notification", "err", err, "type", notifType)
-					// Don't fail the request if notification fails
+				// Check cooldown before creating notification
+				notifCooldown := 1 * time.Minute
+				var lastNotif sql.NullTime
+
+				if targetType == "post" {
+					lastNotif, err = sqlite.NewQuery(app.DB).Notifications.GetLastPostReactionNotification(r.Context(), db_notifications.GetLastPostReactionNotificationParams{
+						ReceiverID: notifReceiver,
+						FromID:     currentUserID,
+					})
+				} else {
+					lastNotif, err = sqlite.NewQuery(app.DB).Notifications.GetLastCommentReactionNotification(r.Context(), db_notifications.GetLastCommentReactionNotificationParams{
+						ReceiverID: notifReceiver,
+						FromID:     currentUserID,
+					})
+				}
+
+				if err == nil && lastNotif.Valid && time.Since(lastNotif.Time) < notifCooldown {
+					app.Logger.Info("Skipping reaction notification due to cooldown", "from", string(currentUserID), "to", string(notifReceiver), "type", notifType)
+				} else {
+					err = helpers.CreateNotification(app, notifReceiver, notifType, currentUserID, nil, nil, nil)
+					if err != nil {
+						app.Logger.Error("failed to create reaction notification", "err", err, "type", notifType)
+						// Don't fail the request if notification fails
+					}
 				}
 			}
 

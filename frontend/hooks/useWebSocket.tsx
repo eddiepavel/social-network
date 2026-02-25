@@ -90,6 +90,42 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   }, [queryClient]);
 
+  const handleNotificationDeleted = useCallback((deleteData: any) => {
+    const { receiver_id, from_id, type, group_id } = deleteData;
+
+    // Remove matching notification from cache
+    queryClient.setQueryData(["notifications"], (old: Notification[] | undefined) => {
+      if (!old) return old;
+      return old.filter((n) => {
+        // Match by receiver, sender, type, and optionally group_id
+        const matchesBasic = n.receiver_id === receiver_id && n.from_id === from_id && n.type === type;
+        if (group_id) {
+          return !(matchesBasic && n.group_id === group_id);
+        }
+        return !matchesBasic;
+      });
+    });
+
+    // Update unseen count (decrement if notification was unseen)
+    queryClient.setQueryData(["unseen-count"], (old: { count: number } | undefined) => {
+      const currentCount = old?.count ?? 0;
+      return { count: Math.max(0, currentCount - 1) };
+    });
+
+    // Invalidate follow-requests if it's a follow request notification
+    if (type === "follow_request") {
+      queryClient.invalidateQueries({ queryKey: ["follow-requests"] });
+    }
+
+    // Invalidate group queries if it's a group notification
+    if (type === "group_request") {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      if (group_id) {
+        queryClient.invalidateQueries({ queryKey: ["group", group_id] });
+      }
+    }
+  }, [queryClient]);
+
   const handleChatMessage = useCallback((msgData: any) => {
     const roomId = msgData.room_id;
     if (!roomId) return; // Safety check
@@ -168,6 +204,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           case "notification":
             handleNotification(payload);
             break;
+          case "notification_deleted":
+            handleNotificationDeleted(payload);
+            break;
           case "chat_message":
             handleChatMessage(payload);
             break;
@@ -215,7 +254,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     ws.onerror = (error) => {
       console.error("[WebSocket] Error:", error);
     };
-  }, [session?.user_id, handleNotification, handleChatMessage]);
+  }, [session?.user_id, handleNotification, handleNotificationDeleted, handleChatMessage]);
 
   const sendMessage = useCallback((roomId: string, content: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

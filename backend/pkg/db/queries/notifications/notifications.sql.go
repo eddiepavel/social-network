@@ -62,6 +62,68 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 	return i, err
 }
 
+const deleteCommentNotificationByReceiverAndType = `-- name: DeleteCommentNotificationByReceiverAndType :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = ?
+`
+
+type DeleteCommentNotificationByReceiverAndTypeParams struct {
+	ReceiverID []byte
+	FromID     []byte
+	Type       string
+}
+
+func (q *Queries) DeleteCommentNotificationByReceiverAndType(ctx context.Context, arg DeleteCommentNotificationByReceiverAndTypeParams) error {
+	_, err := q.db.ExecContext(ctx, deleteCommentNotificationByReceiverAndType, arg.ReceiverID, arg.FromID, arg.Type)
+	return err
+}
+
+const deleteCommentReactionNotification = `-- name: DeleteCommentReactionNotification :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'comment_reaction'
+`
+
+type DeleteCommentReactionNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) DeleteCommentReactionNotification(ctx context.Context, arg DeleteCommentReactionNotificationParams) error {
+	_, err := q.db.ExecContext(ctx, deleteCommentReactionNotification, arg.ReceiverID, arg.FromID)
+	return err
+}
+
+const deleteFollowRequestNotification = `-- name: DeleteFollowRequestNotification :exec
+DELETE FROM notifications 
+WHERE receiver_id = ? AND from_id = ? AND type = 'follow_request'
+`
+
+type DeleteFollowRequestNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) DeleteFollowRequestNotification(ctx context.Context, arg DeleteFollowRequestNotificationParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFollowRequestNotification, arg.ReceiverID, arg.FromID)
+	return err
+}
+
+const deleteGroupRequestNotification = `-- name: DeleteGroupRequestNotification :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND group_id = ? AND type = 'group_request'
+`
+
+type DeleteGroupRequestNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+	GroupID    []byte
+}
+
+func (q *Queries) DeleteGroupRequestNotification(ctx context.Context, arg DeleteGroupRequestNotificationParams) error {
+	_, err := q.db.ExecContext(ctx, deleteGroupRequestNotification, arg.ReceiverID, arg.FromID, arg.GroupID)
+	return err
+}
+
 const deleteNotification = `-- name: DeleteNotification :exec
 DELETE FROM notifications WHERE notif_id = ?
 `
@@ -80,6 +142,116 @@ func (q *Queries) DeleteNotificationsByReceiverId(ctx context.Context, receiverI
 	return err
 }
 
+const deletePostReactionNotification = `-- name: DeletePostReactionNotification :exec
+DELETE FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'post_reaction'
+`
+
+type DeletePostReactionNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) DeletePostReactionNotification(ctx context.Context, arg DeletePostReactionNotificationParams) error {
+	_, err := q.db.ExecContext(ctx, deletePostReactionNotification, arg.ReceiverID, arg.FromID)
+	return err
+}
+
+const getLastCommentReactionNotification = `-- name: GetLastCommentReactionNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'comment_reaction'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastCommentReactionNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastCommentReactionNotification(ctx context.Context, arg GetLastCommentReactionNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastCommentReactionNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const getLastFollowAcceptedNotification = `-- name: GetLastFollowAcceptedNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'follow_accepted'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastFollowAcceptedNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastFollowAcceptedNotification(ctx context.Context, arg GetLastFollowAcceptedNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastFollowAcceptedNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const getLastFollowRequestNotification = `-- name: GetLastFollowRequestNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'follow_request'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastFollowRequestNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastFollowRequestNotification(ctx context.Context, arg GetLastFollowRequestNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastFollowRequestNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const getLastGroupJoinApprovedNotification = `-- name: GetLastGroupJoinApprovedNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'group_join_approved'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastGroupJoinApprovedNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastGroupJoinApprovedNotification(ctx context.Context, arg GetLastGroupJoinApprovedNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastGroupJoinApprovedNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const getLastGroupRequestNotification = `-- name: GetLastGroupRequestNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'group_request'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastGroupRequestNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastGroupRequestNotification(ctx context.Context, arg GetLastGroupRequestNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastGroupRequestNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
 const getLastMessageNotification = `-- name: GetLastMessageNotification :one
 SELECT created_at FROM notifications
 WHERE receiver_id = ? AND from_id = ? AND type = 'message'
@@ -94,6 +266,25 @@ type GetLastMessageNotificationParams struct {
 
 func (q *Queries) GetLastMessageNotification(ctx context.Context, arg GetLastMessageNotificationParams) (sql.NullTime, error) {
 	row := q.db.QueryRowContext(ctx, getLastMessageNotification, arg.ReceiverID, arg.FromID)
+	var created_at sql.NullTime
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const getLastPostReactionNotification = `-- name: GetLastPostReactionNotification :one
+SELECT created_at FROM notifications
+WHERE receiver_id = ? AND from_id = ? AND type = 'post_reaction'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLastPostReactionNotificationParams struct {
+	ReceiverID []byte
+	FromID     []byte
+}
+
+func (q *Queries) GetLastPostReactionNotification(ctx context.Context, arg GetLastPostReactionNotificationParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getLastPostReactionNotification, arg.ReceiverID, arg.FromID)
 	var created_at sql.NullTime
 	err := row.Scan(&created_at)
 	return created_at, err
