@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/constants"
@@ -476,10 +477,10 @@ func CreateRoom(app *app.App) http.HandlerFunc {
 
 		if roomExists != nil {
 			roomUUid, _ := helpers.GenerateFromBytes(roomExists)
+			fmt.Println("exists")
 			utils.OK(w, map[string]string{"room_id": roomUUid})
 			return
 		}
-
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			app.Logger.Error("failed to find room between users", "error", err.Error())
 			utils.Internal(w, errors.New("Internal"))

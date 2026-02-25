@@ -96,7 +96,7 @@ FROM chat_rooms cr
          INNER JOIN chat_participants cp2
                     ON cr.room_id = cp2.room_id
                         AND cp2.user_id = ?
-WHERE cr.group_id != null
+WHERE cr.group_id IS NULL
   AND cp1.user_id != cp2.user_id  -- Ensure different users
 LIMIT 1
 `
