@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 	contextkeys "social-network/internal/contextKeys"
 	"social-network/internal/utils"
@@ -16,7 +15,7 @@ func (m *MiddlewareChain) RateLimiter(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			user, err := r.Cookie(contextkeys.SessionCookieName)
 			if err != nil {
-				utils.BadRequest(w, errors.New("where is your cookie cookieman?"))
+				next(w, r)
 				return
 			}
 			cookie = *user
@@ -26,7 +25,7 @@ func (m *MiddlewareChain) RateLimiter(next http.HandlerFunc) http.HandlerFunc {
 
 		allow := m.App.Rate.Allow(cookie.Value)
 
-		if !allow && r.URL.Path != "/session" {
+		if !allow {
 			utils.Error(w, 429, "429", "too many requests", "cooldown 120 seconds")
 			return
 		}
