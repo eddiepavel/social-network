@@ -301,6 +301,30 @@ button {
 }
 
 /* ============================================
+   LOGO COMPONENT
+   ============================================ */
+
+.logo {
+  display: block;
+  object-fit: contain;
+}
+
+.logo--small {
+  height: 32px;
+  width: auto;
+}
+
+.logo--medium {
+  height: 48px;
+  width: auto;
+}
+
+.logo--large {
+  height: 64px;
+  width: auto;
+}
+
+/* ============================================
    TABS COMPONENT
    ============================================ */
 
@@ -679,7 +703,7 @@ button {
 
 .comment-thread {
   position: relative;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 .comment-thread.comment-reply {

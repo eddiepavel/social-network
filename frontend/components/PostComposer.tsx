@@ -136,7 +136,7 @@ export default function PostComposer({ groupId }: PostComposerProps) {
   return (
       <div className="surface card">
         {/* Drawer Header - Always Visible */}
-        <button
+                <button
             onClick={() => setIsOpen(!isOpen)}
             className="drawer-header"
             style={{
@@ -152,13 +152,24 @@ export default function PostComposer({ groupId }: PostComposerProps) {
             }}
         >
           <h3 style={{ margin: 0 }}>Share a moment</h3>
-          <span style={{
-            fontSize: "1.5rem",
-            transition: "transform 0.3s ease",
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"
-          }}>
-          ▼
-        </span>
+          <svg 
+            width="20" 
+            height="20" 
+            viewBox="0 0 20 20" 
+            fill="none"
+            style={{
+              transition: "transform 0.3s ease",
+              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"
+            }}
+          >
+            <path 
+              d="M5 7.5L10 12.5L15 7.5" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
 
         {/* Drawer Content - Slides Down */}

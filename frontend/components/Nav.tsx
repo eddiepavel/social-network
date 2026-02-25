@@ -9,6 +9,7 @@ import Button from "@/components/Button";
 import Avatar from "@/components/Avatar";
 import SearchBar from "@/components/SearchBar";
 import NotificationDropdown from "@/components/NotificationDropdown";
+import Logo from "./Logo";
 
 export default function Nav() {
   const { data: session } = useSession();
@@ -28,7 +29,7 @@ export default function Nav() {
   return (
     <nav className="navbar">
       <Link href={homeHref}>
-        <strong>Pulse</strong>
+        <Logo size="large"/>
       </Link>
       <SearchBar />
       <div className="nav-links">
