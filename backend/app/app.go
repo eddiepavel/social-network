@@ -3,6 +3,7 @@ package app
 import (
 	"database/sql"
 	"log/slog"
+	"social-network/internal/ratelimiter"
 	"social-network/internal/services"
 	"social-network/internal/websocket"
 	"time"
@@ -14,4 +15,5 @@ type App struct {
 	File          *services.FileService
 	WsManager     *websocket.Manager
 	GuestSessions map[string]time.Time
+	Rate          *ratelimiter.RateLimiter
 }

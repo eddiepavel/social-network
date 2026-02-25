@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"social-network/app"
+	"social-network/internal/ratelimiter"
 	"social-network/internal/routes"
 	"social-network/internal/services"
 	"social-network/internal/websocket"
@@ -43,12 +44,15 @@ func main() {
 	wsManager.Start()
 	defer wsManager.Shutdown()
 
+	rt := ratelimiter.NewRateLimiter()
+
 	app := &app.App{
 		DB:            db.DB,
 		Logger:        logger,
 		File:          file,
 		WsManager:     wsManager,
 		GuestSessions: make(map[string]time.Time),
+		Rate:          rt,
 	}
 
 	defer func() {
