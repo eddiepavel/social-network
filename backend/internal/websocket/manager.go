@@ -83,6 +83,7 @@ func (m *Manager) ServeWs(w http.ResponseWriter, r *http.Request, userID []byte)
 	m.addClient(client)
 
 	go client.writeMessages()
+	go client.readMessages()
 }
 
 func (m *Manager) addClient(client *Client) {

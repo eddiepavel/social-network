@@ -232,7 +232,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: "enter_chat",
-        payload: JSON.stringify({ room_id: roomId }),
+        payload: { room_id: roomId },
       }));
       console.log("[WebSocket] Entered chat room:", roomId);
     }

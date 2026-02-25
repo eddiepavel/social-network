@@ -33,7 +33,7 @@ SELECT
              FROM chat_messages cm
              WHERE cm.target_id = cr.room_id
                AND cm.sender_id != ?
-           AND cm.created_at >= COALESCE(cp.last_read_at, cp.joined_at, '1970-01-01')
+           AND cm.created_at > COALESCE(cp.last_read_at, cp.joined_at, '1970-01-01')
         ), 0
     ) AS INTEGER) AS unread_count,
 

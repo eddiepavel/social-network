@@ -16,6 +16,15 @@ type Client struct {
 	activeRoom string // tracks which chat room the user is currently viewing
 }
 
+type Message struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+type EnterChat struct {
+	RoomId string `json:"room_id"`
+}
+
 func NewClient(conn *websocket.Conn, manager *Manager, userID string) *Client {
 	return &Client{
 		connection: conn,
@@ -23,6 +32,50 @@ func NewClient(conn *websocket.Conn, manager *Manager, userID string) *Client {
 		userID:     userID,
 		egress:     make(chan Event, 16),
 		activeRoom: "",
+	}
+}
+
+func (c *Client) readMessages() {
+	defer func() {
+		if c.manager != nil && c.manager.Logger != nil {
+			c.manager.Logger.Info("Closing client (writeMessages)", "userID", c.userID)
+		}
+		c.manager.removeClient(c)
+	}()
+
+	for {
+		_, p, err := c.connection.ReadMessage()
+
+		if err != nil {
+			return
+		}
+
+		test := Message{}
+		err = json.Unmarshal(p, &test)
+		if err != nil {
+			if c.manager != nil && c.manager.Logger != nil {
+				c.manager.Logger.Warn("unmarshal error", "userID", c.userID, "err", err)
+			}
+			continue
+		}
+
+		switch test.Type {
+		case "enter_chat":
+			var enterChat EnterChat
+			err := json.Unmarshal(test.Payload, &enterChat)
+			if err != nil {
+				if c.manager != nil && c.manager.Logger != nil {
+					c.manager.Logger.Warn("unmarshal error", "userID", c.userID, "err", err)
+				}
+				continue
+			}
+			c.activeRoom = enterChat.RoomId
+			continue
+		case "leave_chat":
+			c.activeRoom = ""
+			continue
+		}
+
 	}
 }
 

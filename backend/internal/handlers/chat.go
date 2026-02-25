@@ -415,9 +415,16 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 					ToUser:          toUser,
 				})
 
-				// Check cooldown - don't spam notifications
-				// Skip if user is currently viewing this chat room
+		
 				if app.WsManager != nil && app.WsManager.IsUserInRoom(participantUUIDStr, roomUUIDStr) {
+					err := sqlite.NewQuery(app.DB).Chat.MarkRoomMessagesAsRead(r.Context(), db_chat.MarkRoomMessagesAsReadParams{
+						UserID: participantID,
+						RoomID: roomID,
+					})
+
+					if err != nil {
+						app.Logger.Info("failed to mark chat as read")
+					}
 					continue
 				}
 				lastNotif, err := sqlite.NewQuery(app.DB).Notifications.GetLastMessageNotification(r.Context(), db_notifications.GetLastMessageNotificationParams{

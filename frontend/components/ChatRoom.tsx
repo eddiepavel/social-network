@@ -37,7 +37,7 @@ export default function ChatRoom({ roomId, currentUserId, roomName, isGroup, can
         leaveChat();
       }
     };
-  }, [isConnected, roomId, enterChat, leaveChat]);
+  }, [roomId, isConnected]);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["chat-messages", roomId],
