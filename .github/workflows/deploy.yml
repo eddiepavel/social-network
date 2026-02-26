@@ -34,6 +34,7 @@ jobs:
           build-args: |
             PRODUCTION=true
             ALLOW_ORIGIN=https://${{ secrets.DOMAIN }}
+            APP_URL=https://${{ secrets.DOMAIN }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5

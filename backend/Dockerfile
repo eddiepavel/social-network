@@ -16,13 +16,15 @@ COPY . .
 # Accept build args for production config
 ARG PRODUCTION=false
 ARG ALLOW_ORIGIN=http://localhost:3000
+ARG APP_URL=http://localhost:8000
 
 # Generate .env from .env.example with a random SECRET_SIGN and production config
 RUN cp .env.example .env \
     && SECRET=$(head -c 48 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 64) \
     && sed -i "s/^SECRET_SIGN=.*/SECRET_SIGN=${SECRET}/" .env \
     && sed -i "s/^PRODUCTION=.*/PRODUCTION=${PRODUCTION}/" .env \
-    && sed -i "s|^ALLOW_ORIGIN=.*|ALLOW_ORIGIN=${ALLOW_ORIGIN}|" .env
+    && sed -i "s|^ALLOW_ORIGIN=.*|ALLOW_ORIGIN=${ALLOW_ORIGIN}|" .env \
+    && sed -i "s|^APP_URL=.*|APP_URL=${APP_URL}|" .env
 
 # Build the Go binary with CGO enabled (needed for sqlite3)
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
