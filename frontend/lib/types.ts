@@ -16,7 +16,7 @@ export type ApiEnvelope<T> = {
 
 export type User = {
   user_id: string;
-  email: string;
+  email?: string; // Only available on session endpoint
   first_name: string;
   last_name: string;
   dob: string;

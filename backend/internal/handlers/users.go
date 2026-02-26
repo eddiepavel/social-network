@@ -56,9 +56,11 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 		}
 
 		var visitPermi bool
+		isOwnProfile := false
 
 		if bytes.Equal(user.UserID, userID) {
 			visitPermi = true
+			isOwnProfile = true
 		} else {
 			follower, err := sqlite.NewQuery(app.DB).Followers.CheckIfUserFollows(r.Context(), db_followers.CheckIfUserFollowsParams{
 				FollowerID: userID,
@@ -80,7 +82,7 @@ func GetUserProfile(app *app.App) http.HandlerFunc {
 
 		// Allow viewing any profile - access control for posts is handled separately
 		// This allows users to see profiles and send follow requests to private accounts
-		response := helpers.UserToResponseProfile(user, app, userID, visitPermi)
+		response := helpers.UserToResponseProfile(user, app, userID, visitPermi, isOwnProfile)
 
 		utils.OK(w, response)
 	}

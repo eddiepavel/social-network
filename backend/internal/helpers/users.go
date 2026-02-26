@@ -61,9 +61,9 @@ func UserToResponse(user db_users.User) models.UserResponse {
 	setUuid, _ := GenerateFromBytes(user.UserID)
 	return models.UserResponse{
 		UserID:    setUuid,
-		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
+		Email:     &user.Email,
 		DOB:       user.Dob,
 		Avatar: func() string {
 			if user.Avatar.Valid {
@@ -90,10 +90,10 @@ func UserToResponse(user db_users.User) models.UserResponse {
 
 func UserToResponseImage(user db_users.User, app *app.App, userId []byte) models.UserResponse {
 	setUuid, _ := GenerateFromBytes(user.UserID)
-
+	email := user.Email
 	return models.UserResponse{
 		UserID:    setUuid,
-		Email:     user.Email,
+		Email:     &email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		DOB:       user.Dob,
@@ -121,15 +121,20 @@ func UserToResponseImage(user db_users.User, app *app.App, userId []byte) models
 	}
 }
 
-func UserToResponseProfile(user db_users.GetUserByIdWithCountsRow, app *app.App, userId []byte, permission bool) models.UserResponse {
+func UserToResponseProfile(user db_users.GetUserByIdWithCountsRow, app *app.App, userId []byte, permission bool, isOwnProfile bool) models.UserResponse {
 	setUuid, _ := GenerateFromBytes(user.UserID)
 	var userResp models.UserResponse
 	userResp = models.UserResponse{
 		UserID:    setUuid,
-		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
-		DOB:       user.Dob,
+		Email: func() *string {
+			if isOwnProfile {
+				return &user.Email
+			}
+			return nil
+		}(),
+		DOB: user.Dob,
 		Avatar: func() string {
 			if user.Avatar.Valid && user.Avatar.String != "" {
 				return app.File.GenerateSignImage(user.Avatar.String, userId, time.Now().Add(15*time.Minute))
