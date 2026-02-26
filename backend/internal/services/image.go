@@ -344,31 +344,39 @@ func (s *FileService) MoveToPrivate(img string, user []byte, extension string) e
 
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return errors.New("failed to start transaction")
+		return err
 	}
 	defer tx.Rollback()
 
+	if _, err := os.Stat(s.BasePath); os.IsNotExist(err) {
+		os.Mkdir(s.BasePath, 0755)
+	}
+
+	if _, err := os.Stat(s.PublicPath); os.IsNotExist(err) {
+		os.Mkdir(s.BasePath, 0755)
+	}
+
 	getPublicImage, err := sqlite.NewQuery(s.DB).PublicImage.GetPublicImage(ctx, img)
 	if err != nil {
-		return errors.New("failed to fetch image")
+		return err
 	}
 
 	publicFolderFile, err := os.Open(filepath.Join(s.PublicPath, img+"."+extension))
 	if err != nil {
-		return errors.New("failed to find public image file")
+		return err
 	}
 	defer publicFolderFile.Close()
 
 	privateFolderFile, err := os.Create(filepath.Join(s.BasePath, img+"."+extension))
 	if err != nil {
-		return errors.New("failed to create private image file")
+		return err
 	}
 	defer privateFolderFile.Close()
 
 	_, err = io.Copy(privateFolderFile, publicFolderFile)
 	if err != nil {
 		os.Remove(filepath.Join(s.BasePath, img))
-		return errors.New("failed to transfer file")
+		return err
 	}
 
 	savePrivateFile := &File{
@@ -403,12 +411,12 @@ func (s *FileService) MoveToPrivate(img string, user []byte, extension string) e
 	err = sqlite.NewQuery(s.DB).PublicImage.WithTx(tx).DeletePublicImage(ctx, getPublicImage.ImageID)
 	if err != nil {
 		os.Remove(filepath.Join(s.BasePath, img+"."+extension))
-		return errors.New("failed to delete public image record")
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
 		os.Remove(filepath.Join(s.BasePath, img+"."+extension))
-		return errors.New("failed to commit transaction")
+		return err
 	}
 
 	err = os.Remove(filepath.Join(s.PublicPath, img+"."+extension))

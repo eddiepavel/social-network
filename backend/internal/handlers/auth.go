@@ -88,9 +88,9 @@ func Register(app *app.App) http.HandlerFunc {
 				if err != nil {
 					app.Logger.Error("failed to assign public image to user", "error", err)
 				}
+			} else {
+				app.Logger.Error("failed to assign image due to wrong type")
 			}
-
-			app.Logger.Error("failed to assign image due to wrong type")
 
 		}
 
