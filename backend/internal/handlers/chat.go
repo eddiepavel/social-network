@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/constants"
@@ -415,7 +414,6 @@ func CreateMessage(app *app.App) http.HandlerFunc {
 					ToUser:          toUser,
 				})
 
-		
 				if app.WsManager != nil && app.WsManager.IsUserInRoom(participantUUIDStr, roomUUIDStr) {
 					err := sqlite.NewQuery(app.DB).Chat.MarkRoomMessagesAsRead(r.Context(), db_chat.MarkRoomMessagesAsReadParams{
 						UserID: participantID,
@@ -484,7 +482,6 @@ func CreateRoom(app *app.App) http.HandlerFunc {
 
 		if roomExists != nil {
 			roomUUid, _ := helpers.GenerateFromBytes(roomExists)
-			fmt.Println("exists")
 			utils.OK(w, map[string]string{"room_id": roomUUid})
 			return
 		}

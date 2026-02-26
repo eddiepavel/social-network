@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/constants"
@@ -956,7 +955,6 @@ func CreateComment(app *app.App) http.HandlerFunc {
 		}
 
 		if !canComment {
-			fmt.Println(canComment)
 			utils.Forbidden(w)
 			return
 		}
@@ -1021,7 +1019,6 @@ func CreateComment(app *app.App) http.HandlerFunc {
 		}
 
 		if rowsAffected == 0 {
-			fmt.Println("whatt?")
 			utils.Forbidden(w)
 			return
 		}

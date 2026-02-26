@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"social-network/app"
 	"social-network/internal/helpers"
@@ -117,7 +116,6 @@ func UpdateProfile(app *app.App) http.HandlerFunc {
 		}
 
 		if *req.Avatar != user.Avatar.String && *req.Avatar != "" {
-			fmt.Println("im the same")
 			img := strings.Split(*req.Avatar, ".")
 
 			if len(img) != 2 {

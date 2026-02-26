@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"social-network/pkg/db/sqlite"
@@ -278,7 +277,7 @@ func (m *Manager) BroadcastChatMessage(roomID []byte, events []ChatEvent) {
 		payload, err := json.Marshal(event)
 
 		if err != nil {
-			fmt.Println(err)
+			m.Logger.Info("failed to marshal message", "user", m.clients[event.ToUser])
 			continue
 		}
 
