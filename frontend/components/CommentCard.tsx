@@ -9,6 +9,8 @@ import ImageUpload from "@/components/ImageUpload";
 import { editComment, deleteComment, uploadFile, ApiError, createComment } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { CommentWithReplies } from "@/lib/types";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToastContext } from "../app/providers";
 
 type CommentCardProps = {
   comment: CommentWithReplies;
@@ -26,12 +28,14 @@ export default function CommentCard({
                                       depth = 0
                                     }: CommentCardProps) {
   const queryClient = useQueryClient();
+  const toast = useToastContext();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [shouldRemoveImage, setShouldRemoveImage] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   // Reply states
   const [isReplying, setIsReplying] = useState(false);
@@ -136,9 +140,12 @@ export default function CommentCard({
       setReplyImageFile(null);
       setReplyImagePreview(null);
       setIsReplying(false);
+      toast.success("Reply posted successfully!");
     },
-    onError: () => {
+    onError: (error) => {
       setIsUploadingReply(false);
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
     },
   });
 
@@ -170,9 +177,12 @@ export default function CommentCard({
       setImageFile(null);
       setImagePreview(null);
       setShouldRemoveImage(false);
+      toast.success("Comment updated successfully!");
     },
-    onError: () => {
+    onError: (error) => {
       setIsUploading(false);
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
     },
   });
 
@@ -181,8 +191,13 @@ export default function CommentCard({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", postId] });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
+      setIsDeleteOpen(false);
+      toast.success("Comment deleted successfully!");
     },
-    onError: () => {},
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
+    },
   });
 
   const authorName = comment.author_nickname
@@ -206,6 +221,7 @@ export default function CommentCard({
   };
 
   return (
+    <>
       <div className={`comment-thread ${depth > 0 ? 'comment-reply' : ''}`}>
         <div className="comment-card">
           {depth > 0 && <div className="comment-thread-line" />}
@@ -300,8 +316,7 @@ export default function CommentCard({
                           </button>
                           <button
                               className="comment-action danger"
-                              onClick={() => removeComment.mutate()}
-                              disabled={removeComment.isPending}
+                              onClick={() => setIsDeleteOpen(true)}
                           >
                             Delete
                           </button>
@@ -336,17 +351,6 @@ export default function CommentCard({
                         </button>
                     )}
                   </div>
-                  {removeComment.isError && (
-                      <div className="comment-form-error" style={{ marginTop: "8px" }}>
-                        {removeComment.error instanceof ApiError && removeComment.error.details
-                            ? typeof removeComment.error.details === 'object' && !Array.isArray(removeComment.error.details)
-                                ? Object.values(removeComment.error.details)[0]
-                                : typeof removeComment.error.details === 'string'
-                                    ? removeComment.error.details
-                                    : removeComment.error.message
-                            : removeComment.error.message}
-                      </div>
-                  )}
                 </>
             )}
 
@@ -434,5 +438,18 @@ export default function CommentCard({
             </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={() => removeComment.mutate()}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmText="Delete Comment"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={removeComment.isPending}
+      />
+    </>
   );
 }

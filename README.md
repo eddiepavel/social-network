@@ -50,14 +50,21 @@ Pulse is a full-stack social networking platform that emphasizes user privacy an
   - `app/` - App context & dependency injection
   - `internal/` - Private application code
     - `handlers/` - HTTP request handlers
-    - `middleware/` - Authentication, CORS, logging
+    - `middleware/` - Authentication, CORS, logging, rate limiting, recovery
     - `models/` - Response DTOs
     - `services/` - Business logic (file uploads, image processing)
     - `helpers/` - Utility functions (UUID conversion, validation)
     - `utils/` - HTTP response helpers
+    - `routes/` - API route registration and setup
+    - `websocket/` - WebSocket hub and connection management
+    - `ratelimiter/` - Rate limiting implementation
+    - `contextKeys/` - Context key definitions
+    - `constants/` - Application constants (notification types, etc.)
   - `pkg/` - Reusable packages
     - `db/queries/` - SQL queries organized by feature
     - `db/sqlite/` - Database connection & management
+    - `db/migrations/` - Database migration scripts (up/down)
+    - `environment/` - Environment variable management
   - `storage/` - File uploads directory
 
 - **Type-Safe SQL with sqlc:** All database queries are written in pure SQL and compiled to type-safe Go code, providing compile-time safety and excellent performance
@@ -372,15 +379,24 @@ social-network/
 │   │   │   ├── auth.go      # Session authentication
 │   │   │   ├── cors.go      # CORS handling
 │   │   │   ├── guest.go     # Guest session
-│   │   │   └── log.go       # Request logging
+│   │   │   ├── log.go       # Request logging
+│   │   │   ├── ratelimiter.go # Rate limiting
+│   │   │   ├── recover.go   # Panic recovery
+│   │   │   └── chain.go     # Middleware chaining
 │   │   ├── models/          # Response DTOs
 │   │   ├── services/        # Business logic
+│   │   │   └── image.go     # Image processing
 │   │   ├── helpers/         # Input validation & utilities
 │   │   ├── utils/           # Response helpers
+│   │   ├── routes/          # Route registration
+│   │   │   ├── routes.go    # Route definitions
+│   │   │   └── setup.go     # Router setup
 │   │   ├── websocket/       # WebSocket manager
 │   │   │   ├── client.go
 │   │   │   ├── event.go
 │   │   │   └── manager.go
+│   │   ├── ratelimiter/     # Rate limiter implementation
+│   │   ├── contextKeys/     # Context key definitions
 │   │   └── constants/       # App constants
 │   ├── pkg/
 │   │   ├── db/

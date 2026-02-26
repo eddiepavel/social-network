@@ -8,6 +8,7 @@ import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import {formatDate} from "@/lib/utils";
 import {FollowRequest} from "@/lib/types";
+import { useToastContext } from "../app/providers";
 
 type FollowRequestsListProps = {
     data?: FollowRequest[] | undefined
@@ -18,15 +19,19 @@ type FollowRequestsListProps = {
 
 export default function FollowRequestsList({data, isLoading, isError, error}: FollowRequestsListProps) {
     const queryClient = useQueryClient();
+    const toast = useToastContext();
 
     const respond = useMutation({
         mutationFn: ({requestId, status}: { requestId: string; status: "accepted" | "rejected" }) =>
             respondToFollowRequest(requestId, status),
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({queryKey: ["follow-requests"]});
             queryClient.invalidateQueries({queryKey: ["followers"]});
+            toast.success(variables.status === "accepted" ? "Follow request accepted" : "Follow request rejected");
         },
-        onError: () => {
+        onError: (error) => {
+            const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+            toast.error(msg);
         },
     });
 

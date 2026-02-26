@@ -741,16 +741,17 @@ func (q *Queries) UpdateDbGroup(ctx context.Context, arg UpdateDbGroupParams) (*
 }
 
 const updateGroupMemberStatus = `-- name: UpdateGroupMemberStatus :exec
-UPDATE group_members SET status = ? WHERE user_id = ?
+UPDATE group_members SET status = ? WHERE user_id = ? AND group_id = ?
 `
 
 type UpdateGroupMemberStatusParams struct {
-	Status string
-	UserID []byte
+	Status  string
+	UserID  []byte
+	GroupID []byte
 }
 
 func (q *Queries) UpdateGroupMemberStatus(ctx context.Context, arg UpdateGroupMemberStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateGroupMemberStatus, arg.Status, arg.UserID)
+	_, err := q.db.ExecContext(ctx, updateGroupMemberStatus, arg.Status, arg.UserID, arg.GroupID)
 	return err
 }
 

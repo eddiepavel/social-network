@@ -7,6 +7,7 @@ import Button from "@/components/Button";
 import ImageUpload from "@/components/ImageUpload";
 import { getComments, createComment, uploadFile, ApiError } from "@/lib/api";
 import type { Comment, CommentWithReplies } from "@/lib/types";
+import { useToastContext } from "../app/providers";
 
 type CommentSectionProps = {
   postId: string;
@@ -48,6 +49,7 @@ export default function CommentSection({
                                          initiallyExpanded = false,
                                        }: CommentSectionProps) {
   const queryClient = useQueryClient();
+  const toast = useToastContext();
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
   const [newComment, setNewComment] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -97,9 +99,12 @@ export default function CommentSection({
       setNewComment("");
       setImageFile(null);
       setImagePreview(null);
+      toast.success("Comment posted successfully!");
     },
-    onError: () => {
+    onError: (error) => {
       setIsUploading(false);
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
     },
   });
 

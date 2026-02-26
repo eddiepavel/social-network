@@ -7,6 +7,8 @@ import {rsvpToEvent, ApiError, getEventRSVP} from "@/lib/api";
 import { useState } from "react";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 import Avatar from "@/components/Avatar";
+import { useToastContext } from "../app/providers";
+import Link from "next/link";
 
 type EventCardProps = {
   event: GroupEvent;
@@ -15,6 +17,7 @@ type EventCardProps = {
 
 export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
   const queryClient = useQueryClient();
+  const toast = useToastContext();
 
   const [currentRsvp, setCurrentRsvp] = useState(event.user_rsvp);
   const [goingCount, setGoingCount] = useState(event.going_count);
@@ -52,14 +55,13 @@ export default function EventCard({ event, onRsvpUpdate }: EventCardProps) {
 
       setCurrentRsvp(status);
       onRsvpUpdate?.(event.event_id, status);
+      toast.success(`You are ${status === "going" ? "going" : "not going"} to this event`);
 
       queryClient.invalidateQueries({ queryKey: ["group_event", event.event_id] });
     } catch (error) {
-      if (error instanceof ApiError && typeof error.details === 'string') {
-        setErrorMsg(error.details);
-      } else if (error instanceof Error) {
-        setErrorMsg(error.message);
-      }
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error instanceof Error ? error.message : "Failed to update RSVP";
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

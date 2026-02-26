@@ -73,7 +73,7 @@ WHERE gm.group_id = ? AND gm.status = 'joined';
 SELECT * FROM group_members WHERE group_id = ?;
 
 -- name: UpdateGroupMemberStatus :exec
-UPDATE group_members SET status = ? WHERE user_id = ?; 
+UPDATE group_members SET status = ? WHERE user_id = ? AND group_id = ?; 
 
 -- name: InviteGroupMembers :exec
 INSERT INTO group_members (user_id, group_id, status, invited_by) VALUES (?, ?, ?, ?);

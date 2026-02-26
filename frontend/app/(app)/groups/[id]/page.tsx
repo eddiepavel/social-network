@@ -15,17 +15,21 @@ import CreateEventModal from "@/components/CreateEventModal";
 import {getGroup, requestJoinGroup, leaveGroup, getGroupRequests} from "@/lib/api";
 import useSession from "@/hooks/useSession";
 import GroupPosts from "@/components/GroupPosts";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToastContext } from "../../../providers";
 
 export default function GroupDetailsPage() {
   const params = useParams();
   const groupId = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const toast = useToastContext();
 
   const [activeTab, setActiveTab] = useState("members");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const { data, isLoading, isError, error, refetch: refetchGroup } = useQuery({
     queryKey: ["group", groupId],
@@ -35,7 +39,22 @@ export default function GroupDetailsPage() {
 
   const requestJoin = useMutation({
     mutationFn: (payload: any) => requestJoinGroup(groupId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["group", groupId] }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["group", groupId] });
+      if (variables.action === "accept_invite") {
+        toast.success("You have joined the group!");
+      } else if (variables.action === "decline_invite") {
+        toast.success("Group invitation declined");
+      } else if (variables.action === "request") {
+        toast.success("Join request sent!");
+      } else if (variables.action === "remove") {
+        toast.success("Join request cancelled");
+      }
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : "Action failed";
+      toast.error(msg);
+    },
   });
 
   const leave = useMutation({
@@ -43,6 +62,12 @@ export default function GroupDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      setShowLeaveConfirm(false);
+      toast.success("You have left the group");
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : "Failed to leave group";
+      toast.error(msg);
     },
   });
 
@@ -131,8 +156,7 @@ export default function GroupDetailsPage() {
               {data.group.user_status == "joined" && !isOwner && (
                 <Button
                   variant="ghost"
-                  onClick={() => leave.mutate()}
-                  disabled={leave.isPending}
+                  onClick={() => setShowLeaveConfirm(true)}
                 >
                   Leave group
                 </Button>
@@ -214,6 +238,18 @@ export default function GroupDetailsPage() {
             onClose={() => setIsCreateEventOpen(false)}
             groupId={groupId}
             onEventCreated={() => refetchGroup()}
+          />
+
+          <ConfirmDialog
+            isOpen={showLeaveConfirm}
+            onClose={() => setShowLeaveConfirm(false)}
+            onConfirm={() => leave.mutate()}
+            title="Leave Group"
+            message="Are you sure you want to leave this group? You will need to request to join again if you want to come back."
+            confirmText="Leave Group"
+            cancelText="Cancel"
+            type="warning"
+            isLoading={leave.isPending}
           />
         </>
       )}

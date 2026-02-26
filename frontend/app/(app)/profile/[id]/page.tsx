@@ -8,6 +8,8 @@ import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import SectionHeader from "@/components/SectionHeader";
 import Avatar from "@/components/Avatar";
+import { useToastContext } from "../../../providers";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import FollowButton from "@/components/FollowButton";
 import FollowersList from "@/components/FollowersList";
 import FollowRequestsList from "@/components/FollowRequestsList";
@@ -52,6 +54,9 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [showPrivacyConfirm, setShowPrivacyConfirm] = useState(false);
+  const [pendingPrivacy, setPendingPrivacy] = useState<boolean | null>(null);
+  const toast = useToastContext();
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -73,18 +78,33 @@ export default function ProfilePage() {
 
   const saveProfile = useMutation({
     mutationFn: updateProfile,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile", userId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+      toast.success("Profile updated successfully");
+    },
     onError: (error) => {
       setValidationErrors({});
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
+      } else {
+        const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+        toast.error(msg);
       }
     },
   });
 
   const updatePrivacyMutation = useMutation({
     mutationFn: updatePrivacy,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile", userId] }),
+    onSuccess: (_, isPublic) => {
+      queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+      setShowPrivacyConfirm(false);
+      setPendingPrivacy(null);
+      toast.success(`Profile is now ${isPublic ? 'public' : 'private'}`);
+    },
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
+    },
   });
 
   const updateField =
@@ -118,6 +138,17 @@ export default function ProfilePage() {
       if (errorMessage.toLowerCase().includes("file") || errorMessage.toLowerCase().includes("extension")) {
         setAvatarError("Invalid file type. Please select an image file (jpg, png, gif, jpeg).");
       }
+    }
+  };
+
+  const handlePrivacyToggle = (newPrivacy: boolean) => {
+    setPendingPrivacy(newPrivacy);
+    setShowPrivacyConfirm(true);
+  };
+
+  const confirmPrivacyChange = () => {
+    if (pendingPrivacy !== null) {
+      updatePrivacyMutation.mutate(pendingPrivacy);
     }
   };
 
@@ -222,7 +253,7 @@ export default function ProfilePage() {
             </Button>
             <Button
               variant="ghost"
-              onClick={() => updatePrivacyMutation.mutate(!(data.is_public ?? false))}
+              onClick={() => handlePrivacyToggle(!(data.is_public ?? false))}
               disabled={updatePrivacyMutation.isPending}
             >
               Toggle privacy
@@ -239,6 +270,25 @@ export default function ProfilePage() {
           ) : null}
         </section>
       ) : null}
+
+      <ConfirmDialog
+        isOpen={showPrivacyConfirm}
+        onClose={() => {
+          setShowPrivacyConfirm(false);
+          setPendingPrivacy(null);
+        }}
+        onConfirm={confirmPrivacyChange}
+        title="Change Profile Privacy"
+        message={`Are you sure you want to make your profile ${pendingPrivacy ? 'public' : 'private'}? ${
+          pendingPrivacy
+            ? 'Anyone will be able to see your posts and profile information.'
+            : 'Only your followers will be able to see your posts and profile information.'
+        }`}
+        confirmText="Change Privacy"
+        cancelText="Cancel"
+        type="warning"
+        isLoading={updatePrivacyMutation.isPending}
+      />
     </div>
   );
 }

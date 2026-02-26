@@ -6,6 +6,7 @@ import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import ImageUpload from "@/components/ImageUpload";
 import Avatar from "@/components/Avatar";
+import { useToastContext } from "app/providers";
 import {createPost, uploadFile, getFollowers, ApiError, createGroupPost} from "@/lib/api";
 import useSession from "@/hooks/useSession";
 
@@ -15,6 +16,7 @@ type PostComposerProps = {
 
 export default function PostComposer({ groupId }: PostComposerProps) {
   const { data: session } = useSession();
+  const toast = useToastContext();
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState("");
@@ -59,17 +61,21 @@ export default function PostComposer({ groupId }: PostComposerProps) {
       setImageFile(null);
       setImagePreview(null);
       setSelectedFollowers([]);
-      setVisibility("public");
+      setVisibility("");
       setValidationErrors({});
       setSuccessMessage("Post created successfully!");
-      setIsOpen(false); // Close drawer on success
+      setIsOpen(false);
       queryClient.invalidateQueries({ queryKey: isGroup ? ["groupPosts", groupId] : ["feed"] });
+      toast.success("Post created successfully!");
     },
     onError: (error) => {
       setSuccessMessage(null);
       setValidationErrors({});
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
+      } else {
+        const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+        toast.error(msg);
       }
     },
   });

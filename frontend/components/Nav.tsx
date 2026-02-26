@@ -20,7 +20,7 @@ export default function Nav() {
     mutationFn: logoutUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["session"] });
-      router.push("/");
+      router.push("/login");
     },
   });
 

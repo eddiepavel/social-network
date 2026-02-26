@@ -8,6 +8,7 @@ import EmptyState from "@/components/EmptyState";
 import { respondToGroupRequest, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import {GroupJoinRequest} from "@/lib/types";
+import { useToastContext } from "../app/providers";
 
 type GroupRequestsListProps = {
   groupId: string;
@@ -19,15 +20,20 @@ type GroupRequestsListProps = {
 
 export default function GroupRequestsList({ groupId, isError, isLoading, error, data }: GroupRequestsListProps) {
   const queryClient = useQueryClient();
+  const toast = useToastContext();
 
   const respond = useMutation({
     mutationFn: ({ user_id, response }: { user_id: string; response: string }) =>
       respondToGroupRequest(groupId, user_id, response),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["group-requests", groupId] });
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
+      toast.success(variables.response === "approve" ? "Member request accepted" : "Member request rejected");
     },
-    onError: () => {},
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
+    },
   });
 
   if (isLoading) return <p>Loading requests...</p>;

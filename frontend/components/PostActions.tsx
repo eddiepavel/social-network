@@ -8,6 +8,8 @@ import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import ImageUpload from "@/components/ImageUpload";
 import { editPost, deletePost, uploadFile, ApiError } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToastContext } from "../app/providers";
 
 type PostActionsProps = {
   postId: string;
@@ -20,6 +22,7 @@ type PostActionsProps = {
 export default function PostActions({ postId, content, visibility, isOwner, imageUrl }: PostActionsProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const toast = useToastContext();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editContent, setEditContent] = useState(content);
@@ -39,8 +42,12 @@ export default function PostActions({ postId, content, visibility, isOwner, imag
       setIsEditOpen(false);
       setImageFile(null);
       setImagePreview(null);
+      toast.success("Post updated successfully!");
     },
-    onError: () => {},
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
+    },
   });
 
   const handleImageSelect = (file: File) => {
@@ -85,9 +92,13 @@ export default function PostActions({ postId, content, visibility, isOwner, imag
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       setIsDeleteOpen(false);
+      toast.success("Post deleted successfully!");
       router.push("/feed");
     },
-    onError: () => {},
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
+    },
   });
 
   if (!isOwner) return null;
@@ -163,28 +174,17 @@ export default function PostActions({ postId, content, visibility, isOwner, imag
         </div>
       </Modal>
 
-      <Modal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} title="Delete Post">
-        <p>Are you sure you want to delete this post? This action cannot be undone.</p>
-        {remove.isError ? (
-          <p style={{ color: "#b42318", fontSize: "0.85rem" }}>
-            {remove.error instanceof ApiError && typeof remove.error.details === 'string'
-              ? remove.error.details
-              : remove.error.message}
-          </p>
-        ) : null}
-        <div className="modal-actions">
-          <Button
-            onClick={() => remove.mutate()}
-            disabled={remove.isPending}
-            className="danger"
-          >
-            Delete
-          </Button>
-          <Button variant="ghost" onClick={() => setIsDeleteOpen(false)}>
-            Cancel
-          </Button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={() => remove.mutate()}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This action cannot be undone."
+        confirmText="Delete Post"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={remove.isPending}
+      />
     </>
   );
 }

@@ -9,10 +9,12 @@ import FormField from "@/components/FormField";
 import {createGroup, getGroups, ApiError } from "@/lib/api";
 import { useState } from "react";
 import useSession from "@/hooks/useSession";
+import { useToastContext } from "../../providers";
 
 export default function GroupsPage() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const toast = useToastContext();
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["groups"],
     queryFn: getGroups,
@@ -28,11 +30,15 @@ export default function GroupsPage() {
       setForm({ group_name: "", description: "" });
       setValidationErrors({});
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group created successfully!");
     },
     onError: (error) => {
       setValidationErrors({});
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
+      } else {
+        const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+        toast.error(msg);
       }
     },
   });

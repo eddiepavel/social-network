@@ -6,6 +6,7 @@ import FormField from "@/components/FormField";
 import Button from "@/components/Button";
 import { createGroupEvent, ApiError } from "@/lib/api";
 import type { CreateEventRequest, GroupEvent } from "@/lib/types";
+import { useToastContext } from "../app/providers";
 
 type CreateEventModalProps = {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export default function CreateEventModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const toast = useToastContext();
 
   const resetForm = () => {
     setTitle("");
@@ -71,6 +73,7 @@ export default function CreateEventModal({
     setIsSubmitting(true);
     try {
       const event = await createGroupEvent(groupId, payload);
+      toast.success("Event created successfully!");
       onEventCreated?.(event);
       handleClose();
     } catch (err) {

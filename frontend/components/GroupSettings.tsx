@@ -8,6 +8,8 @@ import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import { updateGroup, deleteGroup, ApiError } from "@/lib/api";
 import type { Group } from "@/lib/types";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToastContext } from "../app/providers";
 
 type GroupSettingsProps = {
   group: Group;
@@ -18,6 +20,7 @@ type GroupSettingsProps = {
 export default function GroupSettings({ group, isOpen, onClose }: GroupSettingsProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const toast = useToastContext();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
@@ -31,12 +34,16 @@ export default function GroupSettings({ group, isOpen, onClose }: GroupSettingsP
       setValidationErrors({});
       queryClient.invalidateQueries({ queryKey: ["group", group.group_id] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group settings updated successfully");
       onClose();
     },
     onError: (error) => {
       setValidationErrors({});
       if (error instanceof ApiError && error.details && typeof error.details === 'object') {
         setValidationErrors(error.details);
+      } else {
+        const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+        toast.error(msg);
       }
     },
   });
@@ -45,30 +52,28 @@ export default function GroupSettings({ group, isOpen, onClose }: GroupSettingsP
     mutationFn: () => deleteGroup(group.group_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group deleted successfully");
       router.push("/groups");
+    },
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
     },
   });
 
   if (showDeleteConfirm) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Delete Group">
-        <p>
-          Are you sure you want to delete <strong>{group.group_name}</strong>?
-          This action cannot be undone.
-        </p>
-        <div className="modal-actions">
-          <Button
-            onClick={() => remove.mutate()}
-            disabled={remove.isPending}
-            className="danger"
-          >
-            Delete Group
-          </Button>
-          <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>
-            Cancel
-          </Button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        isOpen={isOpen}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => remove.mutate()}
+        title="Delete Group"
+        message={`Are you sure you want to delete ${group.group_name}? This action cannot be undone. All posts, events, and member data will be permanently deleted.`}
+        confirmText="Delete Group"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={remove.isPending}
+      />
     );
   }
 

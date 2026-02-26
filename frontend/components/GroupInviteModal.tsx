@@ -7,6 +7,7 @@ import Button from "@/components/Button";
 import Avatar from "@/components/Avatar";
 import { searchUsers, inviteToGroup, ApiError } from "@/lib/api";
 import type { SearchUser } from "@/lib/types";
+import { useToastContext } from "../app/providers";
 
 type GroupInviteModalProps = {
   isOpen: boolean;
@@ -22,28 +23,28 @@ export default function GroupInviteModal({
   existingMemberIds,
 }: GroupInviteModalProps) {
   const queryClient = useQueryClient();
+  const toast = useToastContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
   const [errorMsg, setErrorMsg] = useState("");
-  const [success, setSuccess] = useState<any>("")
 
   const invite = useMutation({
     mutationFn: () => inviteToGroup(groupId, Array.from(invitedIds)),
     onSuccess: (data: any) => {
       setErrorMsg("");
-      setSuccess(data.message)
-      setSearchResults([])
-      setSearchQuery("")
-      setTimeout(() => {
-        setSuccess("")
-      }, 3000)
+      setSearchResults([]);
+      setSearchQuery("");
+      setInvitedIds(new Set());
+      toast.success(data.message || "Invitations sent successfully");
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
     },
     onError: (error) => {
-      setErrorMsg(error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message);
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      setErrorMsg(msg);
+      toast.error(msg);
     },
   });
 
@@ -102,7 +103,6 @@ export default function GroupInviteModal({
       </div>
 
       {errorMsg && <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 4px" }}>{errorMsg}</p>}
-      {success && <p style={{ color: "#b42318", fontSize: "0.85rem", padding: "0 4px" }}>{success}</p>}
       <div className="group-invite-results">
         {isSearching ? (
           <p>Searching...</p>

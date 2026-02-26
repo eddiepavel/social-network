@@ -340,8 +340,9 @@ func InviteToGroup(app *app.App) http.HandlerFunc {
 
 			if exists && member.Status == "requested" && len(member.InvitedBy) == 0 {
 				err := db.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
-					Status: "joined",
-					UserID: gen,
+					Status:  "joined",
+					UserID:  gen,
+					GroupID: groupID,
 				})
 
 				if err != nil {
@@ -579,8 +580,9 @@ func RequestToJoinGroup(app *app.App) http.HandlerFunc {
 				}()
 
 				err = sqlite.NewQuery(app.DB).Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
-					Status: "joined",
-					UserID: userId,
+					Status:  "joined",
+					UserID:  userId,
+					GroupID: groupID,
 				})
 
 				if err != nil {
@@ -809,8 +811,9 @@ func RespondRequest(app *app.App) http.HandlerFunc {
 			}()
 
 			if err := query.Groups.UpdateGroupMemberStatus(r.Context(), db_groups.UpdateGroupMemberStatusParams{
-				Status: "joined",
-				UserID: groupMem.UserID,
+				Status:  "joined",
+				UserID:  groupMem.UserID,
+				GroupID: groupMem.GroupID,
 			}); err != nil {
 				app.Logger.Error("failed to update group member status", "err", err)
 				utils.Internal(w, errors.New("internal server error"))

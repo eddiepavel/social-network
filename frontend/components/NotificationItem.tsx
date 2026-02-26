@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/utils";
 import { respondToFollowRequest, markNotificationAsSeen, ApiError } from "@/lib/api";
 import type { Notification } from "@/lib/types";
 import { useRouter } from "next/navigation";
+import { useToastContext } from "../app/providers";
 
 type NotificationItemProps = {
   notification: Notification;
@@ -24,11 +25,12 @@ export default function NotificationItem({
 }: NotificationItemProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const toast = useToastContext();
 
   const respond = useMutation({
     mutationFn: ({ reqId, status }: { reqId: string; status: "accepted" | "rejected" }) =>
       respondToFollowRequest(reqId, status),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["follow-requests"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["followers"] });
@@ -36,7 +38,12 @@ export default function NotificationItem({
         const currentCount = old?.count ?? 0;
         return { count: Math.max(0, currentCount - 1) };
       });
+      toast.success(variables.status === "accepted" ? "Follow request accepted" : "Follow request rejected");
       onAction?.();
+    },
+    onError: (error) => {
+      const msg = error instanceof ApiError && typeof error.details === 'string' ? error.details : error.message;
+      toast.error(msg);
     },
   });
 
