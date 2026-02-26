@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import useSession from "@/hooks/useSession";
 import type { Notification, ChatMessage, ChatThread } from "@/lib/types";
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_BASE?.replace(/\/$/, "") || "ws://localhost:8000";
+const WS_BASE_URL = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "ws://localhost:8000";
 
 type WebSocketContextType = {
   isConnected: boolean;
