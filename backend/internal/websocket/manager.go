@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 	"social-network/pkg/db/sqlite"
 	"sync"
 	"time"
@@ -353,6 +354,11 @@ func checkOrigin(r *http.Request) bool {
 		"http://localhost:3000",
 		"http://localhost:8000",
 		"http://localhost:8080",
+	}
+
+	// Also allow the configured ALLOW_ORIGIN (for production)
+	if envOrigin := os.Getenv("ALLOW_ORIGIN"); envOrigin != "" {
+		allowedOrigins = append(allowedOrigins, envOrigin)
 	}
 
 	for _, allowed := range allowedOrigins {

@@ -1,0 +1,47 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - certbot-webroot:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+    environment:
+      - DOMAIN=${DOMAIN}
+      - NGINX_ENVSUBST_FILTER=DOMAIN
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
+
+  backend:
+    image: ${DOCKER_USERNAME}/social-network-backend:latest
+    environment:
+      - PRODUCTION=true
+      - ALLOW_ORIGIN=https://${DOMAIN}
+    volumes:
+      - sqlite-data:/app/pkg/db
+      - backend-storage:/app/storage
+    restart: unless-stopped
+
+  frontend:
+    image: ${DOCKER_USERNAME}/social-network-frontend:latest
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  sqlite-data:
+  backend-storage:
+  certbot-webroot:
+  certbot-certs:
