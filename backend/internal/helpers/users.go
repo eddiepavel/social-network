@@ -159,9 +159,8 @@ func UserToResponseProfile(user db_users.GetUserByIdWithCountsRow, app *app.App,
 		CanView:   permission,
 	}
 
-	if permission {
-		userResp.Followers = &user.FollowersCount
-		userResp.Following = &user.FollowingCount
-	}
+	userResp.Followers = &user.FollowersCount
+	userResp.Following = &user.FollowingCount
+
 	return userResp
 }
